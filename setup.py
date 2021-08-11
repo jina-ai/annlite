@@ -27,9 +27,7 @@ setup(
     extras_require=extras,
     setup_requires=['setuptools>=18.0', 'wheel'],
     classifiers=[
-        'Development Status :: 5 - Production/Stable',
         'Intended Audience :: Developers',
-        'Intended Audience :: Education',
         'Intended Audience :: Science/Research',
         'License :: OSI Approved :: Apache Software License',
         'Operating System :: OS Independent',
