@@ -1,4 +1,6 @@
 import numpy as np
+from loguru import logger
+
 from scipy.cluster.vq import kmeans2, vq
 from .base import BaseCodec
 
@@ -27,7 +29,7 @@ class PQCodec(BaseCodec):
         d_vector: int,
         n_subvectors: int = 8,
         n_clusters: int = 256,
-        metric: str = 'cosine',
+        metric: str = 'euclidean',
     ):
         super(PQCodec, self).__init__(require_train=True)
         self.d_vector = d_vector
@@ -45,9 +47,12 @@ class PQCodec(BaseCodec):
             else (np.uint16 if n_clusters <= 2 ** 16 else np.uint32)
         )
 
+        assert metric == 'euclidean', f'The distance metric `{metric}` is not supported yet!'
         self.metric = metric
 
-    def fit(self, x: 'np.ndarray', iter: int = 20):
+        self._codebooks = None
+
+    def fit(self, x: 'np.ndarray', iter: int = 100):
         assert x.dtype == np.float32
         assert x.ndim == 2
 
@@ -80,7 +85,7 @@ class PQCodec(BaseCodec):
         codes = np.empty((N, self.n_subvectors), dtype=self.code_dtype)
         for m in range(self.n_subvectors):
             sub_vecs = x[:, m * self.d_subvector : (m + 1) * self.d_subvector]
-            codes[:, m], _ = vq(sub_vecs, self.codewords[m])
+            codes[:, m], _ = vq(sub_vecs, self.codebooks[m])
 
         return codes
 

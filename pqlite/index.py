@@ -1,7 +1,9 @@
 from typing import Optional, List
 
 import numpy as np
+from loguru import logger
 
+from .core.codec import VQCodec, PQCodec
 
 class PQLite:
     """:class:`PQLite` is an implementation of IVF-PQ.
@@ -36,7 +38,7 @@ class PQLite:
         init_size: Optional[int] = None,
         expand_step_size: int = 128,
         expand_mode: str = 'double',
-        metric: str = 'cosine',
+        metric: str = 'euclidean',
         use_residual: bool = False,
         *args,
         **kwargs,
@@ -57,6 +59,9 @@ class PQLite:
         self._use_smart_probing = True
         self._smart_probing_temperature = 30.0
 
+        self.vq_codec = VQCodec(n_cells, metric=metric)
+        self.pq_codec = PQCodec(d_vector, n_subvectors=n_subvectors, n_clusters=256, metric=metric)
+
     def _sanity_check(self, x: 'np.ndarray'):
         assert len(x.shape) == 2
         assert x.shape[1] == self.d_vector
@@ -66,9 +71,13 @@ class PQLite:
     def fit(self, x: 'np.ndarray', force_retrain: bool = False):
         n_data, d_vector = self._sanity_check(x)
 
-        print(f'=> start training VQ codec...')
+        logger.info(f'=> start training VQ codec...')
+        self.vq_codec.fit(x)
 
-        print(f'=> start training PQ codec...')
+        logger.info(f'=> start training PQ codec...')
+        self.pq_codec.fit(x)
+
+        logger.info(f'=> index is trained successfully!')
 
     def add(self, x: 'np.ndarray', ids: Optional[List] = None):
         n_data, _ = self._sanity_check(x)
@@ -78,9 +87,13 @@ class PQLite:
 
     def encode(self, x: 'np.ndarray'):
         n_data, _ = self._sanity_check(x)
+        y = self.pq_codec.encode(x)
+        return y
 
     def decode(self, x):
-        pass
+        assert len(x.shape) == 2
+        assert x.shape[1] == self.n_subvectors
+        return self.pq_codec.decode(x)
 
     @property
     def use_smart_probing(self):

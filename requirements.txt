@@ -1,3 +1,4 @@
+loguru
 click
 numpy
 scipy

@@ -1,16 +1,20 @@
 import numpy as np
+from loguru import logger
 from scipy.cluster.vq import kmeans2, vq
 from .base import BaseCodec
 
 
 class VQCodec(BaseCodec):
-    def __init__(self, n_clusters: int, *args, **kwargs):
+    def __init__(self, n_clusters: int, metric: str = 'euclidean', *args, **kwargs):
         super(VQCodec, self).__init__(require_train=True)
         self.n_clusters = n_clusters
 
+        assert metric == 'euclidean', f'The distance metric `{metric}` is not supported yet!'
+        self.metric = metric
+
         self._codebook = None
 
-    def fit(self, x: 'np.ndarray', iter: int = 20):
+    def fit(self, x: 'np.ndarray', iter: int = 100):
         """Given training vectors, run k-means for each sub-space and create
             codewords for each sub-space.
 
@@ -20,6 +24,7 @@ class VQCodec(BaseCodec):
 
         assert x.dtype == np.float32
         assert x.ndim == 2
+
         self._codebook, _ = kmeans2(x, self.n_clusters, iter=iter, minit='points')
 
         self._is_trained = True
@@ -31,6 +36,9 @@ class VQCodec(BaseCodec):
 
         codes, _ = vq(x, self.codebook)
         return codes
+
+    def decode(self, x: 'np.ndarray'):
+        return None
 
     @property
     def codebook(self):
