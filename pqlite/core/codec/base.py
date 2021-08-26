@@ -20,7 +20,7 @@ class BaseCodec(ABC):
 
     @property
     def is_trained(self):
-        return self.is_trained
+        return self._is_trained
 
     def _check_trained(self):
         assert self.is_trained is True, 'Codec is untrained'

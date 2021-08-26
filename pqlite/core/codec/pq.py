@@ -47,7 +47,9 @@ class PQCodec(BaseCodec):
             else (np.uint16 if n_clusters <= 2 ** 16 else np.uint32)
         )
 
-        assert metric == 'euclidean', f'The distance metric `{metric}` is not supported yet!'
+        assert (
+            metric == 'euclidean'
+        ), f'The distance metric `{metric}` is not supported yet!'
         self.metric = metric
 
         self._codebooks = None

@@ -1,11 +1,15 @@
 from typing import Optional, List
 
 import numpy as np
+from jina.math.distance import cdist
+from jina.math.helper import top_k
 from loguru import logger
 
+from .container.cell import CellContainer
 from .core.codec import VQCodec, PQCodec
 
-class PQLite:
+
+class PQLite(CellContainer):
     """:class:`PQLite` is an implementation of IVF-PQ.
 
     To create a :class:`PQLite` object, simply:
@@ -35,7 +39,7 @@ class PQLite:
         d_vector: int,
         n_subvectors: int = 8,
         n_cells: int = 64,
-        init_size: Optional[int] = None,
+        initial_size: Optional[int] = None,
         expand_step_size: int = 128,
         expand_mode: str = 'double',
         metric: str = 'euclidean',
@@ -44,6 +48,16 @@ class PQLite:
         **kwargs,
     ):
         assert d_vector % n_subvectors == 0
+
+        super(PQLite, self).__init__(
+            code_size=n_subvectors,
+            n_cells=n_cells,
+            dtype='uint8',
+            initial_size=initial_size,
+            expand_step_size=expand_step_size,
+            expand_mode=expand_mode,
+        )
+
         self.d_vector = d_vector
         self.n_subvectors = n_subvectors
         self.d_subvector = d_vector // n_subvectors
@@ -60,7 +74,9 @@ class PQLite:
         self._smart_probing_temperature = 30.0
 
         self.vq_codec = VQCodec(n_cells, metric=metric)
-        self.pq_codec = PQCodec(d_vector, n_subvectors=n_subvectors, n_clusters=256, metric=metric)
+        self.pq_codec = PQCodec(
+            d_vector, n_subvectors=n_subvectors, n_clusters=256, metric=metric
+        )
 
     def _sanity_check(self, x: 'np.ndarray'):
         assert len(x.shape) == 2
@@ -79,11 +95,97 @@ class PQLite:
 
         logger.info(f'=> index is trained successfully!')
 
-    def add(self, x: 'np.ndarray', ids: Optional[List] = None):
+    def add(
+        self, x: 'np.ndarray', ids: Optional[List] = None, return_address: bool = False
+    ):
         n_data, _ = self._sanity_check(x)
 
-    def search(self, x: 'np.ndarray', top_k: int = 10):
-        n_data, _ = self._sanity_check(x)
+        assigned_cells = self.vq_codec.encode(x)
+        quantized_x = self.encode(x)
+
+        return super(PQLite, self).add(
+            quantized_x,
+            cells=assigned_cells,
+            ids=ids,
+        )
+
+    def ivfpq_topk(self, precomputed, cells: List[int], k: int = 10):
+        topk_sims = []
+        topk_ids = []
+        for cell_id in cells:
+            is_empty = self._is_empties[cell_id]
+            # print(f'=> is_empty: {is_empty}')
+            dists = precomputed.adist(self._storages[cell_id])  # (10000, )
+            dists += is_empty * np.iinfo(np.int16).max
+            dists = np.expand_dims(dists, axis=0)
+
+            _topk_sims, indices = top_k(dists, k=k)
+            _topk_ids = np.array(
+                [idx for idx in self.get_id_by_address(cell_id, indices)],
+                dtype=f'|S{self._key_length}',
+            )
+            topk_sims.append(_topk_sims)
+            topk_ids.append(_topk_ids)
+        topk_sims = np.concatenate(topk_sims, axis=1)
+        topk_ids = np.concatenate(topk_ids, axis=1)
+        idx = topk_sims.argsort(axis=1)[:, :k]
+        topk_sims = np.take_along_axis(topk_sims, idx, axis=1)
+        topk_ids = np.take_along_axis(topk_ids, idx, axis=1)
+        return topk_sims, topk_ids
+
+    def search_cells(
+        self,
+        query: 'np.ndarray',
+        cells: 'np.ndarray',
+        base_sims: Optional['np.ndarray'] = None,
+        n_probe_list=None,
+        k: int = 1,
+    ):
+
+        topk_val, topk_ids = [], []
+        for x, cell_idx in zip(query, cells):
+            precomputed = self.pq_codec.precompute_adc(x)
+            _topk_val, _topk_ids = self.ivfpq_topk(precomputed, cells=cell_idx, k=k)
+            topk_val.append(_topk_val)
+            topk_ids.append(_topk_ids)
+        topk_val = np.concatenate(topk_val, axis=0)
+        topk_ids = np.concatenate(topk_ids, axis=0)
+
+        return topk_val, topk_ids
+
+    def search(self, query: 'np.ndarray', k: int = 10):
+        n_data, _ = self._sanity_check(query)
+        assert 0 < k <= 1024
+
+        vq_codebook = self.vq_codec.codebook
+
+        # find n_probe closest cells
+        dists = cdist(query, vq_codebook, metric='euclidean')
+        topk_sims, cells = top_k(dists, k=self.n_probe)
+
+        # if self.use_smart_probing and self.n_probe > 1:
+        #     p = -topk_sims.abs().sqrt()
+        #     p = torch.softmax(p / self.smart_probing_temperature, dim=-1)
+        #
+        #     # p_norm = p.norm(dim=-1)
+        #     # sqrt_d = self.n_probe ** 0.5
+        #     # score = 1 - (p_norm * sqrt_d - 1) / (sqrt_d - 1) - 1e-6
+        #     # n_probe_list = torch.ceil(score * (self.n_probe) ).long()
+        #
+        #     max_n_probe = torch.tensor(self.n_probe, device=self.device)
+        #     normalized_entropy = - torch.sum(p * torch.log2(p) / torch.log2(max_n_probe), dim=-1)
+        #     n_probe_list = torch.ceil(normalized_entropy * max_n_probe).long()
+        # else:
+        #     n_probe_list = None
+        #
+
+        return self.search_cells(
+            query=query,
+            cells=cells,
+            base_sims=topk_sims,
+            n_probe_list=None,
+            k=k,
+        )
 
     def encode(self, x: 'np.ndarray'):
         n_data, _ = self._sanity_check(x)

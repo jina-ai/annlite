@@ -9,7 +9,9 @@ class VQCodec(BaseCodec):
         super(VQCodec, self).__init__(require_train=True)
         self.n_clusters = n_clusters
 
-        assert metric == 'euclidean', f'The distance metric `{metric}` is not supported yet!'
+        assert (
+            metric == 'euclidean'
+        ), f'The distance metric `{metric}` is not supported yet!'
         self.metric = metric
 
         self._codebook = None

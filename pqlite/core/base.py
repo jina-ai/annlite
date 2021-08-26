@@ -10,9 +10,9 @@ class BaseIndex(ABC):
         pass
 
     @abstractmethod
-    def delete(self):
+    def remove(self):
         pass
 
     @abstractmethod
-    def query(self):
+    def search(self):
         pass

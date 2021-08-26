@@ -1,4 +1,5 @@
-loguru
 click
+jina
+loguru
 numpy
 scipy
