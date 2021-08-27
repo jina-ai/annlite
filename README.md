@@ -29,6 +29,41 @@ Bringing performance benefits in line with `Rust`, its memory safety, concurrenc
 
 ## Quick Start
 
+### Setup
+
+```bash
+$ git clone https://github.com/jina-ai/pqlite.git \
+  && cd pqlite \
+  && pip install .
+```
+## How to use?
+
+```python
+import numpy as np
+from pqlite import PQLite
+
+N = 10000 # number of data points
+Nt = 2000
+Nq = 10
+D = 24 # dimentionality / number of features
+
+X = np.random.random((N, D)).astype(np.float32)  # 10,000 128-dim vectors to be indexed
+Xt = np.random.random((Nt, D)).astype(np.float32)  # 2,000 128-dim vectors for training
+query = np.random.random((Nq, D)).astype(np.float32)  # a 128-dim query vector
+
+pqlite = PQLite(d_vector=D, n_cells=64, n_subvectors=8)
+
+pqlite.fit(Xt)
+
+pqlite.add(X, ids=list(range(len(X))))
+
+dists, ids = pqlite.search(query, k=5)
+
+print(f'the result:')
+for i, (dist, idx) in enumerate(zip(dists, ids)):
+    print(f'query [{i}]: {dist} {idx}')
+```
+
 ## Benchmark
 
 All experiments were performed with a Intel(R) Xeon(R) CPU @ 2.00GHz and Nvidia Tesla T4 GPU.
