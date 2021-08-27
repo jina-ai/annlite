@@ -45,7 +45,7 @@ from pqlite import PQLite
 N = 10000 # number of data points
 Nt = 2000
 Nq = 10
-D = 24 # dimentionality / number of features
+D = 128 # dimentionality / number of features
 
 X = np.random.random((N, D)).astype(np.float32)  # 10,000 128-dim vectors to be indexed
 Xt = np.random.random((Nt, D)).astype(np.float32)  # 2,000 128-dim vectors for training
