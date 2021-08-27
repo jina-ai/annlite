@@ -1,7 +1,6 @@
 # PQLite
 
-`PQLite` is an **embedded** library for **Approximate Nearest Neighbor Search** (ANNS) using **Product Quantization** (PQ) algorithm. `
-
+`PQLite` is a blaze fast **embedded** library for **Approximate Nearest Neighbor Search** (ANNS) using **Product Quantization** (PQ) algorithm. 
 Bringing performance benefits in line with `Rust`, its memory safety, concurrency and accessibility to Machine Learning engineers make it a powerful additional choice for the deployment of performant, machine-learning powered applications.
 
 ## WARNING
@@ -11,9 +10,8 @@ Bringing performance benefits in line with `Rust`, its memory safety, concurrenc
 
 ## Design Goals
 
-- **Capable**: Offer a complete 2D and 3D feature set
+- **Capable**: Offer a complete 2D feature set
 - **Simple**: Easy for newbies to pick up, but infinitely flexible for power users
-- **Data Focused**: Data-oriented architecture using the Entity Component System paradigm
 - **Modular**: Use only what you need. Replace what you don't like
 - **Fast**: App logic should run quickly, and when possible, in parallel
 - **Productive**: Changes should compile quickly ... waiting isn't fun
@@ -44,8 +42,6 @@ All experiments were performed with a Intel(R) Xeon(R) CPU @ 2.00GHz and Nvidia 
 - [hyperfine](https://github.com/sharkdp/hyperfine) Good UX example
 - [PGM-index](https://github.com/gvinciguerra/PGM-index) State-of-the-art learned data structure that enables fast lookup, predecessor, range searches and updates in arrays of billions of items using orders of magnitude less space than traditional indexes
 - [Xor Filters](https://lemire.me/blog/2019/12/19/xor-filters-faster-and-smaller-than-bloom-filters/) Faster and Smaller Than Bloom Filters
-
-
 - [CVPR20 Tutorial](https://www.youtube.com/watch?v=SKrHs03i08Q&list=PLKQB14e0EJUWaTnwgQogJ3nSLzEFNn9d8&t=849s) Billion-scale Approximate Nearest Neighbor Search
 
 
