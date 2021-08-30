@@ -160,7 +160,7 @@ class DistanceTable(object):
             (1) m-th sub-vector of query and (2) ks-th codeword for m-th subspace.
     """
 
-    def __init__(self, dtable):
+    def __init__(self, dtable: 'np.ndarray'):
         assert dtable.ndim == 2
         assert dtable.dtype == np.float32
         self.dtable = dtable

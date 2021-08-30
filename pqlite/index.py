@@ -114,7 +114,6 @@ class PQLite(CellContainer):
         topk_ids = []
         for cell_id in cells:
             is_empty = self._is_empties[cell_id]
-            # print(f'=> is_empty: {is_empty}')
             dists = precomputed.adist(self._storages[cell_id])  # (10000, )
             dists += is_empty * np.iinfo(np.int16).max
             dists = np.expand_dims(dists, axis=0)
@@ -137,9 +136,9 @@ class PQLite(CellContainer):
         self,
         query: 'np.ndarray',
         cells: 'np.ndarray',
-        base_sims: Optional['np.ndarray'] = None,
+        topk_dists: Optional['np.ndarray'] = None,
         n_probe_list=None,
-        k: int = 1,
+        k: int = 10,
     ):
 
         topk_val, topk_ids = [], []
@@ -161,7 +160,7 @@ class PQLite(CellContainer):
 
         # find n_probe closest cells
         dists = cdist(query, vq_codebook, metric='euclidean')
-        topk_sims, cells = top_k(dists, k=self.n_probe)
+        topk_dists, cells = top_k(dists, k=self.n_probe)
 
         # if self.use_smart_probing and self.n_probe > 1:
         #     p = -topk_sims.abs().sqrt()
@@ -182,7 +181,7 @@ class PQLite(CellContainer):
         return self.search_cells(
             query=query,
             cells=cells,
-            base_sims=topk_sims,
+            topk_dists=topk_dists,
             n_probe_list=None,
             k=k,
         )
