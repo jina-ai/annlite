@@ -57,7 +57,7 @@ pqlite = PQLite(d_vector=D, n_cells=64, n_subvectors=8, columns=[('x', float, Tr
 pqlite.fit(Xt)
 
 tags = [{'x': random.random()} for _ in range(N)]
-pqlite.add(X, ids=list(range(len(X))),doc_tags=tags)
+pqlite.add(X, ids=list(range(len(X))), doc_tags=tags)
 
 # without filtering
 dists, ids = pqlite.search(query, k=5)
