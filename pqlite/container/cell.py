@@ -4,6 +4,7 @@ from loguru import logger
 import numpy as np
 
 from .base import Container
+from .table import Table
 from ..helper import str2dtype
 
 
@@ -15,7 +16,7 @@ class CellContainer(Container):
         dtype: str = 'float32',
         initial_size: Optional[int] = None,
         expand_step_size: Optional[int] = 1024,
-        expand_mode: str = 'double',
+        expand_mode: str = 'step',
         key_length: int = 36,
     ):
         if initial_size is None:
@@ -50,6 +51,8 @@ class CellContainer(Container):
         self._cell_size = np.zeros(n_cells, dtype=np.int64)
         self._cell_capacity = np.zeros(n_cells, dtype=np.int64) + initial_size
 
+        self._cell_tables = [Table(f'cell_table_{c}') for c in range(self.n_cells)]
+
     def get_id_by_address(self, cell: int, offset: int):
         return self._address2id[cell][offset]
 
@@ -77,7 +80,19 @@ class CellContainer(Container):
         ioa = mcs.sum(axis=1) - 1
         return ioa
 
-    def add(self, data: np.ndarray, cells: np.ndarray, ids: Optional[List[str]] = None):
+    def add(self, data: np.ndarray, cells: np.ndarray, ids: Optional[List[str]], tags: Optional[List[dict]] = None):
+        if tags is None:
+            tags = [{'_doc_id': k} for k in ids]
+        else:
+            for k, doc in zip(ids, tags):
+                doc.update({'_doc_id': k})
+
+        for doc, cell in zip(tags, cells):
+            self.cell_tables[cell].insert([doc])
+
+        self._add(data, cells, ids=ids)
+
+    def _add(self, data: np.ndarray, cells: np.ndarray, ids: Optional[List[str]] = None):
         assert data.shape[0] == cells.shape[0]
         assert data.shape[1] == self.code_size
 
@@ -159,6 +174,21 @@ class CellContainer(Container):
 
         logger.debug(f'=> {len(ids)} items deleted')
 
+    def get_size(self, cell_id: int):
+        return self._cell_size[cell_id]
+
     @property
     def size(self):
         return np.sum(self._cell_size, dtype=np.int64)
+
+    @property
+    def cell_tables(self):
+        return self._cell_tables
+
+    def add_column(self, name: str, dtype: str, is_key: bool = False):
+        for table in self.cell_tables:
+            table.add_column(name, dtype, is_key=is_key)
+
+    def create_tables(self):
+        for table in self.cell_tables:
+            table.create_table()
