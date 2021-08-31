@@ -67,7 +67,7 @@ class Table:
         if fts5:
             where.append("sql like '%USING FTS5%'")
         sql = "select name from sqlite_master where {}".format(" AND ".join(where))
-        return [r[0] for r in self.execute(sql).fetchall()]
+        return [r[0] for r in self._conn.execute(sql).fetchall()]
 
     def existed(self):
         return self.name in self.table_names
@@ -87,11 +87,11 @@ class Table:
 
     def create_table(self):
         with self._conn:
-            sql_statement = f'''CREATE TABLE {self.name} 
-                                    (_id INTEGER NOT NULL PRIMARY KEY, 
-                                     _doc_id TEXT NOT NULL, 
-                                     _deleted NUMERIC DEFAULT 0,
-                                     {', '.join(self._columns)})'''
+            sql_statement = f'CREATE TABLE {self.name} (_id INTEGER NOT NULL PRIMARY KEY, _doc_id TEXT NOT NULL, _deleted NUMERIC DEFAULT 0'
+            if len(self._columns) > 0:
+                sql_statement += ', ' + ', '.join(self._columns)
+            sql_statement += ')'
+
             self._conn.execute(sql_statement)
 
             for name in self._index_keys:
@@ -133,14 +133,16 @@ class Table:
         sql = 'SELECT {columns} from {table} WHERE {where} ORDER BY _id ASC;'
         columns = ', '.join(self.column_names)
 
-        conds = []
+        conds = ['_deleted = ?']
+        if conditions is None:
+            conditions = []
         for cond in conditions:
             cond = f'{cond[0]} {cond[1]} ?'
             conds.append(cond)
         where = 'and '.join(conds)
         sql = sql.format(columns=columns, table=self.name, where=where)
 
-        params = tuple([_converting(cond[2]) for cond in conditions])
+        params = tuple([0] + [_converting(cond[2]) for cond in conditions])
         cursor = self._conn.execute(sql, params)
         keys = [d[0] for d in cursor.description]
         for row in cursor:

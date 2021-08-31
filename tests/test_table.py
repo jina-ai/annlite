@@ -24,6 +24,13 @@ def sample_docs():
     ]
 
 
+def test_create():
+    table = Table(name='cell_table_0')
+    table.add_column('x', 'float')
+    table.create_table()
+    assert table.existed()
+
+
 def test_schema(dummy_table):
     schema = dummy_table.schema
     assert len(schema.split('\n')) == 6
@@ -32,7 +39,9 @@ def test_schema(dummy_table):
 def test_insert_query(dummy_table, sample_docs):
     dummy_table.insert(sample_docs)
 
-    result = list(dummy_table.query([('name', '=', 'poly'), ('price', '>', 5)]))
-    assert len(result) == 1
-    assert result[0]['name'] == 'poly'
-    assert result[0]['_id'] == 2
+    result = list(dummy_table.query([('category', '=', 'fruit'), ('price', '<', 3)]))
+    assert len(result) == 2
+    assert result[0]['name'] == 'orange'
+    assert result[0]['_id'] == 0
+
+

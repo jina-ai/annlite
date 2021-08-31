@@ -78,11 +78,13 @@ class PQLite(CellContainer):
             d_vector, n_subvectors=n_subvectors, n_clusters=256, metric=metric
         )
 
+
     def _sanity_check(self, x: 'np.ndarray'):
         assert len(x.shape) == 2
         assert x.shape[1] == self.d_vector
 
         return x.shape
+
 
     def fit(self, x: 'np.ndarray', force_retrain: bool = False):
         n_data, d_vector = self._sanity_check(x)
@@ -95,9 +97,7 @@ class PQLite(CellContainer):
 
         logger.info(f'=> index is trained successfully!')
 
-    def add(
-        self, x: 'np.ndarray', ids: Optional[List] = None, return_address: bool = False
-    ):
+    def add(self, x: 'np.ndarray', ids: Optional[List], tags: Optional[List] = None):
         n_data, _ = self._sanity_check(x)
 
         assigned_cells = self.vq_codec.encode(x)
@@ -105,28 +105,43 @@ class PQLite(CellContainer):
 
         return super(PQLite, self).add(
             quantized_x,
-            cells=assigned_cells,
-            ids=ids,
+            assigned_cells,
+            ids,
+            tags=tags
         )
 
-    def ivfpq_topk(self, precomputed, cells: List[int], k: int = 10):
+    def ivfpq_topk(self, precomputed, cells: List[int], conditions: Optional[list] = None, k: int = 10):
         topk_sims = []
         topk_ids = []
         for cell_id in cells:
-            is_empty = self._is_empties[cell_id]
-            dists = precomputed.adist(self._storages[cell_id])  # (10000, )
-            dists += is_empty * np.iinfo(np.int16).max
+            idx = []
+            ids = []
+            for d in self.cell_tables[cell_id].query(conditions=conditions):
+                idx.append(d['_id'])
+                ids.append(d['_doc_id'])
+            if len(idx) == 0:
+                continue
+
+            idx = np.array(idx, dtype=np.int64)
+
+            ids = np.array(ids, dtype=f'|S{self._key_length}')
+            ids = np.expand_dims(ids, axis=0)
+            codes = self._storages[cell_id][idx]
+
+            dists = precomputed.adist(codes)  # (10000, )
             dists = np.expand_dims(dists, axis=0)
 
             _topk_sims, indices = top_k(dists, k=k)
-            _topk_ids = np.array(
-                [idx for idx in self.get_id_by_address(cell_id, indices)],
-                dtype=f'|S{self._key_length}',
-            )
+            _topk_ids = np.take_along_axis(ids, indices, axis=1)
+
             topk_sims.append(_topk_sims)
             topk_ids.append(_topk_ids)
-        topk_sims = np.concatenate(topk_sims, axis=1)
-        topk_ids = np.concatenate(topk_ids, axis=1)
+
+        # topk_sims = np.concatenate(topk_sims, axis=1)
+        # topk_ids = np.concatenate(topk_ids, axis=1)
+        topk_sims = np.hstack(topk_sims)
+        topk_ids = np.hstack(topk_ids)
+
         idx = topk_sims.argsort(axis=1)[:, :k]
         topk_sims = np.take_along_axis(topk_sims, idx, axis=1)
         topk_ids = np.take_along_axis(topk_ids, idx, axis=1)
@@ -136,6 +151,7 @@ class PQLite(CellContainer):
         self,
         query: 'np.ndarray',
         cells: 'np.ndarray',
+        conditions: Optional[list] = None,
         topk_dists: Optional['np.ndarray'] = None,
         n_probe_list=None,
         k: int = 10,
@@ -144,7 +160,8 @@ class PQLite(CellContainer):
         topk_val, topk_ids = [], []
         for x, cell_idx in zip(query, cells):
             precomputed = self.pq_codec.precompute_adc(x)
-            _topk_val, _topk_ids = self.ivfpq_topk(precomputed, cells=cell_idx, k=k)
+            _topk_val, _topk_ids = self.ivfpq_topk(precomputed, cells=cell_idx, conditions=conditions, k=k)
+
             topk_val.append(_topk_val)
             topk_ids.append(_topk_ids)
         topk_val = np.concatenate(topk_val, axis=0)
@@ -152,7 +169,7 @@ class PQLite(CellContainer):
 
         return topk_val, topk_ids
 
-    def search(self, query: 'np.ndarray', k: int = 10):
+    def search(self, query: 'np.ndarray', conditions: Optional[list] = None, k: int = 10):
         n_data, _ = self._sanity_check(query)
         assert 0 < k <= 1024
 
@@ -181,6 +198,7 @@ class PQLite(CellContainer):
         return self.search_cells(
             query=query,
             cells=cells,
+            conditions=conditions,
             topk_dists=topk_dists,
             n_probe_list=None,
             k=k,
@@ -214,3 +232,6 @@ class PQLite(CellContainer):
         assert value > 0
         assert self.use_smart_probing, 'set use_smart_probing to True first'
         self._smart_probing_temperature = value
+
+
+
