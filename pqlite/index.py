@@ -5,49 +5,51 @@ from jina.math.distance import cdist
 from jina.math.helper import top_k
 from loguru import logger
 
-from .container.cell import CellContainer
-from .core.codec import VQCodec, PQCodec
+from .core import VQCodec, PQCodec
+from .storage import CellStorage
 
 
-class PQLite(CellContainer):
-    """:class:`PQLite` is an implementation of IVF-PQ.
+class PQLite(CellStorage):
+    """:class:`PQLite` is an implementation of IVF-PQ being with equipped with SQLite.
 
     To create a :class:`PQLite` object, simply:
 
         .. highlight:: python
         .. code-block:: python
-            pqlite = PQLite(d_vector=256, metric='cosine')
+            pqlite = PQLite(d_vector=256, metric='euclidean')
 
-    :param n_vector: the dimentionality of input vectors. there are 2 constraints on d_vector:
+    :param d_vector: the dimensionality of input vectors. there are 2 constraints on d_vector:
             (1) it needs to be divisible by n_subvectors; (2) it needs to be a multiple of 4.*
     :param n_subvectors: number of subquantizers, essentially this is the byte size of
             each quantized vector, default is 8.
     :param n_cells:  number of coarse quantizer clusters.
-    :param init_size: initial capacity assigned to each voronoi cell of coarse quantizer. ``n_cells * init_size``
-            is the number of vectors that can be stored initially. if any cell has reached its capacity, that cell
-            will be automatically expanded. If you need to add vectors frequently, a larger value for init_size
-            is recommended.
+    :param initial_size: initial capacity assigned to each voronoi cell of coarse quantizer.
+            ``n_cells * initial_size`` is the number of vectors that can be stored initially.
+            if any cell has reached its capacity, that cell will be automatically expanded.
+            If you need to add vectors frequently, a larger value for init_size is recommended.
     :param args: Additional positional arguments which are just used for the parent initialization
     :param kwargs: Additional keyword arguments which are just used for the parent initialization
 
     .. note::
-        Remember that the shape of any tensor that contains data points has to be [n_data, d_vector].
+        Remember that the shape of any tensor that contains data points has to be `[n_data, d_vector]`.
     """
 
     def __init__(
         self,
         d_vector: int,
         n_subvectors: int = 8,
-        n_cells: int = 64,
+        n_cells: int = 8,
         initial_size: Optional[int] = None,
-        expand_step_size: int = 128,
-        expand_mode: str = 'double',
+        expand_step_size: int = 1024,
         metric: str = 'euclidean',
         use_residual: bool = False,
+        columns: Optional[List[tuple]] = None,
         *args,
         **kwargs,
     ):
-        assert d_vector % n_subvectors == 0
+        assert (
+            d_vector % n_subvectors == 0
+        ), '"d_vector" needs to be divisible by "n_subvectors"'
 
         super(PQLite, self).__init__(
             code_size=n_subvectors,
@@ -55,7 +57,7 @@ class PQLite(CellContainer):
             dtype='uint8',
             initial_size=initial_size,
             expand_step_size=expand_step_size,
-            expand_mode=expand_mode,
+            columns=columns,
         )
 
         self.d_vector = d_vector
@@ -65,10 +67,10 @@ class PQLite(CellContainer):
         self.use_residual = use_residual
         self.n_probe = 1
 
-        if use_residual and (n_cells * 256 * n_subvectors * 4) <= 4 * 1024 ** 3:
-            self._use_precomputed = True
-        else:
-            self._use_precomputed = False
+        # if use_residual and (n_cells * 256 * n_subvectors * 4) <= 4 * 1024 ** 3:
+        #     self._use_precomputed = True
+        # else:
+        #     self._use_precomputed = False
 
         self._use_smart_probing = True
         self._smart_probing_temperature = 30.0
@@ -78,67 +80,71 @@ class PQLite(CellContainer):
             d_vector, n_subvectors=n_subvectors, n_clusters=256, metric=metric
         )
 
-
     def _sanity_check(self, x: 'np.ndarray'):
         assert len(x.shape) == 2
         assert x.shape[1] == self.d_vector
 
         return x.shape
 
-
     def fit(self, x: 'np.ndarray', force_retrain: bool = False):
         n_data, d_vector = self._sanity_check(x)
 
-        logger.info(f'=> start training VQ codec...')
+        logger.info(f'=> start training VQ codec with {n_data} data...')
         self.vq_codec.fit(x)
 
-        logger.info(f'=> start training PQ codec...')
+        logger.info(f'=> start training PQ codec with {n_data} data...')
         self.pq_codec.fit(x)
 
-        logger.info(f'=> index is trained successfully!')
+        logger.info(f'=> pqlite is successfully trained!')
 
-    def add(self, x: 'np.ndarray', ids: Optional[List], tags: Optional[List] = None):
+    def add(
+        self,
+        x: 'np.ndarray',
+        ids: Optional[List],
+        doc_tags: Optional[List[dict]] = None,
+    ):
         n_data, _ = self._sanity_check(x)
 
         assigned_cells = self.vq_codec.encode(x)
         quantized_x = self.encode(x)
 
         return super(PQLite, self).add(
-            quantized_x,
-            assigned_cells,
-            ids,
-            tags=tags
+            quantized_x, assigned_cells, ids=ids, doc_tags=doc_tags
         )
 
-    def ivfpq_topk(self, precomputed, cells: List[int], conditions: Optional[list] = None, k: int = 10):
+    def ivfpq_topk(
+        self,
+        precomputed,
+        cells: 'np.ndarray',
+        conditions: Optional[list] = None,
+        k: int = 10,
+    ):
         topk_sims = []
         topk_ids = []
         for cell_id in cells:
-            idx = []
-            ids = []
-            for d in self.cell_tables[cell_id].query(conditions=conditions):
-                idx.append(d['_id'])
-                ids.append(d['_doc_id'])
-            if len(idx) == 0:
+            indices = []
+            doc_ids = []
+            for d in self.cell_table(cell_id).query(conditions=conditions):
+                indices.append(d['_id'])
+                doc_ids.append(d['_doc_id'])
+            if len(indices) == 0:
                 continue
 
-            idx = np.array(idx, dtype=np.int64)
+            indices = np.array(indices, dtype=np.int64)
 
-            ids = np.array(ids, dtype=f'|S{self._key_length}')
-            ids = np.expand_dims(ids, axis=0)
-            codes = self._storages[cell_id][idx]
+            doc_ids = np.array(doc_ids, dtype=self._doc_id_dtype)
+            doc_ids = np.expand_dims(doc_ids, axis=0)
+            codes = self.storage[cell_id][indices]
 
             dists = precomputed.adist(codes)  # (10000, )
             dists = np.expand_dims(dists, axis=0)
 
             _topk_sims, indices = top_k(dists, k=k)
-            _topk_ids = np.take_along_axis(ids, indices, axis=1)
+            _topk_ids = np.take_along_axis(doc_ids, indices, axis=1)
 
             topk_sims.append(_topk_sims)
             topk_ids.append(_topk_ids)
 
-        # topk_sims = np.concatenate(topk_sims, axis=1)
-        # topk_ids = np.concatenate(topk_ids, axis=1)
         topk_sims = np.hstack(topk_sims)
         topk_ids = np.hstack(topk_ids)
 
@@ -156,28 +162,32 @@ class PQLite(CellContainer):
         n_probe_list=None,
         k: int = 10,
     ):
-
-        topk_val, topk_ids = [], []
+        topk_dists, topk_ids = [], []
         for x, cell_idx in zip(query, cells):
             precomputed = self.pq_codec.precompute_adc(x)
-            _topk_val, _topk_ids = self.ivfpq_topk(precomputed, cells=cell_idx, conditions=conditions, k=k)
+            dist, ids = self.ivfpq_topk(
+                precomputed, cells=cell_idx, conditions=conditions, k=k
+            )
 
-            topk_val.append(_topk_val)
-            topk_ids.append(_topk_ids)
-        topk_val = np.concatenate(topk_val, axis=0)
+            topk_dists.append(dist)
+            topk_ids.append(ids)
+
+        topk_dists = np.concatenate(topk_dists, axis=0)
         topk_ids = np.concatenate(topk_ids, axis=0)
 
-        return topk_val, topk_ids
+        return topk_dists, topk_ids
 
-    def search(self, query: 'np.ndarray', conditions: Optional[list] = None, k: int = 10):
+    def search(
+        self, query: 'np.ndarray', conditions: Optional[list] = None, k: int = 10
+    ):
         n_data, _ = self._sanity_check(query)
         assert 0 < k <= 1024
 
         vq_codebook = self.vq_codec.codebook
 
         # find n_probe closest cells
-        dists = cdist(query, vq_codebook, metric='euclidean')
-        topk_dists, cells = top_k(dists, k=self.n_probe)
+        dists = cdist(query, vq_codebook, metric=self.metric)
+        dists, cells = top_k(dists, k=self.n_probe)
 
         # if self.use_smart_probing and self.n_probe > 1:
         #     p = -topk_sims.abs().sqrt()
@@ -199,7 +209,7 @@ class PQLite(CellContainer):
             query=query,
             cells=cells,
             conditions=conditions,
-            topk_dists=topk_dists,
+            topk_dists=dists,
             n_probe_list=None,
             k=k,
         )
@@ -232,6 +242,3 @@ class PQLite(CellContainer):
         assert value > 0
         assert self.use_smart_probing, 'set use_smart_probing to True first'
         self._smart_probing_temperature = value
-
-
-

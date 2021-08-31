@@ -1,6 +1,6 @@
 # PQLite
 
-`PQLite` is a blaze fast **embedded** library for **Approximate Nearest Neighbor Search** (ANNS) using **Product Quantization** (PQ) algorithm. 
+`PQLite` is a blaze fast **embedded** library for **Approximate Nearest Neighbor Search** (ANNS) using **Product Quantization** (PQ) algorithm.
 Bringing performance benefits in line with `Rust`, its memory safety, concurrency and accessibility to Machine Learning engineers make it a powerful additional choice for the deployment of performant, machine-learning powered applications.
 
 ## WARNING

@@ -1,6 +1,6 @@
 import pytest
 
-from pqlite.container.table import Table
+from pqlite.storage.table import Table
 
 
 @pytest.fixture
@@ -43,5 +43,3 @@ def test_insert_query(dummy_table, sample_docs):
     assert len(result) == 2
     assert result[0]['name'] == 'orange'
     assert result[0]['_id'] == 0
-
-

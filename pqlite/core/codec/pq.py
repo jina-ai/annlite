@@ -6,18 +6,19 @@ from .base import BaseCodec
 
 
 class PQCodec(BaseCodec):
-    """implementation of Product Quantization (PQ) [Jegou11]_.
+    """Implementation of Product Quantization (PQ) [Jegou11]_.
 
     For the indexing phase of database vectors,
     a `D`-dim input vector is divided into `M` `D`/`M`-dim sub-vectors.
     Each sub-vector is quantized into a small integer via `Ks` codewords.
-    For the querying phase, given a new `D`-dim query vector, the distance beween the query
+
+    For the querying phase, given a new `D`-dim query vector, the distance between the query
     and the database PQ-codes are efficiently approximated via Asymmetric Distance.
     All vectors must be np.ndarray with np.float32
 
     .. [Jegou11] H. Jegou et al., "Product Quantization for Nearest Neighbor Search", IEEE TPAMI 2011
 
-    :param d_vector: the dimentionality of input vectors
+    :param d_vector: the dimensionality of input vectors
     :param n_subvectors: The number of sub-space
     :param n_clusters: The number of codewords for each subspace
             (typically 256, so that each sub-vector is quantized

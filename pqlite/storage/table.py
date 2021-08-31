@@ -3,26 +3,26 @@ import sqlite3
 import datetime
 
 COLUMN_TYPE_MAPPING = {
-    float: "FLOAT",
-    int: "INTEGER",
-    bool: "INTEGER",
-    str: "TEXT",
-    bytes.__class__: "BLOB",
-    bytes: "BLOB",
-    memoryview: "BLOB",
-    datetime.datetime: "TEXT",
-    datetime.date: "TEXT",
-    datetime.time: "TEXT",
-    None.__class__: "TEXT",
+    float: 'FLOAT',
+    int: 'INTEGER',
+    bool: 'INTEGER',
+    str: 'TEXT',
+    bytes.__class__: 'BLOB',
+    bytes: 'BLOB',
+    memoryview: 'BLOB',
+    datetime.datetime: 'TEXT',
+    datetime.date: 'TEXT',
+    datetime.time: 'TEXT',
+    None.__class__: 'TEXT',
     # SQLite explicit types
-    "TEXT": "TEXT",
-    "INTEGER": "INTEGER",
-    "FLOAT": "FLOAT",
-    "BLOB": "BLOB",
-    "text": "TEXT",
-    "integer": "INTEGER",
-    "float": "FLOAT",
-    "blob": "BLOB",
+    'TEXT': 'TEXT',
+    'INTEGER': 'INTEGER',
+    'FLOAT': 'FLOAT',
+    'BLOB': 'BLOB',
+    'text': 'TEXT',
+    'integer': 'INTEGER',
+    'float': 'FLOAT',
+    'blob': 'BLOB',
 }
 
 
@@ -42,6 +42,7 @@ class Table:
         else:
             self._con_name = f'{name}.db'
         self._name = name
+
         self._conn = sqlite3.connect(self._conn_name)
         self._cursor = self._conn.cursor()
 
@@ -66,19 +67,19 @@ class Table:
             where.append("sql like '%USING FTS4%'")
         if fts5:
             where.append("sql like '%USING FTS5%'")
-        sql = "select name from sqlite_master where {}".format(" AND ".join(where))
+        sql = 'select name from sqlite_master where {}'.format(' AND '.join(where))
         return [r[0] for r in self._conn.execute(sql).fetchall()]
 
     def existed(self):
         return self.name in self.table_names
 
-    def add_column(self, name: str, dtype: str, is_key: bool = True):
-        self._columns.append(f'{name} {dtype.upper()}')
-        if is_key:
+    def add_column(self, name: str, dtype: str, create_index: bool = True):
+        self._columns.append(f'{name} {COLUMN_TYPE_MAPPING[dtype]}')
+        if create_index:
             self._index_keys.add(name)
 
     def create_index(self, column_name: str, commit: bool = False):
-        sql_statement = f'''CREATE INDEX idx_{column_name} 
+        sql_statement = f'''CREATE INDEX idx_{column_name}
                             ON {self.name} ({column_name})'''
         self._conn.execute(sql_statement)
 
