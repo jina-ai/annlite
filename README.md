@@ -39,6 +39,7 @@ $ git clone https://github.com/jina-ai/pqlite.git \
 ## How to use?
 
 ```python
+import random
 import numpy as np
 from pqlite import PQLite
 
@@ -51,13 +52,23 @@ X = np.random.random((N, D)).astype(np.float32)  # 10,000 128-dim vectors to be 
 Xt = np.random.random((Nt, D)).astype(np.float32)  # 2,000 128-dim vectors for training
 query = np.random.random((Nq, D)).astype(np.float32)  # a 128-dim query vector
 
-pqlite = PQLite(d_vector=D, n_cells=64, n_subvectors=8)
+pqlite = PQLite(d_vector=D, n_cells=64, n_subvectors=8, columns=[('x', float, True)])
 
 pqlite.fit(Xt)
 
-pqlite.add(X, ids=list(range(len(X))))
+tags = [{'x': random.random()} for _ in range(N)]
+pqlite.add(X, ids=list(range(len(X))),doc_tags=tags)
 
+# without filtering
 dists, ids = pqlite.search(query, k=5)
+
+print(f'the result:')
+for i, (dist, idx) in enumerate(zip(dists, ids)):
+    print(f'query [{i}]: {dist} {idx}')
+
+# with filtering
+conditions = [('x', '>', 0.1)]
+dists, ids = pqlite.search(query, conditions=conditions, k=5)
 
 print(f'the result:')
 for i, (dist, idx) in enumerate(zip(dists, ids)):
