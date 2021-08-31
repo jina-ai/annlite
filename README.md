@@ -67,7 +67,7 @@ for i, (dist, idx) in enumerate(zip(dists, ids)):
     print(f'query [{i}]: {dist} {idx}')
 
 # with filtering
-conditions = [('x', '>', 0.1)]
+conditions = [('x', '<', 0.3)]
 dists, ids = pqlite.search(query, conditions=conditions, k=5)
 
 print(f'the result:')
