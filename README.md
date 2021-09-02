@@ -81,7 +81,10 @@ All experiments were performed with a Intel(R) Xeon(R) CPU @ 2.00GHz and Nvidia 
 
 - [Yandex Research](https://research.yandex.com/datasets/biganns) Benchmarks for Billion-Scale Similarity Search
 
+## TODO
 
+- [Bolt](https://github.com/dblalock/bolt) 10x faster matrix and vector operations.
+- [MADDNESS](https://arxiv.org/abs/2106.10860) Multiplying Matrices Without Multiplying [code](https://github.com/dblalock/bolt)
 
 ## References
 
@@ -90,7 +93,6 @@ All experiments were performed with a Intel(R) Xeon(R) CPU @ 2.00GHz and Nvidia 
 - [Xor Filters](https://lemire.me/blog/2019/12/19/xor-filters-faster-and-smaller-than-bloom-filters/) Faster and Smaller Than Bloom Filters
 - [CVPR20 Tutorial](https://www.youtube.com/watch?v=SKrHs03i08Q&list=PLKQB14e0EJUWaTnwgQogJ3nSLzEFNn9d8&t=849s) Billion-scale Approximate Nearest Neighbor Search
 - [XOR-Quantization](https://arxiv.org/pdf/2008.02002.pdf) Fast top-K Cosine Similarity Search through XOR-Friendly Binary Quantization on GPUs
-- [Bolt](https://github.com/dblalock/bolt) 10x faster matrix and vector operations.
 - [NeurIPS21 Challenge](http://big-ann-benchmarks.com/index.html) Billion-Scale Approximate Nearest Neighbor Search Challenge [NeurIPS'21 competition track](https://neurips.cc/Conferences/2021/CompetitionTrack)
 
 
