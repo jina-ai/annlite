@@ -94,9 +94,9 @@ class Table:
             sql_statement += ')'
 
             self._conn.execute(sql_statement)
-
             for name in self._index_keys:
                 self.create_index(name)
+            self._conn.commit()
 
         self._is_created = True
 
@@ -130,17 +130,30 @@ class Table:
                 values = tuple([_converting(doc[c]) for c in column_names])
                 self._conn.execute(sql, values)
 
-    def query(self, conditions: List):
-        sql = 'SELECT {columns} from {table} WHERE {where} ORDER BY _id ASC;'
-        columns = ', '.join(self.column_names)
-
-        conds = ['_deleted = ?']
+    def count(self, conditions: List[tuple]):
+        sql = 'SELECT count(*) from {table} WHERE {where};'
+        where_conds = ['_deleted = ?']
         if conditions is None:
             conditions = []
         for cond in conditions:
             cond = f'{cond[0]} {cond[1]} ?'
-            conds.append(cond)
-        where = 'and '.join(conds)
+            where_conds.append(cond)
+        where = 'and '.join(where_conds)
+        sql = sql.format(table=self.name, where=where)
+        params = tuple([0] + [_converting(cond[2]) for cond in conditions])
+        return self._conn.execute(sql, params).fetchone()[0]
+
+    def query(self, conditions: List[tuple]):
+        sql = 'SELECT {columns} from {table} WHERE {where} ORDER BY _id ASC;'
+        columns = ', '.join(self.column_names)
+
+        where_conds = ['_deleted = ?']
+        if conditions is None:
+            conditions = []
+        for cond in conditions:
+            cond = f'{cond[0]} {cond[1]} ?'
+            where_conds.append(cond)
+        where = 'and '.join(where_conds)
         sql = sql.format(columns=columns, table=self.name, where=where)
 
         params = tuple([0] + [_converting(cond[2]) for cond in conditions])

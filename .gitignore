@@ -135,3 +135,5 @@ toy*.yml
 # Rust
 /target
 Cargo.lock
+
+toy*.py
