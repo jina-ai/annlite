@@ -1,5 +1,8 @@
-from typing import Optional
 import abc
+from typing import Optional, List
+
+import numpy as np
+
 from ..enums import ExpandMode
 
 
@@ -34,9 +37,25 @@ class Storage(abc.ABC):
         ...
 
     @abc.abstractmethod
-    def add(self):
+    def add(
+        self,
+        data: np.ndarray,
+        cells: np.ndarray,
+        ids: List[str],
+        doc_tags: Optional[List[dict]] = None,
+    ):
         ...
 
     @abc.abstractmethod
-    def delete(self):
+    def delete(self, ids: List[str]):
+        ...
+
+    @abc.abstractmethod
+    def update(
+        self,
+        data: np.ndarray,
+        cells: np.ndarray,
+        ids: List[str],
+        doc_tags: Optional[List[dict]] = None,
+    ):
         ...

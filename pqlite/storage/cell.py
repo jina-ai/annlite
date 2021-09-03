@@ -4,7 +4,7 @@ from loguru import logger
 import numpy as np
 
 from .base import Storage
-from .table import Table
+from .table import CellTable, MetaTable
 from ..helper import str2dtype
 from .base import ExpandMode
 
@@ -38,29 +38,32 @@ class CellStorage(Storage):
         self.initial_size = initial_size
 
         self._doc_id_dtype = f'|S{key_length}'
-        self._storage = []
+        self._vecs_storage = []
         for _ in range(n_cells):
-            cell_storage = np.zeros((initial_size, code_size), dtype=dtype)
-            self._storage.append(cell_storage)
+            cell_vecs = np.zeros((initial_size, code_size), dtype=dtype)
+            self._vecs_storage.append(cell_vecs)
 
         self._cell_size = np.zeros(n_cells, dtype=np.int64)
         self._cell_capacity = np.zeros(n_cells, dtype=np.int64) + initial_size
 
-        self._cell_tables = [Table(f'cell_table_{c}') for c in range(self.n_cells)]
+        self._cell_tables = [CellTable(f'cell_table_{c}') for c in range(self.n_cells)]
         if columns is not None:
             for name, dtype, create_index in columns:
                 self._add_column(name, dtype, create_index=create_index)
         self._create_tables()
+
+        self._meta_table = MetaTable()
 
     @property
     def capacity(self) -> int:
         return self._cell_capacity.sum()
 
     @property
-    def storage(self):
-        return self._storage
+    def vecs_storage(self):
+        return self._vecs_storage
 
     def clean(self):
+        # TODO:
         pass
 
     @staticmethod
@@ -77,17 +80,14 @@ class CellStorage(Storage):
         ioa = mcs.sum(axis=1) - 1
         return ioa
 
-    def add(
+    def insert(
         self,
         data: np.ndarray,
         cells: np.ndarray,
-        ids: Optional[List[str]],
+        ids: List[str],
         doc_tags: Optional[List[dict]] = None,
     ):
-        if ids is not None:
-            assert len(ids) == len(data)
-        else:
-            raise NotImplemented('The auto-generated UUID is not supported yet')
+        assert len(ids) == len(data)
 
         if doc_tags is None:
             doc_tags = [{'_doc_id': k} for k in ids]
@@ -95,18 +95,17 @@ class CellStorage(Storage):
             for k, doc in zip(ids, doc_tags):
                 doc.update({'_doc_id': k})
 
-        for doc, cell_idx in zip(doc_tags, cells):
-            self.cell_table(cell_idx).insert([doc])
+        for doc_id, doc, cell_id in zip(ids, doc_tags, cells):
+            offset = self.cell_table(cell_id).insert([doc])[0]
+            self._meta_table.add_address(doc_id, cell_id, offset)
 
-        self._add_vecs(data, cells, ids=ids)
+        self._add_vecs(data, cells)
 
-    def _add_vecs(
-        self, data: np.ndarray, cells: np.ndarray, ids: Optional[List[str]] = None
-    ):
+        logger.debug(f'=> {len(ids)} new items added')
+
+    def _add_vecs(self, data: np.ndarray, cells: np.ndarray):
         assert data.shape[0] == cells.shape[0]
         assert data.shape[1] == self.code_size
-
-        n_data = data.shape[0]
 
         unique_cells, unique_cell_counts = np.unique(cells, return_counts=True)
         ioa = self.get_ioa(cells, unique_cells)
@@ -126,12 +125,10 @@ class CellStorage(Storage):
             start = self._cell_size[cell_index]
             end = start + len(x)
 
-            self.storage[cell_index][start:end, :] = x
+            self.vecs_storage[cell_index][start:end, :] = x
 
         # update number of stored items in each cell
         self._cell_size[unique_cells] += unique_cell_counts
-
-        logger.debug(f'=> {n_data} new items added')
 
     def expand(self, cells):
         total = 0
@@ -150,8 +147,8 @@ class CellStorage(Storage):
                     n_new = now
 
             new_block = np.zeros((n_new, self.code_size), dtype=self.dtype)
-            self.storage[cell_index] = np.concatenate(
-                (self.storage[cell_index], new_block), axis=0
+            self.vecs_storage[cell_index] = np.concatenate(
+                (self.vecs_storage[cell_index], new_block), axis=0
             )
 
             self._cell_capacity[cell_index] += n_new
@@ -161,14 +158,68 @@ class CellStorage(Storage):
             f'=> total storage capacity is expanded by {total} for {cells.shape[0]} cells',
         )
 
+    def update(
+        self,
+        data: np.ndarray,
+        cells: np.ndarray,
+        ids: List[str],
+        doc_tags: Optional[List[dict]] = None,
+    ):
+        if doc_tags is None:
+            doc_tags = [{'_doc_id': k} for k in ids]
+        else:
+            for k, doc in zip(ids, doc_tags):
+                doc.update({'_doc_id': k})
+
+        new_data = []
+        new_cells = []
+        new_docs = []
+        new_ids = []
+
+        for (
+            doc_id,
+            x,
+            doc,
+            cell_id,
+        ) in zip(ids, data, doc_tags, cells):
+            _cell_id, _offset = self._meta_table.get_address(doc_id)
+            if cell_id == _cell_id:
+                self.vecs_storage[cell_id][_offset, :] = x
+                self._undo_delete_at(_cell_id, _offset)
+            elif _cell_id is None:
+                new_data.append(x)
+                new_cells.append(cell_id)
+                new_ids.append(doc_id)
+                new_docs.append(doc)
+            else:
+                # relpace
+                self._delete_at(_cell_id, _offset)
+
+                new_data.append(x)
+                new_cells.append(cell_id)
+                new_ids.append(doc_id)
+                new_docs.append(doc)
+
+        new_data = np.stack(new_data)
+        new_cells = np.array(new_cells, dtype=np.int64)
+
+        self.insert(new_data, new_cells, new_ids, doc_tags=new_docs)
+
+        logger.debug(f'=> {len(ids)} items updated')
+
+    def _delete_at(self, cell_id: int, offset: int):
+        self.cell_table(cell_id).delete_by_offset(offset)
+        self._cell_size[cell_id] -= 1
+
+    def _undo_delete_at(self, cell_id: int, offset: int):
+        self.cell_table(cell_id).undo_delete_by_offset(offset)
+        self._cell_size[cell_id] += 1
+
     def delete(self, ids: List[str]):
-        # TODO: refactor using SQLite
-        # for _id in ids:
-        #     cell, offset = self.get_address_by_id(_id)
-        #
-        #     self._is_empties[cell][offset] = 1
-        #     self._ids2address[cell][offset] = ''
-        #     self._cell_size[cell] -= 1
+        for doc_id in ids:
+            cell_id, offset = self._meta_table.get_address(doc_id)
+            if cell_id is not None:
+                self._delete_at(cell_id, offset)
 
         logger.debug(f'=> {len(ids)} items deleted')
 

@@ -72,7 +72,7 @@ print(f'the result with filtering:')
 for i, (dist, idx) in enumerate(zip(dists, ids)):
     print(f'query [{i}]: {dist} {idx}')
 ```
-4. Update data (TODO)
+4. Update data
 
 ```python
 Xn = np.random.random((10, D)).astype(np.float32)  # 10,000 128-dim vectors to be indexed
@@ -81,7 +81,7 @@ tags = [{'x': random.random()} for _ in range(10)]
 pqlite.update(Xn, ids=list(range(len(Xn))), doc_tags=tags)
 ```
 
-5. Delete data (TODO)
+5. Delete data
 
 ```python
 pqlite.delete(ids=['1', '2'])

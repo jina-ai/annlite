@@ -45,6 +45,16 @@ def test_index_add(pqlite):
     pqlite.add(X, ids)
 
 
+def test_index_delete(pqlite_with_data):
+    pqlite_with_data.delete(['0', '1'])
+
+
+def test_index_update(pqlite_with_data):
+    X = np.random.random((5, D)).astype(np.float32)  # 5 128-dim vectors to be indexed
+    ids = list(range(len(X)))
+    pqlite_with_data.update(X, ids)
+
+
 def test_index_add_with_tags(pqlite):
     X = np.random.random((N, D)).astype(
         np.float32
@@ -56,7 +66,6 @@ def test_index_add_with_tags(pqlite):
 
 def test_index_query(pqlite_with_data):
     query = np.random.random((Nq, D)).astype(np.float32)  # a 128-dim query vector
-    # print(f'query: {query}')
     dists, ids = pqlite_with_data.search(query)
 
 

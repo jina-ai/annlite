@@ -65,7 +65,7 @@ class PQLite(CellStorage):
         self.d_subvector = d_vector // n_subvectors
         self.metric = metric
         self.use_residual = use_residual
-        self.n_probe = 1
+        self.n_probe = 5
 
         # if use_residual and (n_cells * 256 * n_subvectors * 4) <= 4 * 1024 ** 3:
         #     self._use_precomputed = True
@@ -98,18 +98,44 @@ class PQLite(CellStorage):
         logger.info(f'=> pqlite is successfully trained!')
 
     def add(
-        self,
-        x: 'np.ndarray',
-        ids: Optional[List],
-        doc_tags: Optional[List[dict]] = None,
+        self, x: 'np.ndarray', ids: List[str], doc_tags: Optional[List[dict]] = None
     ):
+        """
+
+        :param x:
+        :param ids:
+        :param doc_tags:
+        :return:
+        """
         n_data, _ = self._sanity_check(x)
 
         assigned_cells = self.vq_codec.encode(x)
         quantized_x = self.encode(x)
 
-        return super(PQLite, self).add(
-            quantized_x, assigned_cells, ids=ids, doc_tags=doc_tags
+        return super(PQLite, self).insert(
+            quantized_x, assigned_cells, ids, doc_tags=doc_tags
+        )
+
+    def update(
+        self,
+        x: 'np.ndarray',
+        ids: List[str],
+        doc_tags: Optional[List[dict]] = None,
+    ):
+        """
+
+        :param x:
+        :param ids:
+        :param doc_tags:
+        :return:
+        """
+        n_data, _ = self._sanity_check(x)
+
+        assigned_cells = self.vq_codec.encode(x)
+        quantized_x = self.encode(x)
+
+        return super(PQLite, self).update(
+            quantized_x, assigned_cells, ids, doc_tags=doc_tags
         )
 
     def ivfpq_topk(
@@ -127,6 +153,8 @@ class PQLite(CellStorage):
             for d in self.cell_table(cell_id).query(conditions=conditions):
                 indices.append(d['_id'])
                 doc_ids.append(d['_doc_id'])
+
+            print(f'==> doc_ids: {doc_ids} - {cell_id}')
             if len(indices) == 0:
                 continue
 
@@ -134,7 +162,7 @@ class PQLite(CellStorage):
 
             doc_ids = np.array(doc_ids, dtype=self._doc_id_dtype)
             doc_ids = np.expand_dims(doc_ids, axis=0)
-            codes = self.storage[cell_id][indices]
+            codes = self.vecs_storage[cell_id][indices]
 
             dists = precomputed.adist(codes)  # (10000, )
             dists = np.expand_dims(dists, axis=0)
@@ -177,9 +205,7 @@ class PQLite(CellStorage):
 
         return topk_dists, topk_ids
 
-    def search(
-        self, query: 'np.ndarray', conditions: Optional[list] = None, k: int = 10
-    ):
+    def search(self, query: 'np.ndarray', conditions: Optional[list] = [], k: int = 10):
         n_data, _ = self._sanity_check(query)
         assert 0 < k <= 1024
 
