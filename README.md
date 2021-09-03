@@ -94,6 +94,7 @@ All experiments were performed with a Intel(R) Xeon(R) CPU @ 2.00GHz and Nvidia 
 
 ## TODO
 
+- [Scalene](https://github.com/plasma-umass/scalene) a high-performance, high-precision CPU, GPU, and memory profiler for Python
 - [Bolt](https://github.com/dblalock/bolt) 10x faster matrix and vector operations.
 - [MADDNESS](https://arxiv.org/abs/2106.10860) Multiplying Matrices Without Multiplying [code](https://github.com/dblalock/bolt)
 

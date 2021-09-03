@@ -66,20 +66,6 @@ class CellStorage(Storage):
         # TODO:
         pass
 
-    @staticmethod
-    def get_ioa(cells, unique_cells=None):
-        if unique_cells is None:
-            unique_cells = np.unique(cells)  # [n_unique_clusters]
-
-        expanded_cells = np.repeat(
-            cells[:, None], unique_cells.shape[0], axis=-1
-        )  # [n_data, n_unique_clusters]
-        mask = expanded_cells == unique_cells[None, :]  # [n_data, n_unique_clusters]
-        mcs = np.cumsum(mask, axis=0)
-        mcs[tuple([~mask])] = 0
-        ioa = mcs.sum(axis=1) - 1
-        return ioa
-
     def insert(
         self,
         data: np.ndarray,
@@ -103,20 +89,30 @@ class CellStorage(Storage):
 
         logger.debug(f'=> {len(ids)} new items added')
 
+    @staticmethod
+    def get_ioa(cells, unique_cells=None):
+        if unique_cells is None:
+            unique_cells = np.unique(cells)  # [n_unique_clusters]
+        print(f'==> cells: {cells.shape}')
+        print(f'==> unique_cells: {unique_cells.shape}')
+        expanded_cells = np.repeat(
+            cells[:, None], unique_cells.shape[0], axis=-1
+        )  # [n_data, n_unique_clusters]
+        mask = expanded_cells == unique_cells[None, :]  # [n_data, n_unique_clusters]
+        print(f'==> mask: {mask.shape}')
+        mcs = np.cumsum(mask, axis=0)
+        mcs[~mask] = 0
+        print(f'==> mcs: {mcs}')
+        ioa = mcs.sum(axis=1) - 1
+        print(f'==> ioa: {ioa}')
+        return ioa
+
     def _add_vecs(self, data: np.ndarray, cells: np.ndarray):
         assert data.shape[0] == cells.shape[0]
         assert data.shape[1] == self.code_size
 
         unique_cells, unique_cell_counts = np.unique(cells, return_counts=True)
-        ioa = self.get_ioa(cells, unique_cells)
-
-        # expand storage if necessary
-        while True:
-            free_space = self._cell_capacity[cells] - self._cell_size[cells] - (ioa + 1)
-            expansion_required = np.unique(cells[free_space < 0])
-            if expansion_required.shape[0] == 0:
-                break
-            self.expand(expansion_required)
+        self._expand(unique_cells, unique_cell_counts)
 
         for cell_index in unique_cells:
             indices = cells == cell_index
@@ -130,32 +126,27 @@ class CellStorage(Storage):
         # update number of stored items in each cell
         self._cell_size[unique_cells] += unique_cell_counts
 
-    def expand(self, cells):
-        total = 0
-        for cell_index in cells:
-            if self.expand_mode == ExpandMode.STEP:
-                n_new = self.expand_step_size
-            elif self.expand_mode == ExpandMode.DOUBLE:
-                n_new = self._cell_capacity[cell_index]
-            else:
-                now = self._cell_capacity[cell_index]
-                if now < 102400:
-                    n_new = self.expand_step_size
-                elif now >= 1024000:
-                    n_new = int(0.1 * now)
-                else:
-                    n_new = now
+    def _expand(self, cells: np.ndarray, cell_counts: np.ndarray):
+        total_expand = 0
+        for cell_id, cell_count in zip(cells, cell_counts):
+            free_space = (
+                self._cell_capacity[cell_id] - self._cell_size[cell_id] - cell_count
+            )
+            if free_space > 0:
+                continue
+
+            n_new = self.expand_step_size - free_space
 
             new_block = np.zeros((n_new, self.code_size), dtype=self.dtype)
-            self.vecs_storage[cell_index] = np.concatenate(
-                (self.vecs_storage[cell_index], new_block), axis=0
+            self.vecs_storage[cell_id] = np.concatenate(
+                (self.vecs_storage[cell_id], new_block), axis=0
             )
 
-            self._cell_capacity[cell_index] += n_new
-            total += n_new
+            self._cell_capacity[cell_id] += n_new
+            total_expand += n_new
 
         logger.debug(
-            f'=> total storage capacity is expanded by {total} for {cells.shape[0]} cells',
+            f'=> total storage capacity is expanded by {total_expand} for {cells.shape[0]} cells',
         )
 
     def update(
