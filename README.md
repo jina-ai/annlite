@@ -1,31 +1,16 @@
 # PQLite
 
 `PQLite` is a blaze fast **embedded** library for **Approximate Nearest Neighbor Search** (ANNS) using **Product Quantization** (PQ) algorithm.
-Bringing performance benefits in line with `Rust`, its memory safety, concurrency and accessibility to Machine Learning engineers make it a powerful additional choice for the deployment of performant, machine-learning powered applications.
 
 ## WARNING
 
 `PQLite` is still in the very early stages of development. APIs can and will change (now is the time to make suggestions!). Important features are missing. Documentation is sparse.
-
-
-## Design Goals
-
-- **Capable**: Offer a complete 2D feature set
-- **Simple**: Easy for newbies to pick up, but infinitely flexible for power users
-- **Modular**: Use only what you need. Replace what you don't like
-- **Fast**: App logic should run quickly, and when possible, in parallel
-- **Productive**: Changes should compile quickly ... waiting isn't fun
 
 ## About
 
 - **Features**: A quick overview of PQlite's features.
 - **Roadmap**: The PQLite team's development plan.
 - **Introducing PQLite**: A blog post covering some of PQLite's features
-
-## Install
-
-- make sure you have the latest version of `rust` installed
-- install `pqlite`
 
 ## Quick Start
 
@@ -38,6 +23,8 @@ $ git clone https://github.com/jina-ai/pqlite.git \
 ```
 ## How to use?
 
+1. Create a new `pqlite`
+
 ```python
 import random
 import numpy as np
@@ -48,33 +35,57 @@ Nt = 2000
 Nq = 10
 D = 128 # dimentionality / number of features
 
-X = np.random.random((N, D)).astype(np.float32)  # 10,000 128-dim vectors to be indexed
 Xt = np.random.random((Nt, D)).astype(np.float32)  # 2,000 128-dim vectors for training
-query = np.random.random((Nq, D)).astype(np.float32)  # a 128-dim query vector
 
+# the column schema: (name:str, dtype:type, create_index: bool)
 pqlite = PQLite(d_vector=D, n_cells=64, n_subvectors=8, columns=[('x', float, True)])
-
 pqlite.fit(Xt)
+```
+
+2. Add new data
+
+```python
+X = np.random.random((N, D)).astype(np.float32)  # 10,000 128-dim vectors to be indexed
 
 tags = [{'x': random.random()} for _ in range(N)]
 pqlite.add(X, ids=list(range(len(X))), doc_tags=tags)
+```
+
+3. Search with Filtering
+
+```python
+query = np.random.random((Nq, D)).astype(np.float32)  # a 128-dim query vector
 
 # without filtering
 dists, ids = pqlite.search(query, k=5)
 
-print(f'the result:')
+print(f'the result without filtering:')
 for i, (dist, idx) in enumerate(zip(dists, ids)):
     print(f'query [{i}]: {dist} {idx}')
 
 # with filtering
+# condition schema: (column_name: str, relation: str, value: any)
 conditions = [('x', '<', 0.3)]
 dists, ids = pqlite.search(query, conditions=conditions, k=5)
 
-print(f'the result:')
+print(f'the result with filtering:')
 for i, (dist, idx) in enumerate(zip(dists, ids)):
     print(f'query [{i}]: {dist} {idx}')
 ```
+4. Update data (TODO)
 
+```python
+Xn = np.random.random((10, D)).astype(np.float32)  # 10,000 128-dim vectors to be indexed
+
+tags = [{'x': random.random()} for _ in range(10)]
+pqlite.update(Xn, ids=list(range(len(Xn))), doc_tags=tags)
+```
+
+5. Delete data (TODO)
+
+```python
+pqlite.delete(ids=['1', '2'])
+```
 ## Benchmark
 
 All experiments were performed with a Intel(R) Xeon(R) CPU @ 2.00GHz and Nvidia Tesla T4 GPU.
