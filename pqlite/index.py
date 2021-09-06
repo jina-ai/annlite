@@ -154,7 +154,6 @@ class PQLite(CellStorage):
                 indices.append(d['_id'])
                 doc_ids.append(d['_doc_id'])
 
-            print(f'==> doc_ids: {doc_ids} - {cell_id}')
             if len(indices) == 0:
                 continue
 
