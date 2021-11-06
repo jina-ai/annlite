@@ -16,13 +16,16 @@ def dummy_cell_table():
 
 @pytest.fixture
 def sample_docs():
-    return DocumentArray([
-        Document(id='0', tags={'name': 'orange', 'price': 1.2, 'category': 'fruit'}),
-        Document(id='1', tags={'name': 'banana', 'price': 2, 'category': 'fruit'}),
-        Document(id='2', tags={'name': 'poly', 'price': 5.1, 'category': 'animal'}),
-        Document(id='3', tags={'name': 'bread'}),
-    ])
-
+    return DocumentArray(
+        [
+            Document(
+                id='0', tags={'name': 'orange', 'price': 1.2, 'category': 'fruit'}
+            ),
+            Document(id='1', tags={'name': 'banana', 'price': 2, 'category': 'fruit'}),
+            Document(id='2', tags={'name': 'poly', 'price': 5.1, 'category': 'animal'}),
+            Document(id='3', tags={'name': 'bread'}),
+        ]
+    )
 
 
 @pytest.fixture

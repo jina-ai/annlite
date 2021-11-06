@@ -1,6 +1,6 @@
 # PQLite
 
-`PQLite` is a blaze fast **Approximate Nearest Neighbor Search** (ANNS) library equipped with `SQLite` as the storage backend. 
+`PQLite` is a blaze fast **Approximate Nearest Neighbor Search** (ANNS) library equipped with `SQLite` as the storage backend.
 
 ## WARNING
 
