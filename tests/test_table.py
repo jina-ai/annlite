@@ -1,5 +1,5 @@
 import pytest
-
+from jina import Document, DocumentArray
 from pqlite.storage.table import CellTable, MetaTable
 
 
@@ -16,12 +16,13 @@ def dummy_cell_table():
 
 @pytest.fixture
 def sample_docs():
-    return [
-        {'_doc_id': '0', 'name': 'orange', 'price': 1.2, 'category': 'fruit'},
-        {'_doc_id': '1', 'name': 'banana', 'price': 2, 'category': 'fruit'},
-        {'_doc_id': '2', 'name': 'poly', 'price': 5.1, 'category': 'animal'},
-        {'_doc_id': '3', 'name': 'bread'},
-    ]
+    return DocumentArray([
+        Document(id='0', tags={'name': 'orange', 'price': 1.2, 'category': 'fruit'}),
+        Document(id='1', tags={'name': 'banana', 'price': 2, 'category': 'fruit'}),
+        Document(id='2', tags={'name': 'poly', 'price': 5.1, 'category': 'animal'}),
+        Document(id='3', tags={'name': 'bread'}),
+    ])
+
 
 
 @pytest.fixture
@@ -39,7 +40,7 @@ def test_create_cell_table():
 
 def test_schema(dummy_cell_table):
     schema = dummy_cell_table.schema
-    assert len(schema.split('\n')) == 6
+    assert len(schema.split('\n')) == 7
 
 
 def test_query(table_with_data):
@@ -47,8 +48,7 @@ def test_query(table_with_data):
         table_with_data.query([('category', '=', 'fruit'), ('price', '<', 3)])
     )
     assert len(result) == 2
-    assert result[0]['name'] == 'orange'
-    assert result[0]['_id'] == 0
+    assert result[0][1].tags['name'] == 'orange'
 
 
 def test_exist(table_with_data):

@@ -2,7 +2,7 @@ from typing import Optional, List, Union
 from loguru import logger
 
 import numpy as np
-
+from jina import DocumentArray
 from .base import Storage
 from .table import CellTable, MetaTable
 from ..helper import str2dtype
@@ -19,7 +19,7 @@ class CellStorage(Storage):
         expand_step_size: Optional[int] = 1024,
         expand_mode: ExpandMode = ExpandMode.STEP,
         columns: Optional[List[tuple]] = None,
-        key_length: int = 36,
+        key_length: int = 64,
     ):
         if initial_size is None:
             initial_size = expand_step_size
@@ -70,42 +70,17 @@ class CellStorage(Storage):
         self,
         data: np.ndarray,
         cells: np.ndarray,
-        ids: List[str],
-        doc_tags: Optional[List[dict]] = None,
+        docs: DocumentArray,
     ):
-        assert len(ids) == len(data)
+        assert len(docs) == len(data)
 
-        if doc_tags is None:
-            doc_tags = [{'_doc_id': k} for k in ids]
-        else:
-            for k, doc in zip(ids, doc_tags):
-                doc.update({'_doc_id': k})
-
-        for doc_id, doc, cell_id in zip(ids, doc_tags, cells):
+        for doc, cell_id in zip(docs, cells):
             offset = self.cell_table(cell_id).insert([doc])[0]
-            self._meta_table.add_address(doc_id, cell_id, offset)
+            self._meta_table.add_address(doc.id, cell_id, offset)
 
         self._add_vecs(data, cells)
 
-        logger.debug(f'=> {len(ids)} new items added')
-
-    @staticmethod
-    def get_ioa(cells, unique_cells=None):
-        if unique_cells is None:
-            unique_cells = np.unique(cells)  # [n_unique_clusters]
-        print(f'==> cells: {cells.shape}')
-        print(f'==> unique_cells: {unique_cells.shape}')
-        expanded_cells = np.repeat(
-            cells[:, None], unique_cells.shape[0], axis=-1
-        )  # [n_data, n_unique_clusters]
-        mask = expanded_cells == unique_cells[None, :]  # [n_data, n_unique_clusters]
-        print(f'==> mask: {mask.shape}')
-        mcs = np.cumsum(mask, axis=0)
-        mcs[~mask] = 0
-        print(f'==> mcs: {mcs}')
-        ioa = mcs.sum(axis=1) - 1
-        print(f'==> ioa: {ioa}')
-        return ioa
+        logger.debug(f'=> {len(docs)} new docs added')
 
     def _add_vecs(self, data: np.ndarray, cells: np.ndarray):
         assert data.shape[0] == cells.shape[0]
@@ -153,34 +128,26 @@ class CellStorage(Storage):
         self,
         data: np.ndarray,
         cells: np.ndarray,
-        ids: List[str],
-        doc_tags: Optional[List[dict]] = None,
+        docs: DocumentArray,
     ):
-        if doc_tags is None:
-            doc_tags = [{'_doc_id': k} for k in ids]
-        else:
-            for k, doc in zip(ids, doc_tags):
-                doc.update({'_doc_id': k})
-
         new_data = []
         new_cells = []
         new_docs = []
         new_ids = []
 
         for (
-            doc_id,
             x,
             doc,
             cell_id,
-        ) in zip(ids, data, doc_tags, cells):
-            _cell_id, _offset = self._meta_table.get_address(doc_id)
+        ) in zip(data, docs, cells):
+            _cell_id, _offset = self._meta_table.get_address(doc.id)
             if cell_id == _cell_id:
                 self.vecs_storage[cell_id][_offset, :] = x
                 self._undo_delete_at(_cell_id, _offset)
             elif _cell_id is None:
                 new_data.append(x)
                 new_cells.append(cell_id)
-                new_ids.append(doc_id)
+                new_ids.append(doc.id)
                 new_docs.append(doc)
             else:
                 # relpace
@@ -188,15 +155,15 @@ class CellStorage(Storage):
 
                 new_data.append(x)
                 new_cells.append(cell_id)
-                new_ids.append(doc_id)
+                new_ids.append(doc.id)
                 new_docs.append(doc)
 
         new_data = np.stack(new_data)
         new_cells = np.array(new_cells, dtype=np.int64)
 
-        self.insert(new_data, new_cells, new_ids, doc_tags=new_docs)
+        self.insert(new_data, new_cells, new_docs)
 
-        logger.debug(f'=> {len(ids)} items updated')
+        logger.debug(f'=> {len(new_docs)} items updated')
 
     def _delete_at(self, cell_id: int, offset: int):
         self.cell_table(cell_id).delete_by_offset(offset)
