@@ -1,6 +1,7 @@
 from typing import Optional, List
 
 import numpy as np
+from jina import DocumentArray
 from jina.math.distance import cdist
 from jina.math.helper import top_k
 from loguru import logger
@@ -98,44 +99,42 @@ class PQLite(CellStorage):
         logger.info(f'=> pqlite is successfully trained!')
 
     def add(
-        self, x: 'np.ndarray', ids: List[str], doc_tags: Optional[List[dict]] = None
+        self, docs: DocumentArray
     ):
         """
 
-        :param x:
-        :param ids:
-        :param doc_tags:
+        :param docs: The documents to index
         :return:
         """
+
+        x = docs.embeddings
+
         n_data, _ = self._sanity_check(x)
 
         assigned_cells = self.vq_codec.encode(x)
         quantized_x = self.encode(x)
 
         return super(PQLite, self).insert(
-            quantized_x, assigned_cells, ids, doc_tags=doc_tags
+            quantized_x, assigned_cells, docs
         )
 
     def update(
         self,
-        x: 'np.ndarray',
-        ids: List[str],
-        doc_tags: Optional[List[dict]] = None,
+        docs: DocumentArray
     ):
         """
 
-        :param x:
-        :param ids:
-        :param doc_tags:
+        :param docs: the documents to update
         :return:
         """
+        x = docs.embeddings
         n_data, _ = self._sanity_check(x)
 
         assigned_cells = self.vq_codec.encode(x)
         quantized_x = self.encode(x)
 
         return super(PQLite, self).update(
-            quantized_x, assigned_cells, ids, doc_tags=doc_tags
+            quantized_x, assigned_cells, docs=docs
         )
 
     def ivfpq_topk(
@@ -143,16 +142,16 @@ class PQLite(CellStorage):
         precomputed,
         cells: 'np.ndarray',
         conditions: Optional[list] = None,
-        k: int = 10,
+        limit: int = 10,
     ):
         topk_sims = []
         topk_ids = []
         for cell_id in cells:
             indices = []
             doc_ids = []
-            for d in self.cell_table(cell_id).query(conditions=conditions):
-                indices.append(d['_id'])
-                doc_ids.append(d['_doc_id'])
+            for idx, doc in self.cell_table(cell_id).query(conditions=conditions):
+                indices.append(idx)
+                doc_ids.append(doc.id)
 
             if len(indices) == 0:
                 continue
@@ -166,7 +165,7 @@ class PQLite(CellStorage):
             dists = precomputed.adist(codes)  # (10000, )
             dists = np.expand_dims(dists, axis=0)
 
-            _topk_sims, indices = top_k(dists, k=k)
+            _topk_sims, indices = top_k(dists, k=limit)
             _topk_ids = np.take_along_axis(doc_ids, indices, axis=1)
 
             topk_sims.append(_topk_sims)
@@ -175,7 +174,7 @@ class PQLite(CellStorage):
         topk_sims = np.hstack(topk_sims)
         topk_ids = np.hstack(topk_ids)
 
-        idx = topk_sims.argsort(axis=1)[:, :k]
+        idx = topk_sims.argsort(axis=1)[:, :limit]
         topk_sims = np.take_along_axis(topk_sims, idx, axis=1)
         topk_ids = np.take_along_axis(topk_ids, idx, axis=1)
         return topk_sims, topk_ids
@@ -185,15 +184,13 @@ class PQLite(CellStorage):
         query: 'np.ndarray',
         cells: 'np.ndarray',
         conditions: Optional[list] = None,
-        topk_dists: Optional['np.ndarray'] = None,
-        n_probe_list=None,
-        k: int = 10,
+        limit: int = 10,
     ):
         topk_dists, topk_ids = [], []
         for x, cell_idx in zip(query, cells):
             precomputed = self.pq_codec.precompute_adc(x)
             dist, ids = self.ivfpq_topk(
-                precomputed, cells=cell_idx, conditions=conditions, k=k
+                precomputed, cells=cell_idx, conditions=conditions, limit=limit
             )
 
             topk_dists.append(dist)
@@ -204,9 +201,10 @@ class PQLite(CellStorage):
 
         return topk_dists, topk_ids
 
-    def search(self, query: 'np.ndarray', conditions: Optional[list] = [], k: int = 10):
+    def search(self, docs: DocumentArray, conditions: Optional[list] = [], limit: int = 10):
+        query = docs.embeddings
         n_data, _ = self._sanity_check(query)
-        assert 0 < k <= 1024
+        assert 0 < limit <= 1024
 
         vq_codebook = self.vq_codec.codebook
 
@@ -234,9 +232,7 @@ class PQLite(CellStorage):
             query=query,
             cells=cells,
             conditions=conditions,
-            topk_dists=dists,
-            n_probe_list=None,
-            k=k,
+            limit=limit,
         )
 
     def encode(self, x: 'np.ndarray'):

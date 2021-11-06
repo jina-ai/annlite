@@ -1,4 +1,12 @@
+from typing import List
 import numpy as np
+
+from jina import Document
+
+
+def dumps_doc(doc: Document):
+    new_doc = Document(doc, copy=True)
+    return new_doc.SerializeToString()
 
 
 def str2dtype(dtype_str: str):

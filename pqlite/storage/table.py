@@ -1,8 +1,9 @@
 from typing import Dict, Any, Iterable, Iterator, List
 import sqlite3
 import datetime
-
+from jina import Document, DocumentArray
 import numpy as np
+from ..helper import dumps_doc
 
 sqlite3.register_adapter(np.int64, lambda x: int(x))
 sqlite3.register_adapter(np.int32, lambda x: int(x))
@@ -130,6 +131,7 @@ class CellTable(Table):
         sql = f'''CREATE TABLE {self.name}
                     (_id INTEGER PRIMARY KEY AUTOINCREMENT,
                      _doc_id TEXT NOT NULL UNIQUE,
+                     _doc_content BLOB,
                      _deleted NUMERIC DEFAULT 0'''
         if len(self._columns) > 0:
             sql += ', ' + ', '.join(self._columns)
@@ -142,7 +144,7 @@ class CellTable(Table):
 
     def insert(
         self,
-        docs: Iterable[Dict[str, Any]],
+        docs: DocumentArray,
         commit: bool = True,
     ) -> List[int]:
         """Add a single record into the table.
@@ -154,7 +156,8 @@ class CellTable(Table):
         row_ids = []
         cursor = self._conn.cursor()
         for doc in docs:
-            column_names = [c for c in doc.keys() if c in self.columns]
+            tag_names = [c for c in doc.tags if c in self.columns]
+            column_names = ['_doc_id', '_doc_content'] + tag_names
             columns = ', '.join(column_names)
             placeholders = ', '.join('?' for c in column_names)
             sql = sql_template.format(
@@ -162,7 +165,7 @@ class CellTable(Table):
                 columns=columns,
                 placeholders=placeholders,
             )
-            values = tuple([_converting(doc[c]) for c in column_names])
+            values = tuple([doc.id, dumps_doc(doc)] + [_converting(doc.tags[c]) for c in tag_names])
             cursor.execute(sql, values)
             row_id = cursor.lastrowid
             row_ids.append(row_id)
@@ -176,7 +179,7 @@ class CellTable(Table):
         :param conditions: the conditions in the format of tuple `(name: str, op: str, value: any)`
         :return: iterator to yield matched doc
         """
-        sql = 'SELECT {columns} from {table} WHERE {where} ORDER BY _id ASC;'
+        sql = 'SELECT {columns}, _doc_content from {table} WHERE {where} ORDER BY _id ASC;'
         columns = ', '.join(self.columns)
 
         where_conds = ['_deleted = ?']
@@ -188,13 +191,12 @@ class CellTable(Table):
 
         params = tuple([0] + [_converting(cond[2]) for cond in conditions])
 
-        print(f'==> sql: {sql}, {params}')
         cursor = self._conn.execute(sql, params)
         keys = [d[0] for d in cursor.description]
         for row in cursor:
-            doc = dict(zip(keys, row))
-            doc['_id'] -= 1
-            yield doc
+            data = dict(zip(keys, row))
+            doc = Document(bytes(data['_doc_content']))
+            yield data['_id'], doc
 
     def delete(self, doc_ids: List[str]):
         """Delete the docs
