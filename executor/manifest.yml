@@ -1,0 +1,5 @@
+manifest_version: 1
+name: PQliteIndexer
+description: A similarity search based on PQlite
+url: https://github.com/jina-ai/executor-pqlite
+keywords: pqlite indexer
