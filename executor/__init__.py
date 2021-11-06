@@ -7,13 +7,18 @@ import pqlite
 class PQLiteIndexer(Executor):
     def __init__(self,
                  metric: str = 'euclidean',
+                 limit: int = 10,
                  index_traversal_paths: Iterable[str] = ('r',),
                  search_traversal_paths: Iterable[str] = ('r',),
+                 is_distance: bool = True,
+                 *args,
                  **kwargs):
-        super().__init__(**kwargs)
+        super().__init__(*args, **kwargs)
         self.logger = JinaLogger(self.__class__.__name__)
 
         self.metric = metric
+        self.limit = limit
+        self.is_distance = is_distance
         self.index_traversal_paths = index_traversal_paths
         self.search_traversal_paths = search_traversal_paths
 
@@ -37,7 +42,7 @@ class PQLiteIndexer(Executor):
 
         self._index.update(flat_docs)
 
-    @requests(on='search')
+    @requests(on='/search')
     def search(self, docs: DocumentArray, parameters: Optional[dict] = {}, **kwargs):
         limit = int(parameters.get('limit', self.limit))
         traversal_paths = parameters.get('traversal_paths', self.search_traversal_paths)
