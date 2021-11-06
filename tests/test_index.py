@@ -33,9 +33,9 @@ def pqlite_with_data():
         np.float32
     )  # 10,000 128-dim vectors to be indexed
 
-    docs = DocumentArray([
-        Document(embedding=X[i], tags={'x': random.random()}) for i in range(N)
-    ])
+    docs = DocumentArray(
+        [Document(embedding=X[i], tags={'x': random.random()}) for i in range(N)]
+    )
     pqlite.add(docs)
     return pqlite
 

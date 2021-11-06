@@ -165,7 +165,9 @@ class CellTable(Table):
                 columns=columns,
                 placeholders=placeholders,
             )
-            values = tuple([doc.id, dumps_doc(doc)] + [_converting(doc.tags[c]) for c in tag_names])
+            values = tuple(
+                [doc.id, dumps_doc(doc)] + [_converting(doc.tags[c]) for c in tag_names]
+            )
             cursor.execute(sql, values)
             row_id = cursor.lastrowid
             row_ids.append(row_id)

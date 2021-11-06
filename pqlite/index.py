@@ -1,11 +1,11 @@
 from typing import Optional, List
 
 import numpy as np
+from loguru import logger
+
 from jina import DocumentArray
 from jina.math.distance import cdist
 from jina.math.helper import top_k
-from loguru import logger
-
 from .core import VQCodec, PQCodec
 from .storage import CellStorage
 
@@ -44,7 +44,6 @@ class PQLite(CellStorage):
         initial_size: Optional[int] = None,
         expand_step_size: int = 1024,
         metric: str = 'euclidean',
-        use_residual: bool = False,
         columns: Optional[List[tuple]] = None,
         *args,
         **kwargs,
@@ -66,7 +65,6 @@ class PQLite(CellStorage):
         self.n_subvectors = n_subvectors
         self.d_subvector = d_vector // n_subvectors
         self.metric = metric
-        self.use_residual = use_residual
         self.n_probe = max(n_probe, n_cells)
 
         # if use_residual and (n_cells * 256 * n_subvectors * 4) <= 4 * 1024 ** 3:
@@ -101,9 +99,7 @@ class PQLite(CellStorage):
 
         logger.info(f'=> pqlite is successfully trained!')
 
-    def add(
-        self, docs: DocumentArray
-    ):
+    def add(self, docs: DocumentArray, **kwargs):
         """
 
         :param docs: The documents to index
@@ -117,14 +113,9 @@ class PQLite(CellStorage):
         assigned_cells = self.vq_codec.encode(x)
         quantized_x = self.encode(x)
 
-        return super(PQLite, self).insert(
-            quantized_x, assigned_cells, docs
-        )
+        return super(PQLite, self).insert(quantized_x, assigned_cells, docs)
 
-    def update(
-        self,
-        docs: DocumentArray
-    ):
+    def update(self, docs: DocumentArray, **kwargs):
         """
 
         :param docs: the documents to update
@@ -136,14 +127,12 @@ class PQLite(CellStorage):
         assigned_cells = self.vq_codec.encode(x)
         quantized_x = self.encode(x)
 
-        return super(PQLite, self).update(
-            quantized_x, assigned_cells, docs=docs
-        )
+        return super(PQLite, self).update(quantized_x, assigned_cells, docs)
 
     def ivfpq_topk(
         self,
         precomputed,
-        cells: 'np.ndarray',
+        cells: np.ndarray,
         conditions: Optional[list] = None,
         limit: int = 10,
     ):
@@ -163,6 +152,8 @@ class PQLite(CellStorage):
 
             doc_ids = np.array(doc_ids, dtype=self._doc_id_dtype)
             doc_ids = np.expand_dims(doc_ids, axis=0)
+
+            # bruteforce search
             codes = self.vecs_storage[cell_id][indices]
 
             dists = precomputed.adist(codes)  # (10000, )
@@ -184,8 +175,8 @@ class PQLite(CellStorage):
 
     def search_cells(
         self,
-        query: 'np.ndarray',
-        cells: 'np.ndarray',
+        query: np.ndarray,
+        cells: np.ndarray,
         conditions: Optional[list] = None,
         limit: int = 10,
     ):
@@ -204,12 +195,18 @@ class PQLite(CellStorage):
 
         return topk_dists, topk_ids
 
-    def search(self, docs: DocumentArray, conditions: Optional[list] = [], limit: int = 10):
+    def search(
+        self,
+        docs: DocumentArray,
+        conditions: Optional[list] = None,
+        limit: int = 10,
+        **kwargs,
+    ):
         query = docs.embeddings
         n_data, _ = self._sanity_check(query)
 
         assert 0 < limit <= 1024
-
+        
         vq_codebook = self.vq_codec.codebook
 
         # find n_probe closest cells
@@ -238,7 +235,7 @@ class PQLite(CellStorage):
             limit=limit,
         )
 
-    def encode(self, x: 'np.ndarray'):
+    def encode(self, x: np.ndarray):
         n_data, _ = self._sanity_check(x)
         y = self.pq_codec.encode(x)
         return y
