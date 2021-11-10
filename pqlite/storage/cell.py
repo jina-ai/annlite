@@ -1,6 +1,6 @@
 from typing import Optional, List, Union
 from loguru import logger
-
+import pathlib
 import numpy as np
 from jina import DocumentArray
 from .base import Storage
@@ -19,6 +19,7 @@ class CellStorage(Storage):
         expand_step_size: Optional[int] = 1024,
         expand_mode: ExpandMode = ExpandMode.STEP,
         columns: Optional[List[tuple]] = None,
+        db_path: pathlib.Path = pathlib.Path('.'),
         key_length: int = 64,
     ):
         if initial_size is None:
@@ -43,10 +44,12 @@ class CellStorage(Storage):
             cell_vecs = np.zeros((initial_size, code_size), dtype=dtype)
             self._vecs_storage.append(cell_vecs)
 
+        self._db_path = db_path
+
         self._cell_size = np.zeros(n_cells, dtype=np.int64)
         self._cell_capacity = np.zeros(n_cells, dtype=np.int64) + initial_size
 
-        self._cell_tables = [CellTable(f'cell_table_{c}') for c in range(self.n_cells)]
+        self._cell_tables = [CellTable(f'cell_table_{c}', db_path=db_path) for c in range(self.n_cells)]
         if columns is not None:
             for name, dtype, create_index in columns:
                 self._add_column(name, dtype, create_index=create_index)

@@ -1,9 +1,10 @@
 from typing import Dict, Any, Iterable, Iterator, List
+import pathlib
 import sqlite3
 import datetime
 from jina import Document, DocumentArray
 import numpy as np
-from ..helper import dumps_doc
+from ..helper import open_lmdb, dumps_doc
 
 sqlite3.register_adapter(np.int64, lambda x: int(x))
 sqlite3.register_adapter(np.int32, lambda x: int(x))
@@ -73,14 +74,11 @@ def _get_table_names(
 
 
 class Table:
-    def __init__(self, name: str, in_memory: bool = True):
-        if in_memory:
-            self._conn_name = ':memory:'
-        else:
-            self._con_name = f'{name}.db'
+    def __init__(self, name: str, db_path: pathlib.Path = pathlib.Path('.')):
         self._name = name
 
-        self._conn = sqlite3.connect(self._conn_name)
+        self._conn = sqlite3.connect(':memory:')
+        self._env = open_lmdb(db_path / f'{name}.db')
 
     def commit(self):
         self._conn.commit()
@@ -101,8 +99,8 @@ class Table:
 
 
 class CellTable(Table):
-    def __init__(self, name: str, in_memory: bool = True):
-        super(CellTable, self).__init__(name, in_memory=in_memory)
+    def __init__(self, name: str, db_path: pathlib.Path = pathlib.Path('.')):
+        super(CellTable, self).__init__(name, db_path=db_path)
 
         self._columns = []
         self._indexed_keys = set()
@@ -131,7 +129,6 @@ class CellTable(Table):
         sql = f'''CREATE TABLE {self.name}
                     (_id INTEGER PRIMARY KEY AUTOINCREMENT,
                      _doc_id TEXT NOT NULL UNIQUE,
-                     _doc_content BLOB,
                      _deleted NUMERIC DEFAULT 0'''
         if len(self._columns) > 0:
             sql += ', ' + ', '.join(self._columns)
@@ -155,22 +152,31 @@ class CellTable(Table):
         sql_template = 'INSERT INTO {table}({columns}) VALUES ({placeholders});'
         row_ids = []
         cursor = self._conn.cursor()
-        for doc in docs:
-            tag_names = [c for c in doc.tags if c in self.columns]
-            column_names = ['_doc_id', '_doc_content'] + tag_names
-            columns = ', '.join(column_names)
-            placeholders = ', '.join('?' for c in column_names)
-            sql = sql_template.format(
-                table=self.name,
-                columns=columns,
-                placeholders=placeholders,
-            )
-            values = tuple(
-                [doc.id, dumps_doc(doc)] + [_converting(doc.tags[c]) for c in tag_names]
-            )
-            cursor.execute(sql, values)
-            row_id = cursor.lastrowid
-            row_ids.append(row_id)
+        with self._env.begin(write=True) as txn:
+            for doc in docs:
+                # enforce using float32 as dtype of embeddings
+                doc.embedding = doc.embedding.astype(np.float32)
+                success = txn.put(doc.id.encode(), doc.SerializeToString())
+
+                if success:
+                    tag_names = [c for c in doc.tags if c in self.columns]
+                    column_names = ['_doc_id'] + tag_names
+                    columns = ', '.join(column_names)
+                    placeholders = ', '.join('?' for c in column_names)
+                    sql = sql_template.format(
+                        table=self.name,
+                        columns=columns,
+                        placeholders=placeholders,
+                    )
+                    values = tuple(
+                        [doc.id] + [_converting(doc.tags[c]) for c in tag_names]
+                    )
+                    cursor.execute(sql, values)
+                    row_id = cursor.lastrowid
+                    row_ids.append(row_id)
+                else:
+                    txn.abort()
+                    raise ValueError(f'The document ({doc.id}) already existed')
         if commit:
             self._conn.commit()
         return row_ids
@@ -181,24 +187,27 @@ class CellTable(Table):
         :param conditions: the conditions in the format of tuple `(name: str, op: str, value: any)`
         :return: iterator to yield matched doc
         """
-        sql = 'SELECT {columns}, _doc_content from {table} WHERE {where} ORDER BY _id ASC;'
-        columns = ', '.join(self.columns)
+        sql = 'SELECT _id, _doc_id from {table} WHERE {where} ORDER BY _id ASC;'
 
         where_conds = ['_deleted = ?']
         for cond in conditions:
             cond = f'{cond[0]} {cond[1]} ?'
             where_conds.append(cond)
         where = 'and '.join(where_conds)
-        sql = sql.format(columns=columns, table=self.name, where=where)
+        sql = sql.format(table=self.name, where=where)
 
         params = tuple([0] + [_converting(cond[2]) for cond in conditions])
 
         cursor = self._conn.execute(sql, params)
         keys = [d[0] for d in cursor.description]
-        for row in cursor:
-            data = dict(zip(keys, row))
-            doc = Document(bytes(data['_doc_content']))
-            yield data['_id'], doc
+
+        with self._env.begin(write=False) as txn:
+            for row in cursor:
+                data = dict(zip(keys, row))
+                doc_id = data['_doc_id']
+                buffer = txn.get(doc_id.encode())
+                doc = Document(buffer)
+                yield data['_id'], doc
 
     def delete(self, doc_ids: List[str]):
         """Delete the docs

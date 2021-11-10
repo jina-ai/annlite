@@ -1,5 +1,5 @@
 from typing import Optional, List
-
+import pathlib
 import numpy as np
 from loguru import logger
 
@@ -45,6 +45,7 @@ class PQLite(CellStorage):
         expand_step_size: int = 1024,
         metric: str = 'euclidean',
         columns: Optional[List[tuple]] = None,
+        db_path: pathlib.Path = pathlib.Path('.')
         *args,
         **kwargs,
     ):
@@ -59,6 +60,7 @@ class PQLite(CellStorage):
             initial_size=initial_size,
             expand_step_size=expand_step_size,
             columns=columns,
+            db_path=db_path,
         )
 
         self.d_vector = d_vector

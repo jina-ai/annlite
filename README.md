@@ -98,7 +98,7 @@ All experiments were performed with a Intel(R) Xeon(R) CPU @ 2.00GHz and Nvidia 
 - [Bolt](https://github.com/dblalock/bolt) 10x faster matrix and vector operations.
 - [MADDNESS](https://arxiv.org/abs/2106.10860) Multiplying Matrices Without Multiplying [code](https://github.com/dblalock/bolt)
 - [embeddinghub](https://github.com/featureform/embeddinghub) A vector database for machine learning embeddings.
-
+- [mobius](https://github.com/sunbelbd/mobius) Möbius Transformation for Fast Inner Product Search on Graph
 
 ## References
 

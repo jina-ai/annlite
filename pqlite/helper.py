@@ -1,6 +1,6 @@
 from typing import List
 import numpy as np
-
+import lmdb
 from jina import Document
 
 
@@ -33,3 +33,23 @@ def str2dtype(dtype_str: str):
     else:
         raise TypeError(f'Unrecognized dtype string: {dtype_str}')
     return dtype
+
+def open_lmdb(db_path: str):
+    return lmdb.Environment(
+        db_path,
+        map_size=int(3.436e10),  # in bytes, 32G,
+        subdir=False,
+        readonly=False,
+        metasync=True,
+        sync=True,
+        map_async=False,
+        mode=493,
+        create=True,
+        readahead=True,
+        writemap=False,
+        meminit=True,
+        max_readers=126,
+        max_dbs=0,  # means only one db
+        max_spare_txns=1,
+        lock=True,
+    )
