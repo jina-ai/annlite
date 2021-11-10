@@ -37,7 +37,7 @@ setup(
         'Topic :: Scientific/Engineering :: Artificial Intelligence',
     ],
     python_requires='>=3.7',
-    package_dir={'': 'pqlite'},
+    # package_dir={'': 'pqlite'},
     packages=find_packages(
         exclude=['*.tests', '*.tests.*', 'tests.*', 'tests', 'test', 'docs', 'src']
     ),
