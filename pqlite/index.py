@@ -66,7 +66,7 @@ class PQLite(CellStorage):
         self.metric = metric
         self.use_residual = use_residual
         self.n_probe = 5
-
+        breakpoint()
         # if use_residual and (n_cells * 256 * n_subvectors * 4) <= 4 * 1024 ** 3:
         #     self._use_precomputed = True
         # else:
@@ -206,6 +206,7 @@ class PQLite(CellStorage):
 
     def search(self, query: 'np.ndarray', conditions: Optional[list] = [], k: int = 10):
         n_data, _ = self._sanity_check(query)
+
         assert 0 < k <= 1024
 
         vq_codebook = self.vq_codec.codebook
@@ -213,7 +214,6 @@ class PQLite(CellStorage):
         # find n_probe closest cells
         dists = cdist(query, vq_codebook, metric=self.metric)
         dists, cells = top_k(dists, k=self.n_probe)
-
         # if self.use_smart_probing and self.n_probe > 1:
         #     p = -topk_sims.abs().sqrt()
         #     p = torch.softmax(p / self.smart_probing_temperature, dim=-1)
