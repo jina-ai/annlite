@@ -188,7 +188,6 @@ class CellTable(Table):
 
         params = tuple([0] + [_converting(cond[2]) for cond in conditions])
 
-        print(f'==> sql: {sql}, {params}')
         cursor = self._conn.execute(sql, params)
         keys = [d[0] for d in cursor.description]
         for row in cursor:
