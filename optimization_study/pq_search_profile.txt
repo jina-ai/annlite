@@ -1,0 +1,305 @@
+Timer unit: 1e-06 s
+
+Total time: 0 s
+File: /Users/davidbuchaca1/Documents/jina_stuff/pqlite/pqlite/core/codec/pq.py
+Function: decode at line 95
+
+Line #      Hits         Time  Per Hit   % Time  Line Contents
+==============================================================
+    95                                               @profile
+    96                                               def decode(self, codes: 'np.ndarray'):
+    97                                                   """Given PQ-codes, reconstruct original D-dimensional vectors
+    98                                                   approximately by fetching the codewords.
+    99                                           
+   100                                                   :param codes: PQ-cdoes with shape=(N, M) and dtype=self.code_dtype.
+   101                                                       Each row is a PQ-code
+   102                                                   :return: Reconstructed vectors with shape=(N, D) and dtype=np.float32
+   103                                                   """
+   104                                                   assert codes.ndim == 2
+   105                                                   N, M = codes.shape
+   106                                                   assert M == self.n_subvectors
+   107                                                   assert codes.dtype == self.code_dtype
+   108                                           
+   109                                                   vecs = np.empty((N, self.d_subvector * self.n_subvectors), dtype=np.float32)
+   110                                                   for m in range(self.n_subvectors):
+   111                                                       vecs[:, m * self.d_subvector : (m + 1) * self.d_subvector] = self.codebooks[
+   112                                                           m
+   113                                                       ][codes[:, m], :]
+   114                                           
+   115                                                   return vecs
+
+Total time: 0 s
+File: /Users/davidbuchaca1/Documents/jina_stuff/pqlite/pqlite/core/codec/pq.py
+Function: precompute_adc at line 117
+
+Line #      Hits         Time  Per Hit   % Time  Line Contents
+==============================================================
+   117                                               @profile
+   118                                               def precompute_adc(self, query):
+   119                                                   """Compute a distance table for a query vector.
+   120                                                   The distances are computed by comparing each sub-vector of the query
+   121                                                   to the codewords for each sub-subspace.
+   122                                                   `dtable[m][ks]` contains the squared Euclidean distance between
+   123                                                   the `m`-th sub-vector of the query and the `ks`-th codeword
+   124                                                   for the `m`-th sub-space (`self.codewords[m][ks]`).
+   125                                           
+   126                                                   :param query: Input vector with shape=(D, ) and dtype=np.float32
+   127                                                   :return: Distance table. which contains dtable with shape=(M, Ks)
+   128                                                       and dtype=np.float32
+   129                                                   """
+   130                                                   assert query.dtype == np.float32
+   131                                                   assert query.ndim == 1, 'input must be a single vector'
+   132                                                   (D,) = query.shape
+   133                                                   assert (
+   134                                                       D == self.d_subvector * self.n_subvectors
+   135                                                   ), 'input dimension must be Ds * M'
+   136                                           
+   137                                                   # dtable[m] : distance between m-th subvec and m-th codewords (m-th subspace)
+   138                                                   # dtable[m][ks] : distance between m-th subvec and ks-th codeword of m-th codewords
+   139                                                   dtable = np.empty((self.n_subvectors, self.n_clusters), dtype=np.float32)
+   140                                                   for m in range(self.n_subvectors):
+   141                                                       query_sub = query[m * self.d_subvector : (m + 1) * self.d_subvector]
+   142                                                       dtable[m, :] = np.linalg.norm(self.codebooks[m] - query_sub, axis=1) ** 2
+   143                                           
+   144                                                   return DistanceTable(dtable)
+
+Total time: 0 s
+File: /Users/davidbuchaca1/Documents/jina_stuff/pqlite/pqlite/index.py
+Function: ivfpq_topk at line 136
+
+Line #      Hits         Time  Per Hit   % Time  Line Contents
+==============================================================
+   136                                               @profile
+   137                                               def ivfpq_topk(
+   138                                                   self,
+   139                                                   precomputed,
+   140                                                   cells: 'np.ndarray',
+   141                                                   conditions: Optional[list] = None,
+   142                                                   k: int = 10,
+   143                                               ):
+   144                                                   topk_sims = []
+   145                                                   topk_ids = []
+   146                                                   for cell_id in cells:
+   147                                                       indices = []
+   148                                                       doc_ids = []
+   149                                                       for d in self.cell_table(cell_id).query(conditions=conditions):
+   150                                                           indices.append(d['_id'])
+   151                                                           doc_ids.append(d['_doc_id'])
+   152                                           
+   153                                                       if len(indices) == 0:
+   154                                                           continue
+   155                                           
+   156                                                       indices = np.array(indices, dtype=np.int64)
+   157                                           
+   158                                                       doc_ids = np.array(doc_ids, dtype=self._doc_id_dtype)
+   159                                                       doc_ids = np.expand_dims(doc_ids, axis=0)
+   160                                                       codes = self.vecs_storage[cell_id][indices]
+   161                                           
+   162                                                       dists = precomputed.adist(codes)  # (10000, )
+   163                                                       dists = np.expand_dims(dists, axis=0)
+   164                                           
+   165                                                       _topk_sims, indices = top_k(dists, k=k)
+   166                                                       _topk_ids = np.take_along_axis(doc_ids, indices, axis=1)
+   167                                           
+   168                                                       topk_sims.append(_topk_sims)
+   169                                                       topk_ids.append(_topk_ids)
+   170                                           
+   171                                                   topk_sims = np.hstack(topk_sims)
+   172                                                   topk_ids = np.hstack(topk_ids)
+   173                                           
+   174                                                   idx = topk_sims.argsort(axis=1)[:, :k]
+   175                                                   topk_sims = np.take_along_axis(topk_sims, idx, axis=1)
+   176                                                   topk_ids = np.take_along_axis(topk_ids, idx, axis=1)
+   177                                                   return topk_sims, topk_ids
+
+Total time: 0 s
+File: /Users/davidbuchaca1/Documents/jina_stuff/pqlite/pqlite/index.py
+Function: search_cells at line 179
+
+Line #      Hits         Time  Per Hit   % Time  Line Contents
+==============================================================
+   179                                               @profile
+   180                                               def search_cells(
+   181                                                   self,
+   182                                                   query: 'np.ndarray',
+   183                                                   cells: 'np.ndarray',
+   184                                                   conditions: Optional[list] = None,
+   185                                                   topk_dists: Optional['np.ndarray'] = None,
+   186                                                   n_probe_list=None,
+   187                                                   k: int = 10,
+   188                                               ):
+   189                                                   topk_dists, topk_ids = [], []
+   190                                                   for x, cell_idx in zip(query, cells):
+   191                                                       precomputed = self.pq_codec.precompute_adc(x)
+   192                                                       dist, ids = self.ivfpq_topk(
+   193                                                           precomputed, cells=cell_idx, conditions=conditions, k=k
+   194                                                       )
+   195                                           
+   196                                                       topk_dists.append(dist)
+   197                                                       topk_ids.append(ids)
+   198                                           
+   199                                                   topk_dists = np.concatenate(topk_dists, axis=0)
+   200                                                   topk_ids = np.concatenate(topk_ids, axis=0)
+   201                                                   return topk_dists, topk_ids
+
+Total time: 0 s
+File: /Users/davidbuchaca1/Documents/jina_stuff/pqlite/pqlite/index.py
+Function: search at line 203
+
+Line #      Hits         Time  Per Hit   % Time  Line Contents
+==============================================================
+   203                                               @profile
+   204                                               def search(self, query: 'np.ndarray', conditions: Optional[list] = [], k: int = 10):
+   205                                                   n_data, _ = self._sanity_check(query)
+   206                                                   assert 0 < k <= 1024
+   207                                           
+   208                                                   vq_codebook = self.vq_codec.codebook
+   209                                                   # find n_probe closest cells
+   210                                                   dists = cdist(query, vq_codebook, metric=self.metric)
+   211                                                   dists, cells = top_k(dists, k=self.n_probe)
+   212                                                   # if self.use_smart_probing and self.n_probe > 1:
+   213                                                   #     p = -topk_sims.abs().sqrt()
+   214                                                   #     p = torch.softmax(p / self.smart_probing_temperature, dim=-1)
+   215                                                   #
+   216                                                   #     # p_norm = p.norm(dim=-1)
+   217                                                   #     # sqrt_d = self.n_probe ** 0.5
+   218                                                   #     # score = 1 - (p_norm * sqrt_d - 1) / (sqrt_d - 1) - 1e-6
+   219                                                   #     # n_probe_list = torch.ceil(score * (self.n_probe) ).long()
+   220                                                   #
+   221                                                   #     max_n_probe = torch.tensor(self.n_probe, device=self.device)
+   222                                                   #     normalized_entropy = - torch.sum(p * torch.log2(p) / torch.log2(max_n_probe), dim=-1)
+   223                                                   #     n_probe_list = torch.ceil(normalized_entropy * max_n_probe).long()
+   224                                                   # else:
+   225                                                   #     n_probe_list = None
+   226                                                   #
+   227                                           
+   228                                                   return self.search_cells(
+   229                                                       query=query,
+   230                                                       cells=cells,
+   231                                                       conditions=conditions,
+   232                                                       topk_dists=dists,
+   233                                                       n_probe_list=None,
+   234                                                       k=k,
+   235                                                   )
+
+Timer unit: 1e-06 s
+
+Total time: 0 s
+File: /Users/davidbuchaca1/Documents/jina_stuff/pqlite/pqlite/index.py
+Function: ivfpq_topk at line 136
+
+Line #      Hits         Time  Per Hit   % Time  Line Contents
+==============================================================
+   136                                               @profile
+   137                                               def ivfpq_topk(
+   138                                                   self,
+   139                                                   precomputed,
+   140                                                   cells: 'np.ndarray',
+   141                                                   conditions: Optional[list] = None,
+   142                                                   k: int = 10,
+   143                                               ):
+   144                                                   topk_sims = []
+   145                                                   topk_ids = []
+   146                                                   for cell_id in cells:
+   147                                                       indices = []
+   148                                                       doc_ids = []
+   149                                                       for d in self.cell_table(cell_id).query(conditions=conditions):
+   150                                                           indices.append(d['_id'])
+   151                                                           doc_ids.append(d['_doc_id'])
+   152                                           
+   153                                                       if len(indices) == 0:
+   154                                                           continue
+   155                                           
+   156                                                       indices = np.array(indices, dtype=np.int64)
+   157                                           
+   158                                                       doc_ids = np.array(doc_ids, dtype=self._doc_id_dtype)
+   159                                                       doc_ids = np.expand_dims(doc_ids, axis=0)
+   160                                                       codes = self.vecs_storage[cell_id][indices]
+   161                                           
+   162                                                       dists = precomputed.adist(codes)  # (10000, )
+   163                                                       dists = np.expand_dims(dists, axis=0)
+   164                                           
+   165                                                       _topk_sims, indices = top_k(dists, k=k)
+   166                                                       _topk_ids = np.take_along_axis(doc_ids, indices, axis=1)
+   167                                           
+   168                                                       topk_sims.append(_topk_sims)
+   169                                                       topk_ids.append(_topk_ids)
+   170                                           
+   171                                                   topk_sims = np.hstack(topk_sims)
+   172                                                   topk_ids = np.hstack(topk_ids)
+   173                                           
+   174                                                   idx = topk_sims.argsort(axis=1)[:, :k]
+   175                                                   topk_sims = np.take_along_axis(topk_sims, idx, axis=1)
+   176                                                   topk_ids = np.take_along_axis(topk_ids, idx, axis=1)
+   177                                                   return topk_sims, topk_ids
+
+Total time: 0 s
+File: /Users/davidbuchaca1/Documents/jina_stuff/pqlite/pqlite/index.py
+Function: search_cells at line 179
+
+Line #      Hits         Time  Per Hit   % Time  Line Contents
+==============================================================
+   179                                               @profile
+   180                                               def search_cells(
+   181                                                   self,
+   182                                                   query: 'np.ndarray',
+   183                                                   cells: 'np.ndarray',
+   184                                                   conditions: Optional[list] = None,
+   185                                                   topk_dists: Optional['np.ndarray'] = None,
+   186                                                   n_probe_list=None,
+   187                                                   k: int = 10,
+   188                                               ):
+   189                                                   topk_dists, topk_ids = [], []
+   190                                                   for x, cell_idx in zip(query, cells):
+   191                                                       precomputed = self.pq_codec.precompute_adc(x)
+   192                                                       dist, ids = self.ivfpq_topk(
+   193                                                           precomputed, cells=cell_idx, conditions=conditions, k=k
+   194                                                       )
+   195                                           
+   196                                                       topk_dists.append(dist)
+   197                                                       topk_ids.append(ids)
+   198                                           
+   199                                                   topk_dists = np.concatenate(topk_dists, axis=0)
+   200                                                   topk_ids = np.concatenate(topk_ids, axis=0)
+   201                                                   return topk_dists, topk_ids
+
+Total time: 0 s
+File: /Users/davidbuchaca1/Documents/jina_stuff/pqlite/pqlite/index.py
+Function: search at line 203
+
+Line #      Hits         Time  Per Hit   % Time  Line Contents
+==============================================================
+   203                                               @profile
+   204                                               def search(self, query: 'np.ndarray', conditions: Optional[list] = [], k: int = 10):
+   205                                                   n_data, _ = self._sanity_check(query)
+   206                                                   assert 0 < k <= 1024
+   207                                           
+   208                                                   vq_codebook = self.vq_codec.codebook
+   209                                                   # find n_probe closest cells
+   210                                                   dists = cdist(query, vq_codebook, metric=self.metric)
+   211                                                   dists, cells = top_k(dists, k=self.n_probe)
+   212                                                   # if self.use_smart_probing and self.n_probe > 1:
+   213                                                   #     p = -topk_sims.abs().sqrt()
+   214                                                   #     p = torch.softmax(p / self.smart_probing_temperature, dim=-1)
+   215                                                   #
+   216                                                   #     # p_norm = p.norm(dim=-1)
+   217                                                   #     # sqrt_d = self.n_probe ** 0.5
+   218                                                   #     # score = 1 - (p_norm * sqrt_d - 1) / (sqrt_d - 1) - 1e-6
+   219                                                   #     # n_probe_list = torch.ceil(score * (self.n_probe) ).long()
+   220                                                   #
+   221                                                   #     max_n_probe = torch.tensor(self.n_probe, device=self.device)
+   222                                                   #     normalized_entropy = - torch.sum(p * torch.log2(p) / torch.log2(max_n_probe), dim=-1)
+   223                                                   #     n_probe_list = torch.ceil(normalized_entropy * max_n_probe).long()
+   224                                                   # else:
+   225                                                   #     n_probe_list = None
+   226                                                   #
+   227                                           
+   228                                                   return self.search_cells(
+   229                                                       query=query,
+   230                                                       cells=cells,
+   231                                                       conditions=conditions,
+   232                                                       topk_dists=dists,
+   233                                                       n_probe_list=None,
+   234                                                       k=k,
+   235                                                   )
+
