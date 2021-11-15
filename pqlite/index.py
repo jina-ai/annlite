@@ -39,6 +39,7 @@ class PQLite(CellStorage):
         d_vector: int,
         n_subvectors: int = 8,
         n_cells: int = 8,
+        n_probe: int = 16,
         initial_size: Optional[int] = None,
         expand_step_size: int = 1024,
         metric: str = 'euclidean',
@@ -65,8 +66,8 @@ class PQLite(CellStorage):
         self.d_subvector = d_vector // n_subvectors
         self.metric = metric
         self.use_residual = use_residual
-        self.n_probe = 5
-        breakpoint()
+        self.n_probe = max(n_probe, n_cells)
+
         # if use_residual and (n_cells * 256 * n_subvectors * 4) <= 4 * 1024 ** 3:
         #     self._use_precomputed = True
         # else:
@@ -74,6 +75,8 @@ class PQLite(CellStorage):
 
         self._use_smart_probing = True
         self._smart_probing_temperature = 30.0
+
+        assert use_residual is False, f'`use_residual=True` is not supported yet!'
 
         self.vq_codec = VQCodec(n_cells, metric=metric)
         self.pq_codec = PQCodec(
