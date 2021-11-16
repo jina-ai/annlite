@@ -5,14 +5,16 @@ import pqlite
 
 
 class PQLiteIndexer(Executor):
-    def __init__(self,
-                 metric: str = 'euclidean',
-                 limit: int = 10,
-                 index_traversal_paths: Iterable[str] = ('r',),
-                 search_traversal_paths: Iterable[str] = ('r',),
-                 is_distance: bool = True,
-                 *args,
-                 **kwargs):
+    def __init__(
+        self,
+        metric: str = 'euclidean',
+        limit: int = 10,
+        index_traversal_paths: Iterable[str] = ('r',),
+        search_traversal_paths: Iterable[str] = ('r',),
+        is_distance: bool = True,
+        *args,
+        **kwargs
+    ):
         super().__init__(*args, **kwargs)
         self.logger = JinaLogger(self.__class__.__name__)
 

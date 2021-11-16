@@ -11,64 +11,74 @@ D = 128  # dimensionality / number of features
 
 
 @pytest.fixture
-def pqlite():
+def pqlite(tmpdir):
     Xt = np.random.random((Nt, D)).astype(
         np.float32
     )  # 2,000 128-dim vectors for training
 
-    pqlite = PQLite(d_vector=D, n_cells=8, n_subvectors=4)
-    pqlite.fit(Xt)
+    pqlite = PQLite(dim=D, data_path=tmpdir / 'pqlite_test')
     return pqlite
 
 
 @pytest.fixture
-def pqlite_with_data():
+def pqlite_with_data(tmpdir):
     columns = [('x', float, True)]
-    pqlite = PQLite(d_vector=D, n_cells=8, n_subvectors=4, columns=columns)
-
-    Xt = np.random.random((Nt, D)).astype(np.float32)
-    pqlite.fit(Xt)
+    pqlite = PQLite(dim=D, columns=columns, data_path=tmpdir / 'pqlite_test')
 
     X = np.random.random((N, D)).astype(
         np.float32
     )  # 10,000 128-dim vectors to be indexed
 
     docs = DocumentArray(
-        [Document(embedding=X[i], tags={'x': random.random()}) for i in range(N)]
+        [
+            Document(id=f'{i}', embedding=X[i], tags={'x': random.random()})
+            for i in range(N)
+        ]
     )
-    pqlite.add(docs)
+    pqlite.index(docs)
     return pqlite
 
 
-def test_index_add(pqlite):
+def test_index(pqlite):
     X = np.random.random((N, D)).astype(
         np.float32
     )  # 10,000 128-dim vectors to be indexed
 
-    docs = DocumentArray([Document(embedding=X[i]) for i in range(N)])
-    pqlite.add(docs)
+    docs = DocumentArray([Document(id=f'{i}', embedding=X[i]) for i in range(N)])
+    pqlite.index(docs)
 
 
-def test_index_delete(pqlite_with_data):
+def test_delete(pqlite_with_data):
     pqlite_with_data.delete(['0', '1'])
 
 
-def test_index_update(pqlite_with_data):
+def test_update(pqlite_with_data):
     X = np.random.random((5, D)).astype(np.float32)  # 5 128-dim vectors to be indexed
-    docs = DocumentArray([Document(embedding=X[i]) for i in range(5)])
+    docs = DocumentArray([Document(id=f'{i}', embedding=X[i]) for i in range(5)])
     pqlite_with_data.update(docs)
 
 
-def test_index_query(pqlite_with_data):
+def test_query(pqlite_with_data):
     X = np.random.random((Nq, D)).astype(np.float32)  # a 128-dim query vector
     query = DocumentArray([Document(embedding=X[i]) for i in range(5)])
-    dists, ids = pqlite_with_data.search(query)
+
+    pqlite_with_data.search(query)
+
+    for i in range(len(query[0].matches) - 1):
+        assert (
+            query[0].matches[i].scores['euclidean'].value
+            <= query[0].matches[i + 1].scores['euclidean'].value
+        )
 
 
 def test_index_query_with_filtering(pqlite_with_data):
     X = np.random.random((Nq, D)).astype(np.float32)
     query = DocumentArray([Document(embedding=X[i]) for i in range(5)])
-    conditions = [('x', '>', 0.1)]
-    dists, ids = pqlite_with_data.search(query, conditions=conditions)
-    print(f'dists: {dists}')
-    print(f'ids: {ids}')
+    conditions = [('x', '>', 0.6)]
+    pqlite_with_data.search(query, conditions=conditions)
+
+    for i in range(len(query[0].matches) - 1):
+        assert (
+            query[0].matches[i].scores['euclidean'].value
+            <= query[0].matches[i + 1].scores['euclidean'].value
+        )

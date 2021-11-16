@@ -7,10 +7,11 @@ from jina import DocumentArray
 from jina.math.distance import cdist
 from jina.math.helper import top_k
 from .core import VQCodec, PQCodec
-from .storage import CellStorage
+from .storage.cell import CellContainer
+from .enums import Metric
 
 
-class PQLite(CellStorage):
+class PQLite(CellContainer):
     """:class:`PQLite` is an implementation of IVF-PQ being with equipped with SQLite.
 
     To create a :class:`PQLite` object, simply:
@@ -19,7 +20,7 @@ class PQLite(CellStorage):
         .. code-block:: python
             pqlite = PQLite(d_vector=256, metric='euclidean')
 
-    :param d_vector: the dimensionality of input vectors. there are 2 constraints on d_vector:
+    :param dim: the dimensionality of input vectors. there are 2 constraints on d_vector:
             (1) it needs to be divisible by n_subvectors; (2) it needs to be a multiple of 4.*
     :param n_subvectors: number of subquantizers, essentially this is the byte size of
             each quantized vector, default is 8.
@@ -37,71 +38,69 @@ class PQLite(CellStorage):
 
     def __init__(
         self,
-        d_vector: int,
-        n_subvectors: int = 8,
-        n_cells: int = 8,
+        dim: int,
+        metric: Metric = Metric.EUCLIDEAN,
+        n_cells: int = 1,
+        n_subvectors: Optional[int] = None,
         n_probe: int = 16,
         initial_size: Optional[int] = None,
-        expand_step_size: int = 1024,
-        metric: str = 'euclidean',
+        expand_step_size: int = 10240,
         columns: Optional[List[tuple]] = None,
-        db_path: pathlib.Path = pathlib.Path('.')
+        data_path: pathlib.Path = pathlib.Path('.'),
         *args,
         **kwargs,
     ):
-        assert (
-            d_vector % n_subvectors == 0
-        ), '"d_vector" needs to be divisible by "n_subvectors"'
+        if n_subvectors:
+            assert (
+                dim % n_subvectors == 0
+            ), '"dim" needs to be divisible by "n_subvectors"'
 
-        super(PQLite, self).__init__(
-            code_size=n_subvectors,
-            n_cells=n_cells,
-            dtype='uint8',
-            initial_size=initial_size,
-            expand_step_size=expand_step_size,
-            columns=columns,
-            db_path=db_path,
-        )
-
-        self.d_vector = d_vector
         self.n_subvectors = n_subvectors
-        self.d_subvector = d_vector // n_subvectors
-        self.metric = metric
         self.n_probe = max(n_probe, n_cells)
-
-        # if use_residual and (n_cells * 256 * n_subvectors * 4) <= 4 * 1024 ** 3:
-        #     self._use_precomputed = True
-        # else:
-        #     self._use_precomputed = False
 
         self._use_smart_probing = True
         self._smart_probing_temperature = 30.0
 
-        assert use_residual is False, f'`use_residual=True` is not supported yet!'
+        self.vq_codec = VQCodec(n_cells, metric=metric) if n_cells > 1 else None
+        self.pq_codec = (
+            PQCodec(dim, n_subvectors=n_subvectors, n_clusters=256, metric=metric)
+            if n_subvectors
+            else None
+        )
 
-        self.vq_codec = VQCodec(n_cells, metric=metric)
-        self.pq_codec = PQCodec(
-            d_vector, n_subvectors=n_subvectors, n_clusters=256, metric=metric
+        super(PQLite, self).__init__(
+            dim=dim,
+            metric=metric,
+            pq_codec=self.pq_codec,
+            n_cells=n_cells,
+            initial_size=initial_size,
+            expand_step_size=expand_step_size,
+            columns=columns,
+            data_path=data_path,
         )
 
     def _sanity_check(self, x: 'np.ndarray'):
         assert len(x.shape) == 2
-        assert x.shape[1] == self.d_vector
+        assert x.shape[1] == self.dim
 
         return x.shape
 
     def fit(self, x: 'np.ndarray', force_retrain: bool = False):
         n_data, d_vector = self._sanity_check(x)
 
-        logger.info(f'=> start training VQ codec with {n_data} data...')
+        logger.info(
+            f'=> start training VQ codec (K={self.n_cells}) with {n_data} data...'
+        )
         self.vq_codec.fit(x)
 
-        logger.info(f'=> start training PQ codec with {n_data} data...')
+        logger.info(
+            f'=> start training PQ codec (n_subvectors={self.n_subvectors}) with {n_data} data...'
+        )
         self.pq_codec.fit(x)
 
         logger.info(f'=> pqlite is successfully trained!')
 
-    def add(self, docs: DocumentArray, **kwargs):
+    def index(self, docs: DocumentArray, **kwargs):
         """
 
         :param docs: The documents to index
@@ -112,10 +111,13 @@ class PQLite(CellStorage):
 
         n_data, _ = self._sanity_check(x)
 
-        assigned_cells = self.vq_codec.encode(x)
-        quantized_x = self.encode(x)
+        assigned_cells = (
+            self.vq_codec.encode(x)
+            if self.vq_codec
+            else np.zeros(n_data, dtype=np.int64)
+        )
 
-        return super(PQLite, self).insert(quantized_x, assigned_cells, docs)
+        return super(PQLite, self).insert(x, assigned_cells, docs)
 
     def update(self, docs: DocumentArray, **kwargs):
         """
@@ -126,76 +128,13 @@ class PQLite(CellStorage):
         x = docs.embeddings
         n_data, _ = self._sanity_check(x)
 
-        assigned_cells = self.vq_codec.encode(x)
-        quantized_x = self.encode(x)
+        assigned_cells = (
+            self.vq_codec.encode(x)
+            if self.vq_codec
+            else np.zeros(n_data, dtype=np.int64)
+        )
 
-        return super(PQLite, self).update(quantized_x, assigned_cells, docs)
-
-    def ivfpq_topk(
-        self,
-        precomputed,
-        cells: np.ndarray,
-        conditions: Optional[list] = None,
-        limit: int = 10,
-    ):
-        topk_sims = []
-        topk_ids = []
-        for cell_id in cells:
-            indices = []
-            doc_ids = []
-            for idx, doc in self.cell_table(cell_id).query(conditions=conditions):
-                indices.append(idx)
-                doc_ids.append(doc.id)
-
-            if len(indices) == 0:
-                continue
-
-            indices = np.array(indices, dtype=np.int64)
-
-            doc_ids = np.array(doc_ids, dtype=self._doc_id_dtype)
-            doc_ids = np.expand_dims(doc_ids, axis=0)
-
-            # bruteforce search
-            codes = self.vecs_storage[cell_id][indices]
-
-            dists = precomputed.adist(codes)  # (10000, )
-            dists = np.expand_dims(dists, axis=0)
-
-            _topk_sims, indices = top_k(dists, k=limit)
-            _topk_ids = np.take_along_axis(doc_ids, indices, axis=1)
-
-            topk_sims.append(_topk_sims)
-            topk_ids.append(_topk_ids)
-
-        topk_sims = np.hstack(topk_sims)
-        topk_ids = np.hstack(topk_ids)
-
-        idx = topk_sims.argsort(axis=1)[:, :limit]
-        topk_sims = np.take_along_axis(topk_sims, idx, axis=1)
-        topk_ids = np.take_along_axis(topk_ids, idx, axis=1)
-        return topk_sims, topk_ids
-
-    def search_cells(
-        self,
-        query: np.ndarray,
-        cells: np.ndarray,
-        conditions: Optional[list] = None,
-        limit: int = 10,
-    ):
-        topk_dists, topk_ids = [], []
-        for x, cell_idx in zip(query, cells):
-            precomputed = self.pq_codec.precompute_adc(x)
-            dist, ids = self.ivfpq_topk(
-                precomputed, cells=cell_idx, conditions=conditions, limit=limit
-            )
-
-            topk_dists.append(dist)
-            topk_ids.append(ids)
-
-        topk_dists = np.concatenate(topk_dists, axis=0)
-        topk_ids = np.concatenate(topk_ids, axis=0)
-
-        return topk_dists, topk_ids
+        return super(PQLite, self).update(x, assigned_cells, docs)
 
     def search(
         self,
@@ -208,12 +147,15 @@ class PQLite(CellStorage):
         n_data, _ = self._sanity_check(query)
 
         assert 0 < limit <= 1024
-        
-        vq_codebook = self.vq_codec.codebook
 
-        # find n_probe closest cells
-        dists = cdist(query, vq_codebook, metric=self.metric)
-        dists, cells = top_k(dists, k=self.n_probe)
+        if self.vq_codec:
+            vq_codebook = self.vq_codec.codebook
+            # find n_probe closest cells
+            dists = cdist(query, vq_codebook, metric=self.metric.name)
+            dists, cells = top_k(dists, k=self.n_probe)
+        else:
+            cells = np.zeros((n_data, 1), dtype=np.int64)
+
         # if self.use_smart_probing and self.n_probe > 1:
         #     p = -topk_sims.abs().sqrt()
         #     p = torch.softmax(p / self.smart_probing_temperature, dim=-1)
@@ -230,12 +172,15 @@ class PQLite(CellStorage):
         #     n_probe_list = None
         #
 
-        return self.search_cells(
+        match_dists, match_docs = self.search_cells(
             query=query,
             cells=cells,
             conditions=conditions,
             limit=limit,
         )
+
+        for doc, matches in zip(docs, match_docs):
+            doc.matches = matches
 
     def encode(self, x: np.ndarray):
         n_data, _ = self._sanity_check(x)

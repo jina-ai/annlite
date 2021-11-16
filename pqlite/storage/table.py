@@ -1,4 +1,4 @@
-from typing import Dict, Any, Iterable, Iterator, List
+from typing import Optional, Any, Iterable, Iterator, List
 import pathlib
 import sqlite3
 import datetime
@@ -74,11 +74,19 @@ def _get_table_names(
 
 
 class Table:
-    def __init__(self, name: str, db_path: pathlib.Path = pathlib.Path('.')):
+    def __init__(
+        self,
+        name: str,
+        data_path: Optional[pathlib.Path] = None,
+        in_memory: bool = True,
+    ):
+        if in_memory:
+            self._conn_name = ':memory:'
+        else:
+            self._conn_name = data_path / f'{name}.db'
         self._name = name
 
-        self._conn = sqlite3.connect(':memory:')
-        self._env = open_lmdb(db_path / f'{name}.db')
+        self._conn = sqlite3.connect(self._conn_name)
 
     def commit(self):
         self._conn.commit()
@@ -99,8 +107,13 @@ class Table:
 
 
 class CellTable(Table):
-    def __init__(self, name: str, db_path: pathlib.Path = pathlib.Path('.')):
-        super(CellTable, self).__init__(name, db_path=db_path)
+    def __init__(
+        self,
+        name: str,
+        data_path: pathlib.Path = pathlib.Path('.'),
+        in_memory: bool = True,
+    ):
+        super().__init__(name, data_path=data_path, in_memory=in_memory)
 
         self._columns = []
         self._indexed_keys = set()
@@ -152,31 +165,21 @@ class CellTable(Table):
         sql_template = 'INSERT INTO {table}({columns}) VALUES ({placeholders});'
         row_ids = []
         cursor = self._conn.cursor()
-        with self._env.begin(write=True) as txn:
-            for doc in docs:
-                # enforce using float32 as dtype of embeddings
-                doc.embedding = doc.embedding.astype(np.float32)
-                success = txn.put(doc.id.encode(), doc.SerializeToString())
+        for doc in docs:
+            tag_names = [c for c in doc.tags if c in self.columns]
+            column_names = ['_doc_id'] + tag_names
+            columns = ', '.join(column_names)
+            placeholders = ', '.join('?' for c in column_names)
+            sql = sql_template.format(
+                table=self.name,
+                columns=columns,
+                placeholders=placeholders,
+            )
+            values = tuple([doc.id] + [_converting(doc.tags[c]) for c in tag_names])
+            cursor.execute(sql, values)
+            row_id = cursor.lastrowid
+            row_ids.append(row_id)
 
-                if success:
-                    tag_names = [c for c in doc.tags if c in self.columns]
-                    column_names = ['_doc_id'] + tag_names
-                    columns = ', '.join(column_names)
-                    placeholders = ', '.join('?' for c in column_names)
-                    sql = sql_template.format(
-                        table=self.name,
-                        columns=columns,
-                        placeholders=placeholders,
-                    )
-                    values = tuple(
-                        [doc.id] + [_converting(doc.tags[c]) for c in tag_names]
-                    )
-                    cursor.execute(sql, values)
-                    row_id = cursor.lastrowid
-                    row_ids.append(row_id)
-                else:
-                    txn.abort()
-                    raise ValueError(f'The document ({doc.id}) already existed')
         if commit:
             self._conn.commit()
         return row_ids
@@ -201,13 +204,8 @@ class CellTable(Table):
         cursor = self._conn.execute(sql, params)
         keys = [d[0] for d in cursor.description]
 
-        with self._env.begin(write=False) as txn:
-            for row in cursor:
-                data = dict(zip(keys, row))
-                doc_id = data['_doc_id']
-                buffer = txn.get(doc_id.encode())
-                doc = Document(buffer)
-                yield data['_id'], doc
+        for row in cursor:
+            yield dict(zip(keys, row))
 
     def delete(self, doc_ids: List[str]):
         """Delete the docs
@@ -217,6 +215,13 @@ class CellTable(Table):
         sql = f'UPDATE {self.name} SET _deleted = 1 WHERE _doc_id = ?'
         self._conn.executemany(sql, doc_ids)
         self._conn.commit()
+
+    def get_docid_by_offset(self, offset: int):
+        sql = f'SELECT _doc_id from {self.name} WHERE _deleted = 0 and _id = ?;'
+        result = self._conn.execute(sql, (offset + 1,)).fetchone()
+        if result:
+            return result[0][0]
+        return None
 
     def delete_by_offset(self, offset: int):
         """Delete the doc with specific offset
@@ -254,8 +259,13 @@ class CellTable(Table):
 
 
 class MetaTable(Table):
-    def __init__(self, name: str = 'meta', in_memory: bool = True):
-        super(MetaTable, self).__init__(name, in_memory=in_memory)
+    def __init__(
+        self,
+        name: str = 'meta',
+        data_path: Optional[pathlib.Path] = None,
+        in_memory: bool = False,
+    ):
+        super(MetaTable, self).__init__(name, data_path=data_path, in_memory=in_memory)
 
         sql = f'''CREATE TABLE {self.name}
                 (_doc_id TEXT NOT NULL PRIMARY KEY,

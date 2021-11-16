@@ -34,6 +34,7 @@ def str2dtype(dtype_str: str):
         raise TypeError(f'Unrecognized dtype string: {dtype_str}')
     return dtype
 
+
 def open_lmdb(db_path: str):
     return lmdb.Environment(
         db_path,

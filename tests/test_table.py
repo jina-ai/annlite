@@ -43,15 +43,24 @@ def test_create_cell_table():
 
 def test_schema(dummy_cell_table):
     schema = dummy_cell_table.schema
-    assert len(schema.split('\n')) == 7
+    assert len(schema.split('\n')) == 6
 
 
 def test_query(table_with_data):
     result = list(
         table_with_data.query([('category', '=', 'fruit'), ('price', '<', 3)])
     )
+
     assert len(result) == 2
-    assert result[0][1].tags['name'] == 'orange'
+    assert result[0]['_doc_id'] == '0'
+
+
+def test_get_docid_by_offset(table_with_data):
+    doc_id = table_with_data.get_docid_by_offset(0)
+    assert doc_id == '0'
+
+    doc_id = table_with_data.get_docid_by_offset(4)
+    assert doc_id is None
 
 
 def test_exist(table_with_data):
@@ -80,8 +89,8 @@ def test_count(table_with_data):
     assert count == 2
 
 
-def test_create_meta_table():
-    table = MetaTable('meta_test')
+def test_create_meta_table(tmpdir):
+    table = MetaTable('meta_test', data_path=tmpdir)
 
     table.add_address('0', 0, 1)
     table.add_address('2', 1, 5)
