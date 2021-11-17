@@ -3,3 +3,4 @@ jina
 loguru
 numpy
 scipy
+lmdb
