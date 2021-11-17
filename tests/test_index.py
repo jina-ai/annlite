@@ -11,19 +11,19 @@ D = 128  # dimensionality / number of features
 
 
 @pytest.fixture
-def pqlite(tmpdir):
+def pqlite_index(tmpdir):
     Xt = np.random.random((Nt, D)).astype(
         np.float32
     )  # 2,000 128-dim vectors for training
 
-    pqlite = PQLite(dim=D, data_path=tmpdir / 'pqlite_test')
-    return pqlite
+    index = PQLite(dim=D, data_path=tmpdir / 'pqlite_test')
+    return index
 
 
 @pytest.fixture
 def pqlite_with_data(tmpdir):
     columns = [('x', float, True)]
-    pqlite = PQLite(dim=D, columns=columns, data_path=tmpdir / 'pqlite_test')
+    index = PQLite(dim=D, columns=columns, data_path=tmpdir / 'pqlite_test')
 
     X = np.random.random((N, D)).astype(
         np.float32
@@ -35,17 +35,17 @@ def pqlite_with_data(tmpdir):
             for i in range(N)
         ]
     )
-    pqlite.index(docs)
-    return pqlite
+    index.index(docs)
+    return index
 
 
-def test_index(pqlite):
+def test_index(pqlite_index):
     X = np.random.random((N, D)).astype(
         np.float32
     )  # 10,000 128-dim vectors to be indexed
 
     docs = DocumentArray([Document(id=f'{i}', embedding=X[i]) for i in range(N)])
-    pqlite.index(docs)
+    pqlite_index.index(docs)
 
 
 def test_delete(pqlite_with_data):

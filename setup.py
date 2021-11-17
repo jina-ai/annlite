@@ -10,7 +10,6 @@ from setuptools import setup, find_packages, Extension
 if sys.version_info >= (3, 10, 0) or sys.version_info < (3, 7, 0):
     raise OSError(f'PQlite requires Python 3.7/3.8/3.9, but yours is {sys.version}')
 
-
 include_dirs = [
     pybind11.get_include(),
     np.get_include()
@@ -24,6 +23,20 @@ try:
         _long_description = fp.read()
 except FileNotFoundError:
     _long_description = ''
+
+try:
+    with open('requirements.txt') as f:
+        base_deps = f.read().splitlines()
+
+    # remove blank lines and comments
+    base_deps = [
+        x.strip() for x in base_deps
+        if ((x.strip()[0] != '#') and (len(x.strip()) > 3) and '-e git://' not in x
+            )
+    ]
+except FileNotFoundError:
+    base_deps = []
+
 
 ext_modules = [
     Extension(
@@ -116,7 +129,7 @@ setup(
     extras_require=extras,
     ext_modules=ext_modules,
     cmdclass={'build_ext': BuildExt},
-    install_requires=['numpy'],
+    install_requires=base_deps,
     setup_requires=['setuptools>=18.0', 'wheel'],
     classifiers=[
         'Intended Audience :: Developers',
@@ -129,10 +142,9 @@ setup(
         'Topic :: Scientific/Engineering :: Artificial Intelligence',
     ],
     python_requires='>=3.7',
-    # package_dir={'': 'pqlite'},
     packages=find_packages(
-        exclude=['*.tests', '*.tests.*', 'tests.*', 'tests', 'test', 'docs', 'src']
+        exclude=['*.tests', '*.tests.*', 'tests.*', 'tests', 'test', 'docs', 'src', 'executor']
     ),
     zip_safe=False,
-    keywords='pqlite product-quantization approximate-nearest-neighbor ivf-pq',
+    keywords='product-quantization approximate-nearest-neighbor',
 )

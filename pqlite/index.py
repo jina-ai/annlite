@@ -46,7 +46,7 @@ class PQLite(CellContainer):
         initial_size: Optional[int] = None,
         expand_step_size: int = 10240,
         columns: Optional[List[tuple]] = None,
-        data_path: pathlib.Path = pathlib.Path('.'),
+        data_path: pathlib.Path = pathlib.Path('./data'),
         *args,
         **kwargs,
     ):

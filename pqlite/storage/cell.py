@@ -9,6 +9,7 @@ from .base import ExpandMode
 from .kv import DocStorage
 from .table import CellTable, MetaTable
 from ..core.index.flat_index import FlatIndex
+from ..core.index.hnsw import HnswIndex
 from ..helper import str2dtype
 from ..enums import Metric
 from ..core.codec.pq import PQCodec
@@ -33,16 +34,28 @@ class CellContainer:
         self.metric = metric
         self.n_cells = n_cells
 
-        self._vec_indexes = [
-            FlatIndex(
-                dim,
-                metric=metric,
-                initial_size=initial_size,
-                expand_step_size=expand_step_size,
-                expand_mode=expand_mode,
-            )
-            for _ in range(n_cells)
-        ]
+        if columns is None:
+            self._vec_indexes = [
+                HnswIndex(
+                    dim,
+                    metric=metric,
+                    initial_size=initial_size,
+                    expand_step_size=expand_step_size,
+                    expand_mode=expand_mode,
+                )
+                for _ in range(n_cells)
+            ]
+        else:
+            self._vec_indexes = [
+                FlatIndex(
+                    dim,
+                    metric=metric,
+                    initial_size=initial_size,
+                    expand_step_size=expand_step_size,
+                    expand_mode=expand_mode,
+                )
+                for _ in range(n_cells)
+            ]
         self._doc_stores = [DocStorage(f'doc_store_{_}') for _ in range(n_cells)]
 
         self._cell_tables = [CellTable(f'cell_table_{c}') for c in range(n_cells)]
