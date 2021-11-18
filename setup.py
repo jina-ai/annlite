@@ -129,6 +129,8 @@ extras = {}
 extras['testing'] = ['pytest']
 
 setup(
+    ext_modules = cythonize("./pqlite/utils/asymmetric_distance.pyx"),
+    include_dirs=[np.get_include()],
     name='pqlite',
     version=__version__,
     description='Blaze Fast and Light Approximate Nearest Neighbor Search Database',
