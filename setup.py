@@ -1,5 +1,9 @@
 import sys
 from setuptools import setup, find_packages
+from distutils.core import setup
+from Cython.Build import cythonize
+from distutils.extension import Extension
+import numpy as np
 
 if sys.version_info >= (3, 10, 0) or sys.version_info < (3, 7, 0):
     raise OSError(f'PQlite requires Python 3.7/3.8/3.9, but yours is {sys.version}')
@@ -14,6 +18,8 @@ extras = {}
 extras['testing'] = ['pytest']
 
 setup(
+    ext_modules = cythonize("./pqlite/utils/asymmetric_distance.pyx"),
+    include_dirs=[np.get_include()],
     name='pqlite',
     version='0.0.1',
     description='Blaze Fast and Light Approximate Nearest Neighbor Search Database',
