@@ -6,14 +6,13 @@ from .base_index import BaseIndex
 
 
 class FlatIndex(BaseIndex):
-    def __init__(self, dim: int, dtype: str = 'float32', **kwargs):
-        super().__init__(dim, dtype=dtype, **kwargs)
-
     def search(
-        self, query: np.ndarray, limit: int = 10, indices: Optional[np.ndarray] = None
+        self, x: np.ndarray, limit: int = 10, indices: Optional[np.ndarray] = None
     ):
-        assert query.shape == (self.dim,)
-        query = query.reshape((1, -1))
+        _dim = x.shape[-1]
+        assert _dim == self.dim, f'the query embedding dimension does not match with index dimension: {_dim} vs {self.dim}'
+
+        x = x.reshape((-1, self.dim))
 
         data = self._data
         data_idx = np.arange(self._capacity)
@@ -22,8 +21,10 @@ class FlatIndex(BaseIndex):
             data = self._data[indices]
             data_idx = data_idx[indices]
 
-        dists = cdist(query, data, metric=self.metric.name.lower())
+        dists = cdist(x, data, metric=self.metric.name.lower())
         dists, ids = top_k(dists, limit, descending=False)
+
+        # TODO: change the shape of return
         ids = ids[0]
         if indices is not None:
             ids = data_idx[ids]

@@ -1,10 +1,11 @@
 # PQLite
 
-`PQLite` is a blaze fast **Approximate Nearest Neighbor Search** (ANNS) library equipped with `SQLite` as the storage backend.
+`PQLite` is a blaze fast **Approximate Nearest Neighbor Search** (ANNS) library.
 
 ## WARNING
 
-`PQLite` is still in the very early stages of development. APIs can and will change (now is the time to make suggestions!). Important features are missing. Documentation is sparse.
+- `PQLite` is still in the very early stages of development. APIs can and will change (now is the time to make suggestions!). Important features are missing. Documentation is sparse.
+- `PQLite` contains code that must be compiled to be used. The build is prepared in `setup.py`, users only need to `pip install .` from the root directory.
 
 ## About
 

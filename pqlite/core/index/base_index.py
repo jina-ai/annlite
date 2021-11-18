@@ -14,17 +14,13 @@ class BaseIndex:
         dtype: str = 'float32',
         metric: Metric = Metric.EUCLIDEAN,
         initial_size: Optional[int] = None,
-        expand_step_size: Optional[int] = 10240,
+        expand_step_size: int = 10240,
         expand_mode: ExpandMode = ExpandMode.STEP,
         **kwargs,
     ):
-
-        if initial_size is None:
-            initial_size = expand_step_size
-        assert initial_size >= 0
         assert expand_step_size > 0
 
-        self.initial_size = initial_size
+        self.initial_size = initial_size or expand_step_size
         self.expand_step_size = expand_step_size
         self.expand_mode = expand_mode
 
