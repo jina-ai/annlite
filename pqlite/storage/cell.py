@@ -36,7 +36,17 @@ class CellContainer:
         self.n_cells = n_cells
 
         if pq_codec is not None:
-            self._vec_indexes = [PQIndex(dim, pq_codec, metric=metric, initial_size=initial_size, expand_step_size=expand_step_size, expand_mode=expand_mode) for _ in range(n_cells)]
+            self._vec_indexes = [
+                PQIndex(
+                    dim,
+                    pq_codec,
+                    metric=metric,
+                    initial_size=initial_size,
+                    expand_step_size=expand_step_size,
+                    expand_mode=expand_mode,
+                )
+                for _ in range(n_cells)
+            ]
         elif columns is None:
             self._vec_indexes = [
                 HnswIndex(
@@ -59,7 +69,9 @@ class CellContainer:
                 )
                 for _ in range(n_cells)
             ]
-        self._doc_stores = [DocStorage(data_path / f'cell_store_{_}') for _ in range(n_cells)]
+        self._doc_stores = [
+            DocStorage(data_path / f'cell_store_{_}') for _ in range(n_cells)
+        ]
 
         self._cell_tables = [CellTable(f'cell_table_{c}') for c in range(n_cells)]
         if columns is not None:
@@ -181,7 +193,7 @@ class CellContainer:
         unique_cells, _ = np.unique(cells, return_counts=True)
 
         for cell_id in unique_cells:
-            indices = (cells == cell_id)
+            indices = cells == cell_id
             x = data[indices, :]
             ids = offsets[indices]
 

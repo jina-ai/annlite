@@ -989,7 +989,7 @@ namespace hnswlib {
                         unmarkDeletedInternal(existingInternalId);
                     }
                     updatePoint(data_point, existingInternalId, 1.0);
-                    
+
                     return existingInternalId;
                 }
 

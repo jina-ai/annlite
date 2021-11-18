@@ -10,10 +10,7 @@ from setuptools import setup, find_packages, Extension
 if sys.version_info >= (3, 10, 0) or sys.version_info < (3, 7, 0):
     raise OSError(f'PQlite requires Python 3.7/3.8/3.9, but yours is {sys.version}')
 
-include_dirs = [
-    pybind11.get_include(),
-    np.get_include()
-]
+include_dirs = [pybind11.get_include(), np.get_include()]
 
 libraries = []
 extra_objects = []
@@ -22,7 +19,9 @@ try:
     pkg_name = 'pqlite'
     libinfo_py = os.path.join(pkg_name, '__init__.py')
     libinfo_content = open(libinfo_py, 'r', encoding='utf8').readlines()
-    version_line = [l.strip() for l in libinfo_content if l.startswith('__version__')][0]
+    version_line = [l.strip() for l in libinfo_content if l.startswith('__version__')][
+        0
+    ]
     exec(version_line)  # produce __version__
 except FileNotFoundError:
     __version__ = '0.0.0'
@@ -39,9 +38,9 @@ try:
 
     # remove blank lines and comments
     base_deps = [
-        x.strip() for x in base_deps
-        if ((x.strip()[0] != '#') and (len(x.strip()) > 3) and '-e git://' not in x
-            )
+        x.strip()
+        for x in base_deps
+        if ((x.strip()[0] != '#') and (len(x.strip()) > 3) and '-e git://' not in x)
     ]
 except FileNotFoundError:
     base_deps = []
@@ -65,6 +64,7 @@ def has_flag(compiler, flagname):
     the specified compiler.
     """
     import tempfile
+
     with tempfile.NamedTemporaryFile('w', suffix='.cpp') as f:
         f.write('int main (int argc, char **argv) { return 0; }')
         try:
@@ -83,11 +83,14 @@ def cpp_flag(compiler):
     elif has_flag(compiler, '-std=c++11'):
         return '-std=c++11'
     else:
-        raise RuntimeError('Unsupported compiler -- at least C++11 support '
-                           'is needed!')
+        raise RuntimeError(
+            'Unsupported compiler -- at least C++11 support ' 'is needed!'
+        )
+
 
 class BuildExt(build_ext):
     """A custom build extension for adding compiler-specific options."""
+
     c_opts = {
         'msvc': ['/EHsc', '/openmp', '/O2'],
         'unix': ['-O3', '-march=native'],  # , '-w'
@@ -101,7 +104,7 @@ class BuildExt(build_ext):
         c_opts['unix'] += ['-stdlib=libc++', '-mmacosx-version-min=10.7']
         link_opts['unix'] += ['-stdlib=libc++', '-mmacosx-version-min=10.7']
     else:
-        c_opts['unix'].append("-fopenmp")
+        c_opts['unix'].append('-fopenmp')
         link_opts['unix'].extend(['-fopenmp', '-pthread'])
 
     def build_extensions(self):
@@ -120,6 +123,7 @@ class BuildExt(build_ext):
             ext.extra_link_args.extend(self.link_opts.get(ct, []))
 
         build_ext.build_extensions(self)
+
 
 extras = {}
 extras['testing'] = ['pytest']
@@ -152,7 +156,16 @@ setup(
     ],
     python_requires='>=3.7',
     packages=find_packages(
-        exclude=['*.tests', '*.tests.*', 'tests.*', 'tests', 'test', 'docs', 'src', 'executor']
+        exclude=[
+            '*.tests',
+            '*.tests.*',
+            'tests.*',
+            'tests',
+            'test',
+            'docs',
+            'src',
+            'executor',
+        ]
     ),
     zip_safe=False,
     keywords='product-quantization approximate-nearest-neighbor',

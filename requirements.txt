@@ -1,6 +1,6 @@
 click
 jina
+lmdb
 loguru
 numpy
 scipy
-lmdb
