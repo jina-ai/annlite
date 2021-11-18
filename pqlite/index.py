@@ -68,6 +68,8 @@ class PQLite(CellContainer):
             else None
         )
 
+        data_path.mkdir(exist_ok=True)
+
         super(PQLite, self).__init__(
             dim=dim,
             metric=metric,
@@ -151,7 +153,7 @@ class PQLite(CellContainer):
         if self.vq_codec:
             vq_codebook = self.vq_codec.codebook
             # find n_probe closest cells
-            dists = cdist(query, vq_codebook, metric=self.metric.name)
+            dists = cdist(query, vq_codebook, metric=self.metric.name.lower())
             dists, cells = top_k(dists, k=self.n_probe)
         else:
             cells = np.zeros((n_data, 1), dtype=np.int64)

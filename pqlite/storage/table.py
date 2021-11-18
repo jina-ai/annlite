@@ -175,9 +175,10 @@ class CellTable(Table):
                 columns=columns,
                 placeholders=placeholders,
             )
+
             values = tuple([doc.id] + [_converting(doc.tags[c]) for c in tag_names])
             cursor.execute(sql, values)
-            row_id = cursor.lastrowid
+            row_id = cursor.lastrowid - 1
             row_ids.append(row_id)
 
         if commit:
@@ -205,6 +206,7 @@ class CellTable(Table):
         keys = [d[0] for d in cursor.description]
 
         for row in cursor:
+            row[0] -= 1
             yield dict(zip(keys, row))
 
     def delete(self, doc_ids: List[str]):
@@ -220,7 +222,7 @@ class CellTable(Table):
         sql = f'SELECT _doc_id from {self.name} WHERE _deleted = 0 and _id = ?;'
         result = self._conn.execute(sql, (offset + 1,)).fetchone()
         if result:
-            return result[0][0]
+            return result[0]
         return None
 
     def delete_by_offset(self, offset: int):

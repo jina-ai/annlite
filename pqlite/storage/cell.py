@@ -8,6 +8,7 @@ from jina import DocumentArray
 from .base import ExpandMode
 from .kv import DocStorage
 from .table import CellTable, MetaTable
+from ..core.index.pq_index import PQIndex
 from ..core.index.flat_index import FlatIndex
 from ..core.index.hnsw import HnswIndex
 from ..helper import str2dtype
@@ -34,7 +35,9 @@ class CellContainer:
         self.metric = metric
         self.n_cells = n_cells
 
-        if columns is None:
+        if pq_codec is not None:
+            self._vec_indexes = [PQIndex(dim, pq_codec, metric=metric, initial_size=initial_size, expand_step_size=expand_step_size, expand_mode=expand_mode) for _ in range(n_cells)]
+        elif columns is None:
             self._vec_indexes = [
                 HnswIndex(
                     dim,
@@ -56,7 +59,7 @@ class CellContainer:
                 )
                 for _ in range(n_cells)
             ]
-        self._doc_stores = [DocStorage(f'doc_store_{_}') for _ in range(n_cells)]
+        self._doc_stores = [DocStorage(data_path / f'cell_store_{_}') for _ in range(n_cells)]
 
         self._cell_tables = [CellTable(f'cell_table_{c}') for c in range(n_cells)]
         if columns is not None:
@@ -91,6 +94,7 @@ class CellContainer:
                     indices.append(doc['_id'])
 
                 if len(indices) == 0:
+                    indices = None
                     continue
 
                 indices = np.array(indices, dtype=np.int64)
@@ -111,13 +115,15 @@ class CellContainer:
         dists = np.hstack(dists)
         doc_idx = np.hstack(doc_idx)
 
-        idx = dists.argsort(axis=0)[:limit]
-        dists = dists[idx]
-        cell_ids = cell_ids[idx]
+        indices = dists.argsort(axis=0)[:limit]
+        dists = dists[indices]
+        cell_ids = cell_ids[indices]
+        doc_idx = doc_idx[indices]
 
         doc_ids = []
-        for cell_id, i in zip(cell_ids, idx):
-            doc_ids.append(self.cell_table(cell_id).get_docid_by_offset(doc_idx[i]))
+        for cell_id, offset in zip(cell_ids, doc_idx):
+            doc_id = self.cell_table(cell_id).get_docid_by_offset(offset)
+            doc_ids.append(doc_id)
         return dists, doc_ids, cell_ids
 
     def search_cells(
@@ -130,14 +136,14 @@ class CellContainer:
         topk_dists, topk_docs = [], []
         for x, cell_idx in zip(query, cells):
             # x.shape = (self.dim,)
-            dist, ids, cells = self.ivf_search(
+            dists, doc_ids, cells = self.ivf_search(
                 x, cells=cell_idx, conditions=conditions, limit=limit
             )
 
-            topk_dists.append(dist)
+            topk_dists.append(dists)
 
             match_docs = DocumentArray()
-            for dist, doc_id, cell_id in zip(dist, ids, cells):
+            for dist, doc_id, cell_id in zip(dists, doc_ids, cells):
                 doc = self.doc_store(cell_id).get([doc_id])[0]
                 doc.scores[self.metric.name.lower()].value = dist
                 match_docs.append(doc)
@@ -163,7 +169,7 @@ class CellContainer:
             self._meta_table.add_address(doc.id, cell_id, offset)
             offsets.append(offset)
 
-        offsets = np.array(offsets)
+        offsets = np.array(offsets, dtype=np.int64)
         self._add_vecs(data, cells, offsets)
 
         logger.debug(f'=> {len(docs)} new docs added')
@@ -174,11 +180,12 @@ class CellContainer:
 
         unique_cells, _ = np.unique(cells, return_counts=True)
 
-        for cell_index in unique_cells:
-            indices = cells == cell_index
+        for cell_id in unique_cells:
+            indices = (cells == cell_id)
             x = data[indices, :]
             ids = offsets[indices]
-            self.vec_index(cell_index).add_with_ids(x, ids)
+
+            self.vec_index(cell_id).add_with_ids(x, ids)
 
     def update(
         self,
@@ -198,7 +205,7 @@ class CellContainer:
             _cell_id, _offset = self._meta_table.get_address(doc.id)
             if cell_id == _cell_id:
                 self.vec_index(cell_id).add_with_ids(x.reshape(1, -1), [_offset])
-                self.cell_table(_cell_id).undo_delete_by_offset(_offset)
+                self.cell_table(cell_id).undo_delete_by_offset(_offset)
 
             elif _cell_id is None:
                 new_data.append(x)
@@ -235,13 +242,13 @@ class CellContainer:
     def cell_tables(self):
         return self._cell_tables
 
-    def cell_table(self, cell_id):
+    def cell_table(self, cell_id: int):
         return self._cell_tables[cell_id]
 
-    def doc_store(self, cell_id):
+    def doc_store(self, cell_id: int):
         return self._doc_stores[cell_id]
 
-    def vec_index(self, cell_id):
+    def vec_index(self, cell_id: int):
         return self._vec_indexes[cell_id]
 
     def _add_column(
