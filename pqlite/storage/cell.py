@@ -1,225 +1,235 @@
+import pathlib
 from typing import Optional, List, Union
-from loguru import logger
 
 import numpy as np
+from loguru import logger
 
-from .base import Storage
-from .table import CellTable, MetaTable
-from ..helper import str2dtype
+from jina import DocumentArray
 from .base import ExpandMode
+from .kv import DocStorage
+from .table import CellTable, MetaTable
+from ..core.index.flat_index import FlatIndex
+from ..core.index.hnsw import HnswIndex
+from ..helper import str2dtype
+from ..enums import Metric
+from ..core.codec.pq import PQCodec
 
 
-class CellStorage(Storage):
+class CellContainer:
     def __init__(
         self,
-        code_size: int,
-        n_cells: int,
-        dtype: str = 'uint8',
+        dim: int,
+        metric: Metric = Metric.EUCLIDEAN,
+        pq_codec: Optional[PQCodec] = None,
+        n_cells: int = 1,
         initial_size: Optional[int] = None,
         expand_step_size: Optional[int] = 1024,
         expand_mode: ExpandMode = ExpandMode.STEP,
         columns: Optional[List[tuple]] = None,
-        key_length: int = 36,
+        data_path: pathlib.Path = pathlib.Path('.'),
     ):
-        if initial_size is None:
-            initial_size = expand_step_size
 
-        super().__init__(
-            initial_size=initial_size * n_cells,
-            expand_step_size=expand_step_size,
-            expand_mode=expand_mode,
-        )
-        assert n_cells > 0
-        assert code_size > 0
-
+        self._data_path = data_path
+        self.dim = dim
+        self.metric = metric
         self.n_cells = n_cells
-        self.code_size = code_size
-        self.dtype = str2dtype(dtype)
-        self.initial_size = initial_size
 
-        self._doc_id_dtype = f'|S{key_length}'
-        self._vecs_storage = []
-        for _ in range(n_cells):
-            cell_vecs = np.zeros((initial_size, code_size), dtype=dtype)
-            self._vecs_storage.append(cell_vecs)
+        if columns is None:
+            self._vec_indexes = [
+                HnswIndex(
+                    dim,
+                    metric=metric,
+                    initial_size=initial_size,
+                    expand_step_size=expand_step_size,
+                    expand_mode=expand_mode,
+                )
+                for _ in range(n_cells)
+            ]
+        else:
+            self._vec_indexes = [
+                FlatIndex(
+                    dim,
+                    metric=metric,
+                    initial_size=initial_size,
+                    expand_step_size=expand_step_size,
+                    expand_mode=expand_mode,
+                )
+                for _ in range(n_cells)
+            ]
+        self._doc_stores = [DocStorage(f'doc_store_{_}') for _ in range(n_cells)]
 
-        self._cell_size = np.zeros(n_cells, dtype=np.int64)
-        self._cell_capacity = np.zeros(n_cells, dtype=np.int64) + initial_size
-
-        self._cell_tables = [CellTable(f'cell_table_{c}') for c in range(self.n_cells)]
+        self._cell_tables = [CellTable(f'cell_table_{c}') for c in range(n_cells)]
         if columns is not None:
             for name, dtype, create_index in columns:
                 self._add_column(name, dtype, create_index=create_index)
         self._create_tables()
 
-        self._meta_table = MetaTable()
-
-    @property
-    def capacity(self) -> int:
-        return self._cell_capacity.sum()
-
-    @property
-    def vecs_storage(self):
-        return self._vecs_storage
+        self._meta_table = MetaTable(data_path=data_path, in_memory=True)
 
     def clean(self):
         # TODO:
         pass
 
+    def ivf_search(
+        self,
+        x: np.ndarray,
+        cells: np.ndarray,
+        conditions: Optional[list] = None,
+        limit: int = 10,
+    ):
+        dists = []
+
+        doc_idx = []
+        cell_ids = []
+        count = 0
+        for cell_id in cells:
+            indices = None
+
+            if conditions is not None:
+                indices = []
+                for doc in self.cell_table(cell_id).query(conditions=conditions):
+                    indices.append(doc['_id'])
+
+                if len(indices) == 0:
+                    continue
+
+                indices = np.array(indices, dtype=np.int64)
+
+            _dists, _doc_idx = self.vec_index(cell_id).search(
+                x, limit=limit, indices=indices
+            )
+
+            if count >= limit and _dists[0] > dists[-1][-1]:
+                continue
+
+            dists.append(_dists)
+            doc_idx.append(_doc_idx)
+            cell_ids.extend([cell_id] * len(_dists))
+            count += len(_dists)
+
+        cell_ids = np.array(cell_ids, dtype=np.int64)
+        dists = np.hstack(dists)
+        doc_idx = np.hstack(doc_idx)
+
+        idx = dists.argsort(axis=0)[:limit]
+        dists = dists[idx]
+        cell_ids = cell_ids[idx]
+
+        doc_ids = []
+        for cell_id, i in zip(cell_ids, idx):
+            doc_ids.append(self.cell_table(cell_id).get_docid_by_offset(doc_idx[i]))
+        return dists, doc_ids, cell_ids
+
+    def search_cells(
+        self,
+        query: np.ndarray,
+        cells: np.ndarray,
+        conditions: Optional[list] = None,
+        limit: int = 10,
+    ):
+        topk_dists, topk_docs = [], []
+        for x, cell_idx in zip(query, cells):
+            # x.shape = (self.dim,)
+            dist, ids, cells = self.ivf_search(
+                x, cells=cell_idx, conditions=conditions, limit=limit
+            )
+
+            topk_dists.append(dist)
+
+            match_docs = DocumentArray()
+            for dist, doc_id, cell_id in zip(dist, ids, cells):
+                doc = self.doc_store(cell_id).get([doc_id])[0]
+                doc.scores[self.metric.name.lower()].value = dist
+                match_docs.append(doc)
+            topk_docs.append(match_docs)
+
+        return topk_dists, topk_docs
+
     def insert(
         self,
         data: np.ndarray,
         cells: np.ndarray,
-        ids: List[str],
-        doc_tags: Optional[List[dict]] = None,
+        docs: DocumentArray,
     ):
-        assert len(ids) == len(data)
+        assert len(docs) == len(data)
 
-        if doc_tags is None:
-            doc_tags = [{'_doc_id': k} for k in ids]
-        else:
-            for k, doc in zip(ids, doc_tags):
-                doc.update({'_doc_id': k})
+        offsets = []
+        for doc, cell_id in zip(docs, cells):
+            # Write-Ahead-Log (WAL)
+            self.doc_store(cell_id).insert([doc])
 
-        for doc_id, doc, cell_id in zip(ids, doc_tags, cells):
+            # update cell_table and meta_table
             offset = self.cell_table(cell_id).insert([doc])[0]
-            self._meta_table.add_address(doc_id, cell_id, offset)
+            self._meta_table.add_address(doc.id, cell_id, offset)
+            offsets.append(offset)
 
-        self._add_vecs(data, cells)
+        offsets = np.array(offsets)
+        self._add_vecs(data, cells, offsets)
 
-        logger.debug(f'=> {len(ids)} new items added')
+        logger.debug(f'=> {len(docs)} new docs added')
 
-    @staticmethod
-    def get_ioa(cells, unique_cells=None):
-        if unique_cells is None:
-            unique_cells = np.unique(cells)  # [n_unique_clusters]
-        print(f'==> cells: {cells.shape}')
-        print(f'==> unique_cells: {unique_cells.shape}')
-        expanded_cells = np.repeat(
-            cells[:, None], unique_cells.shape[0], axis=-1
-        )  # [n_data, n_unique_clusters]
-        mask = expanded_cells == unique_cells[None, :]  # [n_data, n_unique_clusters]
-        print(f'==> mask: {mask.shape}')
-        mcs = np.cumsum(mask, axis=0)
-        mcs[~mask] = 0
-        print(f'==> mcs: {mcs}')
-        ioa = mcs.sum(axis=1) - 1
-        print(f'==> ioa: {ioa}')
-        return ioa
-
-    def _add_vecs(self, data: np.ndarray, cells: np.ndarray):
+    def _add_vecs(self, data: np.ndarray, cells: np.ndarray, offsets: np.ndarray):
         assert data.shape[0] == cells.shape[0]
-        assert data.shape[1] == self.code_size
+        assert data.shape[1] == self.dim
 
-        unique_cells, unique_cell_counts = np.unique(cells, return_counts=True)
-        self._expand(unique_cells, unique_cell_counts)
+        unique_cells, _ = np.unique(cells, return_counts=True)
 
         for cell_index in unique_cells:
             indices = cells == cell_index
             x = data[indices, :]
-
-            start = self._cell_size[cell_index]
-            end = start + len(x)
-
-            self.vecs_storage[cell_index][start:end, :] = x
-
-        # update number of stored items in each cell
-        self._cell_size[unique_cells] += unique_cell_counts
-
-    def _expand(self, cells: np.ndarray, cell_counts: np.ndarray):
-        total_expand = 0
-        for cell_id, cell_count in zip(cells, cell_counts):
-            free_space = (
-                self._cell_capacity[cell_id] - self._cell_size[cell_id] - cell_count
-            )
-            if free_space > 0:
-                continue
-
-            n_new = self.expand_step_size - free_space
-
-            new_block = np.zeros((n_new, self.code_size), dtype=self.dtype)
-            self.vecs_storage[cell_id] = np.concatenate(
-                (self.vecs_storage[cell_id], new_block), axis=0
-            )
-
-            self._cell_capacity[cell_id] += n_new
-            total_expand += n_new
-
-        logger.debug(
-            f'=> total storage capacity is expanded by {total_expand} for {cells.shape[0]} cells',
-        )
+            ids = offsets[indices]
+            self.vec_index(cell_index).add_with_ids(x, ids)
 
     def update(
         self,
         data: np.ndarray,
         cells: np.ndarray,
-        ids: List[str],
-        doc_tags: Optional[List[dict]] = None,
+        docs: DocumentArray,
     ):
-        if doc_tags is None:
-            doc_tags = [{'_doc_id': k} for k in ids]
-        else:
-            for k, doc in zip(ids, doc_tags):
-                doc.update({'_doc_id': k})
-
         new_data = []
         new_cells = []
         new_docs = []
-        new_ids = []
 
         for (
-            doc_id,
             x,
             doc,
             cell_id,
-        ) in zip(ids, data, doc_tags, cells):
-            _cell_id, _offset = self._meta_table.get_address(doc_id)
+        ) in zip(data, docs, cells):
+            _cell_id, _offset = self._meta_table.get_address(doc.id)
             if cell_id == _cell_id:
-                self.vecs_storage[cell_id][_offset, :] = x
-                self._undo_delete_at(_cell_id, _offset)
+                self.vec_index(cell_id).add_with_ids(x.reshape(1, -1), [_offset])
+                self.cell_table(_cell_id).undo_delete_by_offset(_offset)
+
             elif _cell_id is None:
                 new_data.append(x)
                 new_cells.append(cell_id)
-                new_ids.append(doc_id)
                 new_docs.append(doc)
             else:
                 # relpace
-                self._delete_at(_cell_id, _offset)
+                self.cell_table(_cell_id).delete_by_offset(_offset)
+
+                # # TODO
+                # self.vec_index(cell_id).delete(_offset)
 
                 new_data.append(x)
                 new_cells.append(cell_id)
-                new_ids.append(doc_id)
                 new_docs.append(doc)
 
-        new_data = np.stack(new_data)
-        new_cells = np.array(new_cells, dtype=np.int64)
+        if len(new_data) > 0:
+            new_data = np.stack(new_data)
+            new_cells = np.array(new_cells, dtype=np.int64)
 
-        self.insert(new_data, new_cells, new_ids, doc_tags=new_docs)
+            self.insert(new_data, new_cells, new_docs)
 
-        logger.debug(f'=> {len(ids)} items updated')
-
-    def _delete_at(self, cell_id: int, offset: int):
-        self.cell_table(cell_id).delete_by_offset(offset)
-        self._cell_size[cell_id] -= 1
-
-    def _undo_delete_at(self, cell_id: int, offset: int):
-        self.cell_table(cell_id).undo_delete_by_offset(offset)
-        self._cell_size[cell_id] += 1
+        logger.debug(f'=> {len(docs)} items updated')
 
     def delete(self, ids: List[str]):
         for doc_id in ids:
             cell_id, offset = self._meta_table.get_address(doc_id)
             if cell_id is not None:
-                self._delete_at(cell_id, offset)
+                self.cell_table(cell_id).delete_by_offset(offset)
 
         logger.debug(f'=> {len(ids)} items deleted')
-
-    def get_size(self, cell_id: int):
-        return self._cell_size[cell_id]
-
-    @property
-    def size(self):
-        return np.sum(self._cell_size, dtype=np.int64)
 
     @property
     def cell_tables(self):
@@ -227,6 +237,12 @@ class CellStorage(Storage):
 
     def cell_table(self, cell_id):
         return self._cell_tables[cell_id]
+
+    def doc_store(self, cell_id):
+        return self._doc_stores[cell_id]
+
+    def vec_index(self, cell_id):
+        return self._vec_indexes[cell_id]
 
     def _add_column(
         self, name: str, dtype: Union[str, type], create_index: bool = False

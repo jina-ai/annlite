@@ -1,5 +1,5 @@
 import pytest
-
+from jina import Document, DocumentArray
 from pqlite.storage.table import CellTable, MetaTable
 
 
@@ -16,12 +16,16 @@ def dummy_cell_table():
 
 @pytest.fixture
 def sample_docs():
-    return [
-        {'_doc_id': '0', 'name': 'orange', 'price': 1.2, 'category': 'fruit'},
-        {'_doc_id': '1', 'name': 'banana', 'price': 2, 'category': 'fruit'},
-        {'_doc_id': '2', 'name': 'poly', 'price': 5.1, 'category': 'animal'},
-        {'_doc_id': '3', 'name': 'bread'},
-    ]
+    return DocumentArray(
+        [
+            Document(
+                id='0', tags={'name': 'orange', 'price': 1.2, 'category': 'fruit'}
+            ),
+            Document(id='1', tags={'name': 'banana', 'price': 2, 'category': 'fruit'}),
+            Document(id='2', tags={'name': 'poly', 'price': 5.1, 'category': 'animal'}),
+            Document(id='3', tags={'name': 'bread'}),
+        ]
+    )
 
 
 @pytest.fixture
@@ -46,9 +50,17 @@ def test_query(table_with_data):
     result = list(
         table_with_data.query([('category', '=', 'fruit'), ('price', '<', 3)])
     )
+
     assert len(result) == 2
-    assert result[0]['name'] == 'orange'
-    assert result[0]['_id'] == 0
+    assert result[0]['_doc_id'] == '0'
+
+
+def test_get_docid_by_offset(table_with_data):
+    doc_id = table_with_data.get_docid_by_offset(0)
+    assert doc_id == '0'
+
+    doc_id = table_with_data.get_docid_by_offset(4)
+    assert doc_id is None
 
 
 def test_exist(table_with_data):
@@ -77,8 +89,8 @@ def test_count(table_with_data):
     assert count == 2
 
 
-def test_create_meta_table():
-    table = MetaTable('meta_test')
+def test_create_meta_table(tmpdir):
+    table = MetaTable('meta_test', data_path=tmpdir)
 
     table.add_address('0', 0, 1)
     table.add_address('2', 1, 5)

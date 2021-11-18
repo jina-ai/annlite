@@ -1,10 +1,11 @@
 # PQLite
 
-`PQLite` is a blaze fast **Approximate Nearest Neighbor Search** (ANNS) library equipped with `SQLite` as the storage backend. 
+`PQLite` is a blaze fast **Approximate Nearest Neighbor Search** (ANNS) library.
 
 ## WARNING
 
-`PQLite` is still in the very early stages of development. APIs can and will change (now is the time to make suggestions!). Important features are missing. Documentation is sparse.
+- `PQLite` is still in the very early stages of development. APIs can and will change (now is the time to make suggestions!). Important features are missing. Documentation is sparse.
+- `PQLite` contains code that must be compiled to be used. The build is prepared in `setup.py`, users only need to `pip install .` from the root directory.
 
 ## About
 
@@ -98,7 +99,7 @@ All experiments were performed with a Intel(R) Xeon(R) CPU @ 2.00GHz and Nvidia 
 - [Bolt](https://github.com/dblalock/bolt) 10x faster matrix and vector operations.
 - [MADDNESS](https://arxiv.org/abs/2106.10860) Multiplying Matrices Without Multiplying [code](https://github.com/dblalock/bolt)
 - [embeddinghub](https://github.com/featureform/embeddinghub) A vector database for machine learning embeddings.
-
+- [mobius](https://github.com/sunbelbd/mobius) Möbius Transformation for Fast Inner Product Search on Graph
 
 ## References
 
