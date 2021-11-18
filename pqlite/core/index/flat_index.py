@@ -10,7 +10,9 @@ class FlatIndex(BaseIndex):
         self, x: np.ndarray, limit: int = 10, indices: Optional[np.ndarray] = None
     ):
         _dim = x.shape[-1]
-        assert _dim == self.dim, f'the query embedding dimension does not match with index dimension: {_dim} vs {self.dim}'
+        assert (
+            _dim == self.dim
+        ), f'the query embedding dimension does not match with index dimension: {_dim} vs {self.dim}'
 
         x = x.reshape((-1, self.dim))
 

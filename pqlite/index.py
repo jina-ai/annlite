@@ -1,5 +1,5 @@
-from typing import Optional, List
-import pathlib
+from typing import Optional, List, Union
+from pathlib import Path
 import numpy as np
 from loguru import logger
 
@@ -46,7 +46,7 @@ class PQLite(CellContainer):
         initial_size: Optional[int] = None,
         expand_step_size: int = 10240,
         columns: Optional[List[tuple]] = None,
-        data_path: pathlib.Path = pathlib.Path('./data'),
+        data_path: Union[Path, str] = Path('./data'),
         *args,
         **kwargs,
     ):
@@ -67,6 +67,9 @@ class PQLite(CellContainer):
             if n_subvectors
             else None
         )
+        if isinstance(data_path, str):
+            data_path = Path(data_path)
+        data_path.mkdir(exist_ok=True)
 
         super(PQLite, self).__init__(
             dim=dim,
@@ -151,7 +154,7 @@ class PQLite(CellContainer):
         if self.vq_codec:
             vq_codebook = self.vq_codec.codebook
             # find n_probe closest cells
-            dists = cdist(query, vq_codebook, metric=self.metric.name)
+            dists = cdist(query, vq_codebook, metric=self.metric.name.lower())
             dists, cells = top_k(dists, k=self.n_probe)
         else:
             cells = np.zeros((n_data, 1), dtype=np.int64)
