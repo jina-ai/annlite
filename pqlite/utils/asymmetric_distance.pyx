@@ -1,11 +1,14 @@
+# distutils: language = c++
 
 import numpy as np
 cimport cython
-    
+from libcpp.vector cimport vector
+
+
 
 @cython.boundscheck(False)
 @cython.wraparound(False)
-cpdef dist_pqcode_to_codebooks(long M, float[:,:] dtable, int[:] pq_code):
+cpdef dist_pqcode_to_codebook(long M, float[:,:] dtable, int[:] pq_code):
     cdef:
         float dist = 0
         int m
@@ -15,6 +18,23 @@ cpdef dist_pqcode_to_codebooks(long M, float[:,:] dtable, int[:] pq_code):
 
     return dist
 
+
+@cython.boundscheck(False)
+@cython.wraparound(False)
+cpdef dist_pqcodes_to_codebooks(long M, float[:,:] dtable, int[:,:] pq_codes):
+    cdef:
+        int m
+        int N = pq_codes.shape[0] 
+        vector[float] dists
+
+    for n in range(N):
+        dists.push_back(dist_pqcode_to_codebook(M, dtable, pq_codes[n,:]))
+
+    return np.asarray(dists)
+
+
+
+             
              
 @cython.boundscheck(False)
 @cython.wraparound(False)

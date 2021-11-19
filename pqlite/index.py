@@ -8,6 +8,7 @@ from loguru import logger
 from .core import VQCodec, PQCodec
 from .storage import CellStorage
 
+from pqlite.utils.asymmetric_distance import dist_pqcodes_to_codebooks
 
 class PQLite(CellStorage):
     """:class:`PQLite` is an implementation of IVF-PQ being with equipped with SQLite.
@@ -166,7 +167,14 @@ class PQLite(CellStorage):
             doc_ids = np.expand_dims(doc_ids, axis=0)
             codes = self.vecs_storage[cell_id][indices]
 
-            dists = precomputed.adist(codes)  # (10000, )
+            # precomputed.dtable contains the ADC table of shape (self.n_subvectors, self.pq_codec.n_clusters)
+            dists = precomputed.adist(codes)
+            # dist len(codes) elements
+            import pdb; pdb.set_trace()
+
+            # precomputed.adist(codes) is equivalent to dist_pqcode_to_codebooks
+            #dists = dist_pqcodes_to_codebooks(self.n_subvectors, self.pq_codec.codebooks, codes )
+
             dists = np.expand_dims(dists, axis=0)
 
             _topk_sims, indices = top_k(dists, k=k)
@@ -177,6 +185,7 @@ class PQLite(CellStorage):
 
         topk_sims = np.hstack(topk_sims)
         topk_ids = np.hstack(topk_ids)
+
 
         idx = topk_sims.argsort(axis=1)[:, :k]
         topk_sims = np.take_along_axis(topk_sims, idx, axis=1)
@@ -193,8 +202,12 @@ class PQLite(CellStorage):
         k: int = 10,
     ):
         topk_dists, topk_ids = [], []
+
         for x, cell_idx in zip(query, cells):
+            # computes the adc table between each query and the sub codebooks of each subspace
             precomputed = self.pq_codec.precompute_adc(x)
+            # precomputed.dtable.shape will be a (self.n_subvectors, self.pq_codec.n_clusters)
+
             dist, ids = self.ivfpq_topk(
                 precomputed, cells=cell_idx, conditions=conditions, k=k
             )
@@ -232,7 +245,6 @@ class PQLite(CellStorage):
         # else:
         #     n_probe_list = None
         #
-
         return self.search_cells(
             query=query,
             cells=cells,
