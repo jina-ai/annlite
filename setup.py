@@ -128,9 +128,30 @@ class BuildExt(build_ext):
 extras = {}
 extras['testing'] = ['pytest']
 
+####### Cython begin #######
+include_dirs = [
+        numpy.get_include(),
+        get_python_inc(plat_specific=True),
+]
+MOD_NAMES = ['pqlite.utils.asymmetric_distance']
+
+ext_modules = []
+for name in MOD_NAMES:
+    mod_path = name.replace(".", "/") + ".pyx"
+    ext = Extension( name, [mod_path], language="c++", include_dirs=include_dirs, extra_compile_args=["-std=c++11"])
+    ext_modules.append(ext)
+
+COMPILER_DIRECTIVES = {
+    "language_level": -3,
+    "embedsignature": True,
+    "annotation_typing": False,
+}
+
+####### Cython end #######
+
 setup(
-    ext_modules = cythonize("./pqlite/utils/asymmetric_distance.pyx"),
-    include_dirs=[np.get_include()],
+    ext_modules=cythonize(ext_modules, compiler_directives=COMPILER_DIRECTIVES),
+    include_dirs=include_dirs,
     name='pqlite',
     version=__version__,
     description='Blaze Fast and Light Approximate Nearest Neighbor Search Database',
@@ -169,6 +190,7 @@ setup(
             'executor',
         ]
     ),
+    #package_data={"": ["*.pyx", "*.pxd", "*.pxi"]},
     zip_safe=False,
     keywords='product-quantization approximate-nearest-neighbor',
 )

@@ -23,7 +23,7 @@ class PQCodec(BaseCodec):
     :param n_subvectors: The number of sub-space
     :param n_clusters: The number of codewords for each subspace
             (typically 256, so that each sub-vector is quantized
-            into 256 bits = 1 byte = uint8)
+            into 256 bits pqlite.utils.asymmetric_distance= 1 byte = uint8)
     """
 
     def __init__(
@@ -114,7 +114,7 @@ class PQCodec(BaseCodec):
 
         return vecs
 
-    def precompute_adc(self, query):
+    def precompute_adc(self, query: object) -> object:
         """Compute a distance table for a query vector.
         The distances are computed by comparing each sub-vector of the query
         to the codewords for each sub-subspace.
@@ -139,6 +139,9 @@ class PQCodec(BaseCodec):
         for m in range(self.n_subvectors):
             query_sub = query[m * self.d_subvector : (m + 1) * self.d_subvector]
             dtable[m, :] = np.linalg.norm(self.codebooks[m] - query_sub, axis=1) ** 2
+
+        ### TODO ADD HERE precompute_adc_table
+        #dtable = precompute_adc_table(query, self.d_subvector, self.n_clusters, self.codebooks)
 
         return DistanceTable(dtable)
 
@@ -179,11 +182,15 @@ class DistanceTable(object):
 
         assert codes.ndim == 2
         N, M = codes.shape
-        assert M == self.dtable.shape[0]
+        #assert M == random_identity.shape[0]
 
         # Fetch distance values using codes. The following codes are
         dists = np.sum(self.dtable[range(M), codes], axis=1)
 
+        ### TODO ADD HERE precompute_adc_table dist_pqcodes_to_codebooks
+        #dists = asymmetric_distance.dist_pqcodes_to_codebooks(M, self.dtable, codes)
+
+        #dists = dist_pqcode_to_codebooks(M, )
         # The above line is equivalent to the followings:
         # dists = np.zeros((N, )).astype(np.float32)
         # for n in range(N):
