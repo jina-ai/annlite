@@ -167,10 +167,13 @@ class PQLite(CellStorage):
             doc_ids = np.expand_dims(doc_ids, axis=0)
             codes = self.vecs_storage[cell_id][indices]
 
-            # precomputed.dtable contains the ADC table of shape (self.n_subvectors, self.pq_codec.n_clusters)
+            # precomputed.dtable contains the ADC table
+            # ADC table shape (self.n_subvectors, self.pq_codec.n_clusters)
+            # precomputed.adist(codes) computes [d(query,c) for c in codes]
             dists = precomputed.adist(codes)
-            # dist len(codes) elements
-            import pdb; pdb.set_trace()
+            # compute_dist(query_adctable, codes)
+            # len(dists) == len(codes) elements
+            #import pdb; pdb.set_trace()
 
             # precomputed.adist(codes) is equivalent to dist_pqcode_to_codebooks
             #dists = dist_pqcodes_to_codebooks(self.n_subvectors, self.pq_codec.codebooks, codes )

@@ -3,9 +3,7 @@ from loguru import logger
 
 from scipy.cluster.vq import kmeans2, vq
 from .base import BaseCodec
-from pqlite import utils
-from pqlite.utils import asymmetric_distance
-#from pqlite.utils.asymmetric_distance import dist_pqcodes_to_codebooks
+from pqlite.utils.asymmetric_distance import precompute_adc_table, dist_pqcodes_to_codebooks
 
 class PQCodec(BaseCodec):
     """Implementation of Product Quantization (PQ) [Jegou11]_.
@@ -130,20 +128,24 @@ class PQCodec(BaseCodec):
         assert query.dtype == np.float32
         assert query.ndim == 1, 'input must be a single vector'
         (D,) = query.shape
-        assert (
-            D == self.d_subvector * self.n_subvectors
-        ), 'input dimension must be Ds * M'
+        #assert (
+        #    D == self.d_subvector * self.n_subvectors
+        #), 'input dimension must be Ds * M'
 
         # dtable[m] : distance between m-th subvec and m-th codewords (m-th subspace)
         # dtable[m][ks] : distance between m-th subvec and ks-th codeword of m-th codewords
+
+        ##########
         dtable = np.empty((self.n_subvectors, self.n_clusters), dtype=np.float32)
         for m in range(self.n_subvectors):
             query_sub = query[m * self.d_subvector : (m + 1) * self.d_subvector]
             dtable[m, :] = np.linalg.norm(self.codebooks[m] - query_sub, axis=1) ** 2
 
-        ### TODO ADD HERE precompute_adc_table
-        #dtable = precompute_adc_table(query, self.d_subvector, self.n_clusters, self.codebooks)
-
+        ### TODO (WORKING) uncomment to test cython
+        #dtable = precompute_adc_table(query,
+        #                             self.d_subvector,
+        #                              self.n_clusters,
+        #                              self.codebooks)
         return DistanceTable(dtable)
 
     @property
@@ -187,9 +189,8 @@ class DistanceTable(object):
 
         # Fetch distance values using codes. The following codes are
         dists = np.sum(self.dtable[range(M), codes], axis=1)
-
-        ### TODO ADD HERE precompute_adc_table dist_pqcodes_to_codebooks
-        #dists = asymmetric_distance.dist_pqcodes_to_codebooks(M, self.dtable, codes)
+        ### TODO (Working)
+        #dists = dist_pqcodes_to_codebooks(M, self.dtable, codes.astype(np.int32))
 
         #dists = dist_pqcode_to_codebooks(M, )
         # The above line is equivalent to the followings:

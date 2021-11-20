@@ -37,7 +37,6 @@ COMPILER_DIRECTIVES = {
     "embedsignature": True,
     "annotation_typing": False,
 }
-
 ####### Cython end #######
 
 setup(
