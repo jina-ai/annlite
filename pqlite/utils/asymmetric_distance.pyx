@@ -19,9 +19,16 @@ ctypedef fused any_int:
 
 @cython.boundscheck(False)
 @cython.wraparound(False)
-cpdef dist_pqcode_to_codebook(long M, float[:,:] dtable, any_int[:] pq_code):
-    ```Compute the distance between each codevector and the pq_code of a query.
-    ```
+cdef inline dist_pqcode_to_codebook(long M, float[:,:] dtable, any_int[:] pq_code):
+    """Compute the distance between each codevector and the pq_code of a query.
+
+    :param M: Number of sub-vectors in the original feature space.
+    :param dtable: 2D Memoryview[float] containing precomputed Asymmetric Distances.
+    :param pq_code: 1D Memoriview[any_int] containing a pq code.
+
+    :return: Distance between pq code and query according to the Asymmetric Distance table.
+
+    """
     cdef:
         float dist = 0
         int m
@@ -34,22 +41,29 @@ cpdef dist_pqcode_to_codebook(long M, float[:,:] dtable, any_int[:] pq_code):
 
 @cython.boundscheck(False)
 @cython.wraparound(False)
-cpdef dist_pqcodes_to_codebooks(long M, float[:,:] dtable, any_int[:,:] pq_codes):
+cpdef dist_pqcodes_to_codebooks(float[:,:] dtable, any_int[:,:] pq_codes):
     """
-    Commpute the distance between each row in pq_codes and each codevector using dtable.
+    Compute the distance between each row in pq_codes and each codevector using a dtable.
+
+    :param dtable: 2D Memoryview of precomputed Asymmetric Distances.
+    :param pq_codes: 2D Memoryview of pq_codes.
+
+    :return: List of Asymmetric Distances distances between pq_codes and the query.
 
     This function is equivalent to:
-    ```
+    '''
         dists = np.zeros((N, )).astype(np.float32)
         for n in range(N):
             for m in range(M):
                 dists[n] += self.dtable[m][codes[n][m]]
-    ```
+    '''
+
     """
 
     cdef:
         int m
         int N = pq_codes.shape[0]
+        int M = pq_codes.shape[1]
         vector[float] dists
 
     for n in range(N):
@@ -65,8 +79,18 @@ cpdef float[:,:] precompute_adc_table(float[:] query,
                                       long n_clusters,
                                       float[:,:,:] codebooks):
     """
+    Compute the  Asymmetric Distance Table between a query and a PQ space.
+
+    :param query: Memoryview  a query in the original feature space (not a pqcode).
+    :param d_subvector: Number of dimensions in a subvector.
+    :param n_clusters: Number of clusters per sub-space (number of prototypes per sub-space).
+    :param codebooks: Memoryview containing the learned codevectors for each slice.
+        This is a 3D view with (slice index, prototype index, vector values).
+
+    :return: Memoryview with a 2D matrix containing the Asymmetric Distance Computation.
+
     This function is equivalent to
-        ```
+        '''
         def numpy_adc_table(query, n_subvectors, n_clusters, d_subvector, codebooks):
         dtable = np.empty((n_subvectors, n_clusters), dtype=np.float32)
         for m in range(n_subvectors):
@@ -74,7 +98,8 @@ cpdef float[:,:] precompute_adc_table(float[:] query,
             dtable[m, :] = np.linalg.norm(codebooks[m] - query_sub, axis=1) ** 2
 
         return dtable
-        ```
+        '''
+    But avoids generating views and calling numpy functions.
     """
             
     cdef:
