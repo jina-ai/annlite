@@ -1,8 +1,8 @@
-import pathlib
 from typing import Optional, List, Union
 
 import numpy as np
 from loguru import logger
+from pathlib import Path
 
 from jina import DocumentArray
 from .storage.base import ExpandMode
@@ -26,7 +26,7 @@ class CellContainer:
         expand_step_size: Optional[int] = 1024,
         expand_mode: ExpandMode = ExpandMode.STEP,
         columns: Optional[List[tuple]] = None,
-        data_path: pathlib.Path = pathlib.Path('storage'),
+        data_path: Path = Path('./data'),
     ):
 
         self._data_path = data_path

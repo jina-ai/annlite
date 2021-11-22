@@ -135,10 +135,9 @@ class PQLite(CellContainer):
             self.dump_model()
 
     def index(self, docs: DocumentArray, **kwargs):
-        """
+        """Index new documents
 
-        :param docs: The documents to index
-        :return:
+        :param docs: the documents to index
         """
 
         if self.read_only:
@@ -158,10 +157,9 @@ class PQLite(CellContainer):
         return super(PQLite, self).insert(x, assigned_cells, docs)
 
     def update(self, docs: DocumentArray, **kwargs):
-        """
+        """Update existing documents
 
         :param docs: the documents to update
-        :return:
         """
         if self.read_only:
             logger.warning('The pqlite is readonly, cannot update documents')
@@ -185,6 +183,13 @@ class PQLite(CellContainer):
         limit: int = 10,
         **kwargs,
     ):
+        """Search the index, and attach matches to the query Documents in `docs`
+
+        :param docs: the query documents to search
+        :param conditions: the filtring conditions
+        :param limit: the number of results to get for each query document in search
+        :return:
+        """
         query = docs.embeddings
         n_data, _ = self._sanity_check(query)
 
@@ -223,6 +228,13 @@ class PQLite(CellContainer):
 
         for doc, matches in zip(docs, match_docs):
             doc.matches = matches
+
+    def delete(self, docs: DocumentArray):
+        """Delete entries from the index by id
+
+        :param docs: the documents to delete
+        """
+        super().delete(docs.get_attributes('id'))
 
     def encode(self, x: np.ndarray):
         n_data, _ = self._sanity_check(x)
@@ -286,6 +298,7 @@ class PQLite(CellContainer):
 
     @property
     def stat(self):
+        """Get information on status of the indexer."""
         return {
             'total_docs': self.total_docs,
             'index_size': self.index_size,
