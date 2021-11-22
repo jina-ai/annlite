@@ -135,17 +135,17 @@ class PQCodec(BaseCodec):
         # dtable[m] : distance between m-th subvec and m-th codewords (m-th subspace)
         # dtable[m][ks] : distance between m-th subvec and ks-th codeword of m-th codewords
 
-        ##########
-        dtable = np.empty((self.n_subvectors, self.n_clusters), dtype=np.float32)
-        for m in range(self.n_subvectors):
-            query_sub = query[m * self.d_subvector : (m + 1) * self.d_subvector]
-            dtable[m, :] = np.linalg.norm(self.codebooks[m] - query_sub, axis=1) ** 2
+        # numpy version for
+        #dtable = np.empty((self.n_subvectors, self.n_clusters), dtype=np.float32)
+        #for m in range(self.n_subvectors):
+        #    query_sub = query[m * self.d_subvector : (m + 1) * self.d_subvector]
+        #    dtable[m, :] = np.linalg.norm(self.codebooks[m] - query_sub, axis=1) ** 2
 
-        ### TODO (WORKING) uncomment to test cython
-        #dtable = precompute_adc_table(query,
-        #                             self.d_subvector,
-        #                              self.n_clusters,
-        #                              self.codebooks)
+        dtable = np.asarray(precompute_adc_table(query,
+                                     self.d_subvector,
+                                      self.n_clusters,
+                                      self.codebooks))
+
         return DistanceTable(dtable)
 
     @property
@@ -169,6 +169,7 @@ class DistanceTable(object):
     """
 
     def __init__(self, dtable: 'np.ndarray'):
+
         assert dtable.ndim == 2
         assert dtable.dtype == np.float32
         self.dtable = dtable
@@ -188,9 +189,8 @@ class DistanceTable(object):
         #assert M == random_identity.shape[0]
 
         # Fetch distance values using codes. The following codes are
-        dists = np.sum(self.dtable[range(M), codes], axis=1)
-        ### TODO (Working)
-        #dists = dist_pqcodes_to_codebooks(M, self.dtable, codes.astype(np.int32))
+        #dists = np.sum(self.dtable[range(M), codes], axis=1)
+        dists = dist_pqcodes_to_codebooks(M, self.dtable, codes)
 
         #dists = dist_pqcode_to_codebooks(M, )
         # The above line is equivalent to the followings:
@@ -198,5 +198,4 @@ class DistanceTable(object):
         # for n in range(N):
         #     for m in range(M):
         #         dists[n] += self.dtable[m][codes[n][m]]
-
         return dists
