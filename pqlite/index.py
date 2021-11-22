@@ -9,7 +9,7 @@ from jina.math.distance import cdist
 from jina.math.helper import top_k
 from .core import VQCodec, PQCodec
 from .container import CellContainer
-from .enums import Metric
+from .enums import Metric, Metrics
 
 
 class PQLite(CellContainer):
@@ -42,7 +42,7 @@ class PQLite(CellContainer):
     def __init__(
         self,
         dim: int,
-        metric: Metric = Metric.EUCLIDEAN,
+        metric: Union[str, Metric] = Metric.EUCLIDEAN,
         n_cells: int = 1,
         n_subvectors: Optional[int] = None,
         n_probe: int = 16,
@@ -81,6 +81,9 @@ class PQLite(CellContainer):
 
         self.read_only = read_only
 
+        if isinstance(metric, str):
+            metric = Metric.from_string(metric)
+
         super(PQLite, self).__init__(
             dim=dim,
             metric=metric,
@@ -98,11 +101,11 @@ class PQLite(CellContainer):
 
         return x.shape
 
-    def fit(self, x: np.ndarray, auto_save: bool = True, force_retrain: bool = False):
+    def train(self, x: np.ndarray, auto_save: bool = True, force_retrain: bool = False):
         """Train pqlite with training data.
 
         :param x: the ndarray data for training.
-        :param auto_save: if False, will not save the trained model.
+        :param auto_save: if False, will not dump the trained model to ``model_path``.
         :param force_retrain: if True, enforce to retrain the model, and overwrite the model if ``auto_save=True``.
 
         """
@@ -114,23 +117,20 @@ class PQLite(CellContainer):
 
         if self.vq_codec:
             logger.info(
-                f'=> start training VQ codec (K={self.n_cells}) with {n_data} data...'
+                f'Start training VQ codec (K={self.n_cells}) with {n_data} data...'
             )
             self.vq_codec.fit(x)
 
         if self.pq_codec:
             logger.info(
-                f'=> start training PQ codec (n_subvectors={self.n_subvectors}) with {n_data} data...'
+                f'Start training PQ codec (n_subvectors={self.n_subvectors}) with {n_data} data...'
             )
             self.pq_codec.fit(x)
 
-        logger.info(f'=> pqlite is successfully trained!')
+        logger.info(f'The pqlite is successfully trained!')
 
         if auto_save:
-            logger.info(f'==> save the trained parameters to {self.data_path / self._model_hash}')
-            self.create_model_dir()
-            self.vq_codec.dump(self._vq_codec_path)
-            self.pq_codec.dump(self._pq_codec_path)
+            self.dump_model()
 
     def index(self, docs: DocumentArray, **kwargs):
         """
@@ -234,13 +234,19 @@ class PQLite(CellContainer):
 
     def model_dir_exists(self):
         """Check whether the model directory exists at the data path"""
-        model_path = self.data_path / self._model_hash
-        return model_path.exists()
+        return self.model_path.exists()
 
     def create_model_dir(self):
         """Create a new directory at the data path to save model."""
-        model_path = self.data_path / self._model_hash
-        model_path.mkdir(exist_ok=True)
+        self.model_path.mkdir(exist_ok=True)
+
+    def dump_model(self):
+        logger.info(f'Save the trained parameters to {self.model_path}')
+        self.create_model_dir()
+        if self.vq_codec:
+            self.vq_codec.dump(self._vq_codec_path)
+        if self.pq_codec:
+            self.pq_codec.dump(self._pq_codec_path)
 
     @property
     def is_trained(self):
@@ -252,16 +258,20 @@ class PQLite(CellContainer):
 
     @property
     def _model_hash(self):
-        key = f'{self.n_cells} x {self.n_subvectors}'
+        key = f'{self.n_cells} x {self.n_subvectors} x {self.metric.name}'
         return hashlib.md5(key.encode()).hexdigest()
 
     @property
+    def model_path(self):
+        return self.data_path / self._model_hash
+
+    @property
     def _vq_codec_path(self):
-        return self.data_path / self._model_hash / 'vq_codec.bin'
+        return self.model_path / 'vq_codec.bin'
 
     @property
     def _pq_codec_path(self):
-        return self.data_path / self._model_hash / 'pq_codec.bin'
+        return self.model_path / 'pq_codec.bin'
 
     @property
     def use_smart_probing(self):
