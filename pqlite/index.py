@@ -9,7 +9,7 @@ from jina.math.distance import cdist
 from jina.math.helper import top_k
 from .core import VQCodec, PQCodec
 from .container import CellContainer
-from .enums import Metric, Metrics
+from .enums import Metric
 
 
 class PQLite(CellContainer):
