@@ -1,4 +1,6 @@
 import time
+from datetime import date
+
 import numpy as np
 from pqlite import PQLite
 
@@ -101,10 +103,17 @@ for n_cells in [8, 16, 32, 64, 128]:
                         'train_time': train_time,
                         'index_time': index_time,
                         'query_time': query_time,
+                        'query_qps': query_time / len(Xte),
+                        'index_qps': index_time / len(Xte),
                         'indexer_hyperparams': {'n_cells': n_cells,
                                                 'n_subvectors': n_subvectors}
                         }
         print(results_dict)
 
         results.append(results_dict)
+
+today = date.today()
+results_df = pd.DataFrame(results)
+results_df.sort_values('recall', ascending=False)
+results_df.to_csv(f'bench-results-{today.strftime("%b-%d-%Y")}.csv')
 
