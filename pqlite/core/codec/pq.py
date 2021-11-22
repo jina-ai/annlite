@@ -127,7 +127,7 @@ class PQCodec(BaseCodec):
         """
         assert query.dtype == np.float32
         assert query.ndim == 1, 'input must be a single vector'
-        (D,) = query.shape
+        #(D,) = query.shape
         #assert (
         #    D == self.d_subvector * self.n_subvectors
         #), 'input dimension must be Ds * M'
@@ -142,9 +142,9 @@ class PQCodec(BaseCodec):
         #    dtable[m, :] = np.linalg.norm(self.codebooks[m] - query_sub, axis=1) ** 2
 
         dtable = np.asarray(precompute_adc_table(query,
-                                     self.d_subvector,
-                                      self.n_clusters,
-                                      self.codebooks))
+                                                 self.d_subvector,
+                                                 self.n_clusters,
+                                                 self.codebooks))
 
         return DistanceTable(dtable)
 
@@ -185,14 +185,12 @@ class DistanceTable(object):
         """
 
         assert codes.ndim == 2
-        N, M = codes.shape
-        #assert M == random_identity.shape[0]
 
         # Fetch distance values using codes. The following codes are
-        #dists = np.sum(self.dtable[range(M), codes], axis=1)
-        dists = dist_pqcodes_to_codebooks(M, self.dtable, codes)
+        # N, M = codes.shape
+        # dists = np.sum(self.dtable[range(M), codes], axis=1)
+        dists = dist_pqcodes_to_codebooks(self.dtable, codes)
 
-        #dists = dist_pqcode_to_codebooks(M, )
         # The above line is equivalent to the followings:
         # dists = np.zeros((N, )).astype(np.float32)
         # for n in range(N):
