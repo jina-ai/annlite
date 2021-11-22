@@ -4,6 +4,8 @@ from loguru import logger
 from scipy.cluster.vq import kmeans2, vq
 from .base import BaseCodec
 from pqlite.utils.asymmetric_distance import precompute_adc_table, dist_pqcodes_to_codebooks
+from ...enums import Metric
+
 
 class PQCodec(BaseCodec):
     """Implementation of Product Quantization (PQ) [Jegou11]_.
@@ -27,20 +29,20 @@ class PQCodec(BaseCodec):
 
     def __init__(
         self,
-        d_vector: int,
+        dim: int,
         n_subvectors: int = 8,
         n_clusters: int = 256,
-        metric: str = 'euclidean',
+        metric: Metric = Metric.EUCLIDEAN,
     ):
         super(PQCodec, self).__init__(require_train=True)
-        self.d_vector = d_vector
+        self.dim = dim
         self.n_subvectors = n_subvectors
         self.n_clusters = n_clusters
 
         assert (
-            d_vector % n_subvectors == 0
+            dim % n_subvectors == 0
         ), 'input dimension must be dividable by number of sub-space'
-        self.d_subvector = d_vector // n_subvectors
+        self.d_subvector = dim // n_subvectors
 
         self.code_dtype = (
             np.uint8
@@ -49,8 +51,8 @@ class PQCodec(BaseCodec):
         )
 
         assert (
-            metric == 'euclidean'
-        ), f'The distance metric `{metric}` is not supported yet!'
+            metric == Metric.EUCLIDEAN
+        ), f'The distance metric `{metric.name}` is not supported yet!'
         self.metric = metric
 
         self._codebooks = None

@@ -2,16 +2,19 @@ import numpy as np
 from loguru import logger
 from scipy.cluster.vq import kmeans2, vq
 from .base import BaseCodec
+from ...enums import Metric
 
 
 class VQCodec(BaseCodec):
-    def __init__(self, n_clusters: int, metric: str = 'euclidean', *args, **kwargs):
+    def __init__(
+        self, n_clusters: int, metric: Metric = Metric.EUCLIDEAN, *args, **kwargs
+    ):
         super(VQCodec, self).__init__(require_train=True)
         self.n_clusters = n_clusters
 
         assert (
-            metric == 'euclidean'
-        ), f'The distance metric `{metric}` is not supported yet!'
+            metric == Metric.EUCLIDEAN
+        ), f'The distance metric `{metric.name}` is not supported yet!'
         self.metric = metric
 
         self._codebook = None
