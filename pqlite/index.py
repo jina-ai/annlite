@@ -232,7 +232,7 @@ class PQLite(CellContainer):
         :param docs: the documents to delete
         """
         doc_ids = docs.get_attributes('id') if isinstance(docs, DocumentArray) else docs
-        super().delete(docs)
+        super().delete(doc_ids)
 
     def load(self, data_path: Path):
         pass
