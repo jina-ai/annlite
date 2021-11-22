@@ -5,15 +5,14 @@ import numpy as np
 from loguru import logger
 
 from jina import DocumentArray
-from pqlite.storage.base import ExpandMode
-from pqlite.storage.kv import DocStorage
-from pqlite.storage.table import CellTable, MetaTable
-from pqlite.core.index.pq_index import PQIndex
-from pqlite.core.index.flat_index import FlatIndex
-from pqlite.core.index.hnsw import HnswIndex
-from pqlite.helper import str2dtype
-from pqlite.enums import Metric
-from pqlite.core.codec.pq import PQCodec
+from .storage.base import ExpandMode
+from .storage.kv import DocStorage
+from .storage.table import CellTable, MetaTable
+from .core.index.pq_index import PQIndex
+from .core.index.flat_index import FlatIndex
+from .core.index.hnsw import HnswIndex
+from .enums import Metric
+from .core.codec.pq import PQCodec
 
 
 class CellContainer:
