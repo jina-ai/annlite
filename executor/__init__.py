@@ -9,8 +9,8 @@ class PQLiteIndexer(Executor):
         self,
         metric: str = 'euclidean',
         limit: int = 10,
-        index_traversal_paths: Iterable[str] = ('r',),
-        search_traversal_paths: Iterable[str] = ('r',),
+        index_traversal_paths: str = 'r',
+        search_traversal_paths: str = 'r',
         is_distance: bool = True,
         *args,
         **kwargs
@@ -33,7 +33,7 @@ class PQLiteIndexer(Executor):
         if len(flat_docs) == 0:
             return
 
-        self._index.add(flat_docs)
+        self._index.index(flat_docs)
 
     @requests(on='/update')
     def update(self, docs: DocumentArray, parameters: Optional[dict] = {}, **kwargs):
