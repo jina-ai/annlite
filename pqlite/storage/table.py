@@ -112,6 +112,7 @@ class CellTable(Table):
         columns: Optional[List[tuple]] = None,
         in_memory: bool = True,
         data_path: Optional[Path] = None,
+        lazy_create: bool = False
     ):
         super().__init__(name, data_path=data_path, in_memory=in_memory)
 
@@ -121,7 +122,8 @@ class CellTable(Table):
         if columns is not None:
             for name, dtype, create_index in columns:
                 self.add_column(name, dtype, create_index)
-        self.create_table()
+        if not lazy_create:
+            self.create_table()
 
     @property
     def columns(self) -> List[str]:
@@ -214,6 +216,7 @@ class CellTable(Table):
         keys = [d[0] for d in cursor.description]
 
         for row in cursor:
+            row = list(row)
             row[0] -= 1
             yield dict(zip(keys, row))
 
@@ -269,7 +272,7 @@ class CellTable(Table):
 
     def deleted_count(self):
         """Return the total number of record what is marked as soft-deleted."""
-        sql = f'SELECT count(*) from {self.name} WHERE _is_deleted = 1'
+        sql = f'SELECT count(*) from {self.name} WHERE _deleted = 1'
         return self._conn.execute(sql).fetchone()[0]
 
 

@@ -72,12 +72,9 @@ class PQLite(CellContainer):
             else None
         )
 
-        if isinstance(data_path, str):
-            data_path = Path(data_path)
-
-        self.data_path = data_path
+        self.data_path = Path(data_path)
         if create:
-            data_path.mkdir(exist_ok=True)
+            self.data_path.mkdir(parents=True, exist_ok=True)
 
         self.read_only = read_only
 
@@ -229,16 +226,16 @@ class PQLite(CellContainer):
         for doc, matches in zip(docs, match_docs):
             doc.matches = matches
 
-    def delete(self, docs: DocumentArray):
+    def delete(self, docs: Union[DocumentArray, List[str]]):
         """Delete entries from the index by id
 
         :param docs: the documents to delete
         """
-        super().delete(docs.get_attributes('id'))
+        doc_ids = docs.get_attributes('id') if isinstance(docs, DocumentArray) else docs
+        super().delete(docs)
 
     def load(self, data_path: Path):
         pass
-
 
     def encode(self, x: np.ndarray):
         n_data, _ = self._sanity_check(x)

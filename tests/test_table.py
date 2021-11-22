@@ -5,7 +5,7 @@ from pqlite.storage.table import CellTable, MetaTable
 
 @pytest.fixture
 def dummy_cell_table():
-    table = CellTable(name='dummy', in_memory=True)
+    table = CellTable(name='dummy', in_memory=True, lazy_create=True)
     table.add_column('name', 'TEXT', create_index=True)
     table.add_column('price', 'FLOAT', create_index=True)
     table.add_column('category', 'TEXT')
@@ -35,7 +35,7 @@ def table_with_data(dummy_cell_table, sample_docs):
 
 
 def test_create_cell_table():
-    table = CellTable(name='cell_table_x')
+    table = CellTable(name='cell_table_x', lazy_create=True)
     table.add_column('x', 'float')
     table.create_table()
     assert table.existed()

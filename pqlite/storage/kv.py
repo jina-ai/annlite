@@ -15,7 +15,7 @@ class DocStorage:
         return lmdb.Environment(
             str(self._path),
             map_size=int(3.436e10),  # in bytes, 32G,
-            subdir=False,
+            subdir=True,
             readonly=False,
             metasync=True,
             sync=True,
