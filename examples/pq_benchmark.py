@@ -81,7 +81,7 @@ for n_cells in [8, 16, 32, 64, 128]:
         pq = PQLite(dim=D, n_cells=n_cells, n_subvectors=n_subvectors)
 
         t0 = time.time()
-        pq.fit(Xtr[:20480])
+        pq.train(Xtr[:20480])
         train_time = abs(time.time() - t0)
 
         t0 = time.time()

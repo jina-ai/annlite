@@ -21,7 +21,7 @@ class BaseCodec(ABC):
         pass
 
     def dump(self, target_path: Path):
-        pickle.dump(self, target_path, protocol=4)
+        pickle.dump(self, target_path.open('wb'), protocol=4)
 
     @property
     def is_trained(self):
