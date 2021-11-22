@@ -15,7 +15,7 @@ class PQIndex(FlatIndex):
         assert pq_codec is not None
         self._dense_dim = dim
         super(PQIndex, self).__init__(
-            pq_codec.n_subvectors, dtype=pq_codec.code_dtype,  **kwargs
+            pq_codec.n_subvectors, dtype=pq_codec.code_dtype, **kwargs
         )
         self._pq_codec = pq_codec
 

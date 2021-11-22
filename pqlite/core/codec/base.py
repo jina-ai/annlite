@@ -23,6 +23,10 @@ class BaseCodec(ABC):
     def dump(self, target_path: Path):
         pickle.dump(self, target_path.open('wb'), protocol=4)
 
+    @staticmethod
+    def load(from_path: Path):
+        return pickle.load(from_path.open('rb'))
+
     @property
     def is_trained(self):
         return self._is_trained

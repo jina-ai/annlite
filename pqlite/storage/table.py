@@ -112,7 +112,7 @@ class CellTable(Table):
         columns: Optional[List[tuple]] = None,
         in_memory: bool = True,
         data_path: Optional[Path] = None,
-        lazy_create: bool = False
+        lazy_create: bool = False,
     ):
         super().__init__(name, data_path=data_path, in_memory=in_memory)
 
@@ -274,7 +274,6 @@ class CellTable(Table):
         """Return the total number of record what is marked as soft-deleted."""
         sql = f'SELECT count(*) from {self.name} WHERE _deleted = 1'
         return self._conn.execute(sql).fetchone()[0]
-
 
     @property
     def size(self):

@@ -22,7 +22,7 @@ class FlatIndex(BaseIndex):
 
         x = x.reshape((-1, self.dim))
 
-        data = self._data[:self.size]
+        data = self._data[: self.size]
         data_ids = np.arange(self.size)
 
         if indices is not None:
@@ -63,7 +63,9 @@ class FlatIndex(BaseIndex):
         self._data = np.zeros((self.initial_size, self.dim), dtype=self.dtype)
 
     def delete(self, ids: List[int]):
-        raise RuntimeError(f'the deletion operation is not allowed for {self.__class__.__name__}!')
+        raise RuntimeError(
+            f'the deletion operation is not allowed for {self.__class__.__name__}!'
+        )
 
     def update_with_ids(self, x: np.ndarray, ids: List[int], **kwargs):
         self._data[ids, :] = x

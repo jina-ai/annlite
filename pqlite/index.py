@@ -62,24 +62,37 @@ class PQLite(CellContainer):
 
         self.n_subvectors = n_subvectors
         self.n_probe = max(n_probe, n_cells)
+        self.n_cells = n_cells
+
+        if isinstance(metric, str):
+            metric = Metric.from_string(metric)
+        self.metric = metric
 
         self._use_smart_probing = True
 
-        self.vq_codec = VQCodec(n_cells, metric=metric) if n_cells > 1 else None
-        self.pq_codec = (
-            PQCodec(dim, n_subvectors=n_subvectors, n_clusters=256, metric=metric)
-            if n_subvectors
-            else None
-        )
+        self.read_only = read_only
 
         self.data_path = Path(data_path)
         if create:
             self.data_path.mkdir(parents=True, exist_ok=True)
 
-        self.read_only = read_only
+        self.vq_codec = None
+        if self._vq_codec_path.exists():
+            logger.info(f'Load VQ codec (K={self.n_cells}) from {self.data_path}')
+            self.vq_codec = VQCodec.load(self._vq_codec_path)
+        elif n_cells > 1:
+            logger.info(
+                f'Load PQ codec (n_subvectors={self.n_subvectors}) from {self.data_path}'
+            )
+            self.vq_codec = VQCodec(self.n_cells, metric=self.metric)
 
-        if isinstance(metric, str):
-            metric = Metric.from_string(metric)
+        self.pq_codec = None
+        if self._pq_codec_path.exists():
+            self.pq_codec = PQCodec.load(self._pq_codec_path)
+        elif n_subvectors:
+            self.pq_codec = PQCodec(
+                dim, n_subvectors=n_subvectors, n_clusters=256, metric=self.metric
+            )
 
         super(PQLite, self).__init__(
             dim=dim,

@@ -67,11 +67,11 @@ class CellContainer:
                 )
                 for _ in range(n_cells)
             ]
-        self._doc_stores = [
-            DocStorage(data_path / f'cell_{_}') for _ in range(n_cells)
-        ]
+        self._doc_stores = [DocStorage(data_path / f'cell_{_}') for _ in range(n_cells)]
 
-        self._cell_tables = [CellTable(f'table_{c}', columns=columns) for c in range(n_cells)]
+        self._cell_tables = [
+            CellTable(f'table_{c}', columns=columns) for c in range(n_cells)
+        ]
 
         self._meta_table = MetaTable('metas', data_path=data_path, in_memory=True)
 
