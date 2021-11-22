@@ -1,10 +1,9 @@
-from typing import Optional, Any, Iterable, Iterator, List
-import pathlib
+from typing import Optional, Any, Iterator, List
+from pathlib import Path
 import sqlite3
 import datetime
-from jina import Document, DocumentArray
+from jina import DocumentArray
 import numpy as np
-from ..helper import open_lmdb, dumps_doc
 
 sqlite3.register_adapter(np.int64, lambda x: int(x))
 sqlite3.register_adapter(np.int32, lambda x: int(x))
@@ -77,7 +76,7 @@ class Table:
     def __init__(
         self,
         name: str,
-        data_path: Optional[pathlib.Path] = None,
+        data_path: Optional[Path] = None,
         in_memory: bool = True,
     ):
         if in_memory:
@@ -110,13 +109,19 @@ class CellTable(Table):
     def __init__(
         self,
         name: str,
-        data_path: pathlib.Path = pathlib.Path('.'),
+        columns: Optional[List[tuple]] = None,
         in_memory: bool = True,
+        data_path: Optional[Path] = None,
     ):
         super().__init__(name, data_path=data_path, in_memory=in_memory)
 
         self._columns = []
         self._indexed_keys = set()
+
+        if columns is not None:
+            for name, dtype, create_index in columns:
+                self.add_column(name, dtype, create_index)
+        self.create_table()
 
     @property
     def columns(self) -> List[str]:
@@ -268,7 +273,7 @@ class MetaTable(Table):
     def __init__(
         self,
         name: str = 'meta',
-        data_path: Optional[pathlib.Path] = None,
+        data_path: Optional[Path] = None,
         in_memory: bool = False,
     ):
         super(MetaTable, self).__init__(name, data_path=data_path, in_memory=in_memory)

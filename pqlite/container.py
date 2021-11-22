@@ -28,11 +28,10 @@ class CellContainer:
         columns: Optional[List[tuple]] = None,
         data_path: Path = Path('./data'),
     ):
-
-        self._data_path = data_path
         self.dim = dim
         self.metric = metric
         self.n_cells = n_cells
+        self.data_path = data_path
 
         if pq_codec is not None:
             self._vec_indexes = [
@@ -69,16 +68,12 @@ class CellContainer:
                 for _ in range(n_cells)
             ]
         self._doc_stores = [
-            DocStorage(data_path / f'cell_store_{_}') for _ in range(n_cells)
+            DocStorage(data_path / f'cell_{_}' / 'docs.db') for _ in range(n_cells)
         ]
 
-        self._cell_tables = [CellTable(f'cell_table_{c}') for c in range(n_cells)]
-        if columns is not None:
-            for name, dtype, create_index in columns:
-                self._add_column(name, dtype, create_index=create_index)
-        self._create_tables()
+        self._cell_tables = [CellTable(f'table_{c}', columns=columns) for c in range(n_cells)]
 
-        self._meta_table = MetaTable(data_path=data_path, in_memory=True)
+        self._meta_table = MetaTable('metas', data_path=data_path, in_memory=True)
 
     def clean(self):
         # TODO:
@@ -269,13 +264,3 @@ class CellContainer:
     @property
     def index_size(self):
         return sum([table.size for table in self._cell_tables])
-
-    def _add_column(
-        self, name: str, dtype: Union[str, type], create_index: bool = False
-    ):
-        for table in self.cell_tables:
-            table.add_column(name, dtype, create_index=create_index)
-
-    def _create_tables(self):
-        for table in self.cell_tables:
-            table.create_table()

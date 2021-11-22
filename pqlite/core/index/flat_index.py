@@ -1,5 +1,7 @@
 from typing import Optional, List
 import numpy as np
+from loguru import logger
+
 from jina.math.distance import cdist
 from jina.math.helper import top_k
 from .base import BaseIndex
@@ -20,8 +22,8 @@ class FlatIndex(BaseIndex):
 
         x = x.reshape((-1, self.dim))
 
-        data = self._data
-        data_ids = np.arange(self.capacity)
+        data = self._data[:self.size]
+        data_ids = np.arange(self.size)
 
         if indices is not None:
             data = self._data[indices]
@@ -31,10 +33,10 @@ class FlatIndex(BaseIndex):
         dists, idx = top_k(dists, limit, descending=False)
 
         # TODO: change the shape of return
-        ids = ids[0]
-        if indices is not None:
-            ids = data_idx[ids]
-        return dists[0], ids
+        dists = dists[0]
+        data_ids = data_ids[idx[0]]
+
+        return dists, data_ids
 
     def add_with_ids(self, x: np.ndarray, ids: List[int]):
         for idx in ids:
@@ -53,17 +55,15 @@ class FlatIndex(BaseIndex):
 
         self._capacity += self.expand_step_size
         logger.debug(
-            f'=> total storage capacity is expanded by {self.expand_step_size}',
+            f'total storage capacity is expanded by {self.expand_step_size}',
         )
 
     def reset(self):
-        pass
-
-    def add_with_ids(self, x: np.ndarray, ids: List[int], **kwargs):
-        pass
+        super().reset()
+        self._data = np.zeros((self.initial_size, self.dim), dtype=self.dtype)
 
     def delete(self, ids: List[int]):
-        pass
+        raise RuntimeError(f'the deletion operation is not allowed for {self.__class__.__name__}!')
 
-    def update(self, x: np.ndarray, ids: List[int], **kwargs):
-        pass
+    def update_with_ids(self, x: np.ndarray, ids: List[int], **kwargs):
+        self._data[ids, :] = x

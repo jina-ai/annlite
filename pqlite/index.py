@@ -236,6 +236,10 @@ class PQLite(CellContainer):
         """
         super().delete(docs.get_attributes('id'))
 
+    def load(self, data_path: Path):
+        pass
+
+
     def encode(self, x: np.ndarray):
         n_data, _ = self._sanity_check(x)
         y = self.pq_codec.encode(x)
