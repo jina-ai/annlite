@@ -190,12 +190,15 @@ class CellTable(Table):
             self._conn.commit()
         return row_ids
 
-    def query(self, conditions: List[tuple] = []) -> Iterator[dict]:
+    def query(self, conditions: Optional[List[tuple]] = None) -> Iterator[dict]:
         """Query the records which matches the given conditions
 
         :param conditions: the conditions in the format of tuple `(name: str, op: str, value: any)`
         :return: iterator to yield matched doc
         """
+        if conditions is None:
+            conditions = []
+
         sql = 'SELECT _id, _doc_id from {table} WHERE {where} ORDER BY _id ASC;'
 
         where_conds = ['_deleted = ?']
@@ -263,6 +266,12 @@ class CellTable(Table):
         sql = sql.format(table=self.name, where=where)
         params = tuple([0] + [_converting(cond[2]) for cond in conditions])
         return self._conn.execute(sql, params).fetchone()[0]
+
+    def deleted_count(self):
+        """Return the total number of record what is marked as soft-deleted."""
+        sql = f'SELECT count(*) from {self.name} WHERE _is_deleted = 1'
+        return self._conn.execute(sql).fetchone()[0]
+
 
     @property
     def size(self):

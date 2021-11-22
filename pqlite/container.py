@@ -93,14 +93,13 @@ class CellContainer:
         count = 0
         for cell_id in cells:
             indices = None
-
-            if conditions is not None:
+            cell_table = self.cell_table(cell_id)
+            if (conditions is not None) or (cell_table.deleted_count() > 0):
                 indices = []
-                for doc in self.cell_table(cell_id).query(conditions=conditions):
+                for doc in cell_table.query(conditions=conditions):
                     indices.append(doc['_id'])
 
                 if len(indices) == 0:
-                    indices = None
                     continue
 
                 indices = np.array(indices, dtype=np.int64)
