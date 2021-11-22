@@ -11,4 +11,3 @@ class ExpandMode(BetterEnum):
     STEP = 1
     DOUBLE = 2
     ADAPTIVE = 3
-

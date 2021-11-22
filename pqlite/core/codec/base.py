@@ -2,6 +2,7 @@ from abc import ABC, abstractmethod
 from pathlib import Path
 import pickle
 
+
 class BaseCodec(ABC):
     def __init__(self, require_train: bool = True):
         self.require_train = require_train

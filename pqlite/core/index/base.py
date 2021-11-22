@@ -6,6 +6,7 @@ import numpy as np
 from ...enums import ExpandMode, Metric
 from ...helper import str2dtype
 
+
 class BaseIndex(abc.ABC):
     def __init__(
         self,
@@ -44,12 +45,7 @@ class BaseIndex(abc.ABC):
         ...
 
     @abc.abstractmethod
-    def add_with_ids(
-        self,
-        x: np.ndarray,
-        ids: List[int],
-        **kwargs
-    ):
+    def add_with_ids(self, x: np.ndarray, ids: List[int], **kwargs):
         ...
 
     @abc.abstractmethod
@@ -57,10 +53,5 @@ class BaseIndex(abc.ABC):
         ...
 
     @abc.abstractmethod
-    def update(
-        self,
-        x: np.ndarray,
-        ids: List[int],
-        **kwargs
-    ):
+    def update(self, x: np.ndarray, ids: List[int], **kwargs):
         ...

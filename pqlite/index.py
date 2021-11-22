@@ -112,7 +112,9 @@ class PQLite(CellContainer):
         n_data, _ = self._sanity_check(x)
 
         if self.is_trained and not force_retrain:
-            logger.warning('The pqlite has been trained. Please use ``force_retrain=True`` to retrain.')
+            logger.warning(
+                'The pqlite has been trained. Please use ``force_retrain=True`` to retrain.'
+            )
             return
 
         if self.vq_codec:
@@ -284,7 +286,14 @@ class PQLite(CellContainer):
 
     @property
     def stat(self):
-        return {'total_docs': self.total_docs, 'index_size': self.index_size, 'n_cells': self.n_cells, 'dim': self.dim, 'metric': self.metric, 'is_trained': self.is_trained}
+        return {
+            'total_docs': self.total_docs,
+            'index_size': self.index_size,
+            'n_cells': self.n_cells,
+            'dim': self.dim,
+            'metric': self.metric,
+            'is_trained': self.is_trained,
+        }
 
     # @property
     # def smart_probing_temperature(self):

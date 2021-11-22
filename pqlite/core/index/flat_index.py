@@ -6,11 +6,7 @@ from .base import BaseIndex
 
 
 class FlatIndex(BaseIndex):
-    def __init__(
-            self,
-            *args,
-            **kwargs
-    ):
+    def __init__(self, *args, **kwargs):
         super(FlatIndex, self).__init__(*args, **kwargs)
         self._data = np.zeros((self.initial_size, self.dim), dtype=self.dtype)
 
@@ -60,7 +56,6 @@ class FlatIndex(BaseIndex):
             f'=> total storage capacity is expanded by {self.expand_step_size}',
         )
 
-
     def reset(self):
         pass
 
@@ -72,4 +67,3 @@ class FlatIndex(BaseIndex):
 
     def update(self, x: np.ndarray, ids: List[int], **kwargs):
         pass
-
