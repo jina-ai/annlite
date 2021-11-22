@@ -1,4 +1,4 @@
-from typing import List, Optional
+from typing import List, Optional, Union
 import numpy as np
 from pqlite.hnsw_bind import Index
 from ....enums import Metric
@@ -9,10 +9,10 @@ class HnswIndex:
     def __init__(
         self,
         dim: int,
-        dtype: str = 'float32',
+        dtype: Union[np.dtype, str] = np.float32,
         metric: Metric = Metric.EUCLIDEAN,
         ef_construction: int = 400,
-        ef_search: int = 50,
+        ef_search: int = 100,
         max_connection: int = 80,
         max_elements: int = 10_000_000,
         **kwargs,
@@ -28,7 +28,7 @@ class HnswIndex:
         """
 
         self.dim = dim
-        self.dtype = str2dtype(dtype)
+        self.dtype = str2dtype(dtype) if isinstance(dtype, str) else dtype
         self.metric = metric
 
         self.ef_construction = ef_construction
