@@ -262,6 +262,14 @@ class CellContainer:
     def vec_index(self, cell_id: int):
         return self._vec_indexes[cell_id]
 
+    @property
+    def total_docs(self):
+        return sum([store.size for store in self._doc_stores])
+
+    @property
+    def index_size(self):
+        return sum([table.size for table in self._cell_tables])
+
     def _add_column(
         self, name: str, dtype: Union[str, type], create_index: bool = False
     ):

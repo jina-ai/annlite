@@ -259,6 +259,10 @@ class CellTable(Table):
         params = tuple([0] + [_converting(cond[2]) for cond in conditions])
         return self._conn.execute(sql, params).fetchone()[0]
 
+    @property
+    def size(self):
+        return self.count()
+
 
 class MetaTable(Table):
     def __init__(

@@ -282,6 +282,10 @@ class PQLite(CellContainer):
         assert type(value) is bool
         self._use_smart_probing = value
 
+    @property
+    def stat(self):
+        return {'total_docs': self.total_docs, 'index_size': self.index_size, 'n_cells': self.n_cells, 'dim': self.dim, 'metric': self.metric, 'is_trained': self.is_trained}
+
     # @property
     # def smart_probing_temperature(self):
     #     return self._smart_probing_temperature
