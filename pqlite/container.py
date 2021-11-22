@@ -5,15 +5,15 @@ import numpy as np
 from loguru import logger
 
 from jina import DocumentArray
-from .base import ExpandMode
-from .kv import DocStorage
-from .table import CellTable, MetaTable
-from ..core.index.pq_index import PQIndex
-from ..core.index.flat_index import FlatIndex
-from ..core.index.hnsw import HnswIndex
-from ..helper import str2dtype
-from ..enums import Metric
-from ..core.codec.pq import PQCodec
+from pqlite.storage.base import ExpandMode
+from pqlite.storage.kv import DocStorage
+from pqlite.storage.table import CellTable, MetaTable
+from pqlite.core.index.pq_index import PQIndex
+from pqlite.core.index.flat_index import FlatIndex
+from pqlite.core.index.hnsw import HnswIndex
+from pqlite.helper import str2dtype
+from pqlite.enums import Metric
+from pqlite.core.codec.pq import PQCodec
 
 
 class CellContainer:
@@ -27,7 +27,7 @@ class CellContainer:
         expand_step_size: Optional[int] = 1024,
         expand_mode: ExpandMode = ExpandMode.STEP,
         columns: Optional[List[tuple]] = None,
-        data_path: pathlib.Path = pathlib.Path('.'),
+        data_path: pathlib.Path = pathlib.Path('storage'),
     ):
 
         self._data_path = data_path

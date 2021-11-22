@@ -1,5 +1,6 @@
 from abc import ABC, abstractmethod
-
+from pathlib import Path
+import pickle
 
 class BaseCodec(ABC):
     def __init__(self, require_train: bool = True):
@@ -17,6 +18,9 @@ class BaseCodec(ABC):
     @abstractmethod
     def decode(self):
         pass
+
+    def dump(self, target_path: Path):
+        pickle.dump(self, target_path, protocol=4)
 
     @property
     def is_trained(self):

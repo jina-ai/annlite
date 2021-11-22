@@ -1,4 +1,5 @@
 from typing import Optional, List, Union
+import hashlib
 from pathlib import Path
 import numpy as np
 from loguru import logger
@@ -7,33 +8,35 @@ from jina import DocumentArray
 from jina.math.distance import cdist
 from jina.math.helper import top_k
 from .core import VQCodec, PQCodec
-from .storage.cell import CellContainer
+from .container import CellContainer
 from .enums import Metric
 
 
 class PQLite(CellContainer):
-    """:class:`PQLite` is an implementation of IVF-PQ being with equipped with SQLite.
+    """:class:`PQLite` is an approximate nearest neighbor search library.
 
     To create a :class:`PQLite` object, simply:
 
         .. highlight:: python
         .. code-block:: python
-            pqlite = PQLite(d_vector=256, metric='euclidean')
+            pqlite = PQLite(dim=256, metric=pqlite.Metric.EUCLIDEAN)
 
-    :param dim: the dimensionality of input vectors. there are 2 constraints on d_vector:
+    :param dim: dimensionality of input vectors. there are 2 constraints on dim:
             (1) it needs to be divisible by n_subvectors; (2) it needs to be a multiple of 4.*
-    :param n_subvectors: number of subquantizers, essentially this is the byte size of
-            each quantized vector, default is 8.
-    :param n_cells:  number of coarse quantizer clusters.
+    :param n_subvectors: number of sub-quantizers, essentially this is the byte size of
+            each quantized vector, default is None.
+    :param n_cells:  number of coarse quantizer clusters, default is 1.
+    :param n_probe: number of cells to search for each query, default is 16.
     :param initial_size: initial capacity assigned to each voronoi cell of coarse quantizer.
             ``n_cells * initial_size`` is the number of vectors that can be stored initially.
             if any cell has reached its capacity, that cell will be automatically expanded.
             If you need to add vectors frequently, a larger value for init_size is recommended.
-    :param args: Additional positional arguments which are just used for the parent initialization
-    :param kwargs: Additional keyword arguments which are just used for the parent initialization
+    :param data_path: location of directory to store the database.
+    :param create: if False, do not create the directory path if it is missing.
+    :param read_only: if True, the index is not writable.
 
     .. note::
-        Remember that the shape of any tensor that contains data points has to be `[n_data, d_vector]`.
+        Remember that the shape of any tensor that contains data points has to be `[n_data, dim]`.
     """
 
     def __init__(
@@ -47,6 +50,8 @@ class PQLite(CellContainer):
         expand_step_size: int = 10240,
         columns: Optional[List[tuple]] = None,
         data_path: Union[Path, str] = Path('./data'),
+        create: bool = True,
+        read_only: bool = False,
         *args,
         **kwargs,
     ):
@@ -59,7 +64,6 @@ class PQLite(CellContainer):
         self.n_probe = max(n_probe, n_cells)
 
         self._use_smart_probing = True
-        self._smart_probing_temperature = 30.0
 
         self.vq_codec = VQCodec(n_cells, metric=metric) if n_cells > 1 else None
         self.pq_codec = (
@@ -67,9 +71,15 @@ class PQLite(CellContainer):
             if n_subvectors
             else None
         )
+
         if isinstance(data_path, str):
             data_path = Path(data_path)
-        data_path.mkdir(exist_ok=True)
+
+        self.data_path = data_path
+        if create:
+            data_path.mkdir(exist_ok=True)
+
+        self.read_only = read_only
 
         super(PQLite, self).__init__(
             dim=dim,
@@ -82,26 +92,45 @@ class PQLite(CellContainer):
             data_path=data_path,
         )
 
-    def _sanity_check(self, x: 'np.ndarray'):
+    def _sanity_check(self, x: np.ndarray):
         assert len(x.shape) == 2
         assert x.shape[1] == self.dim
 
         return x.shape
 
-    def fit(self, x: 'np.ndarray', force_retrain: bool = False):
-        n_data, d_vector = self._sanity_check(x)
+    def fit(self, x: np.ndarray, auto_save: bool = True, force_retrain: bool = False):
+        """Train pqlite with training data.
 
-        logger.info(
-            f'=> start training VQ codec (K={self.n_cells}) with {n_data} data...'
-        )
-        self.vq_codec.fit(x)
+        :param x: the ndarray data for training.
+        :param auto_save: if False, will not save the trained model.
+        :param force_retrain: if True, enforce to retrain the model, and overwrite the model if ``auto_save=True``.
 
-        logger.info(
-            f'=> start training PQ codec (n_subvectors={self.n_subvectors}) with {n_data} data...'
-        )
-        self.pq_codec.fit(x)
+        """
+        n_data, _ = self._sanity_check(x)
+
+        if self.is_trained and not force_retrain:
+            logger.warning('The pqlite has been trained. Please use ``force_retrain=True`` to retrain.')
+            return
+
+        if self.vq_codec:
+            logger.info(
+                f'=> start training VQ codec (K={self.n_cells}) with {n_data} data...'
+            )
+            self.vq_codec.fit(x)
+
+        if self.pq_codec:
+            logger.info(
+                f'=> start training PQ codec (n_subvectors={self.n_subvectors}) with {n_data} data...'
+            )
+            self.pq_codec.fit(x)
 
         logger.info(f'=> pqlite is successfully trained!')
+
+        if auto_save:
+            logger.info(f'==> save the trained parameters to {self.data_path / self._model_hash}')
+            self.create_model_dir()
+            self.vq_codec.dump(self._vq_codec_path)
+            self.pq_codec.dump(self._pq_codec_path)
 
     def index(self, docs: DocumentArray, **kwargs):
         """
@@ -109,6 +138,10 @@ class PQLite(CellContainer):
         :param docs: The documents to index
         :return:
         """
+
+        if self.read_only:
+            logger.warning('The pqlite is readonly, cannot add documents')
+            return
 
         x = docs.embeddings
 
@@ -128,6 +161,10 @@ class PQLite(CellContainer):
         :param docs: the documents to update
         :return:
         """
+        if self.read_only:
+            logger.warning('The pqlite is readonly, cannot update documents')
+            return
+
         x = docs.embeddings
         n_data, _ = self._sanity_check(x)
 
@@ -195,6 +232,37 @@ class PQLite(CellContainer):
         assert x.shape[1] == self.n_subvectors
         return self.pq_codec.decode(x)
 
+    def model_dir_exists(self):
+        """Check whether the model directory exists at the data path"""
+        model_path = self.data_path / self._model_hash
+        return model_path.exists()
+
+    def create_model_dir(self):
+        """Create a new directory at the data path to save model."""
+        model_path = self.data_path / self._model_hash
+        model_path.mkdir(exist_ok=True)
+
+    @property
+    def is_trained(self):
+        if self.vq_codec and (not self.vq_codec.is_trained):
+            return False
+        if self.pq_codec and (not self.pq_codec.is_trained):
+            return False
+        return True
+
+    @property
+    def _model_hash(self):
+        key = f'{self.n_cells} x {self.n_subvectors}'
+        return hashlib.md5(key.encode()).hexdigest()
+
+    @property
+    def _vq_codec_path(self):
+        return self.data_path / self._model_hash / 'vq_codec.bin'
+
+    @property
+    def _pq_codec_path(self):
+        return self.data_path / self._model_hash / 'pq_codec.bin'
+
     @property
     def use_smart_probing(self):
         return self._use_smart_probing
@@ -204,12 +272,12 @@ class PQLite(CellContainer):
         assert type(value) is bool
         self._use_smart_probing = value
 
-    @property
-    def smart_probing_temperature(self):
-        return self._smart_probing_temperature
-
-    @smart_probing_temperature.setter
-    def smart_probing_temperature(self, value):
-        assert value > 0
-        assert self.use_smart_probing, 'set use_smart_probing to True first'
-        self._smart_probing_temperature = value
+    # @property
+    # def smart_probing_temperature(self):
+    #     return self._smart_probing_temperature
+    #
+    # @smart_probing_temperature.setter
+    # def smart_probing_temperature(self, value):
+    #     assert value > 0
+    #     assert self.use_smart_probing, 'set use_smart_probing to True first'
+    #     self._smart_probing_temperature = value
