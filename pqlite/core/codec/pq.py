@@ -135,7 +135,7 @@ class PQCodec(BaseCodec):
 
         # dtable[m] : distance between m-th subvec and m-th codewords (m-th subspace)
         # dtable[m][ks] : distance between m-th subvec and ks-th codeword of m-th codewords
-
+        query = np.array(query, copy=True)
         dtable = np.asarray(
             pq_bind.precompute_adc_table(
                 query, self.d_subvector, self.n_clusters, self.codebooks
