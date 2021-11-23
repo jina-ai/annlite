@@ -81,7 +81,7 @@ cpdef float[:,:] precompute_adc_table(float[:] query,
     """
     Compute the  Asymmetric Distance Table between a query and a PQ space.
 
-    :param query: Memoryview  a query in the original feature space (not a pqcode).
+    :param query: Memoryview a query in the original feature space (not a pqcode).
     :param d_subvector: Number of dimensions in a subvector.
     :param n_clusters: Number of clusters per sub-space (number of prototypes per sub-space).
     :param codebooks: Memoryview containing the learned codevectors for each slice.

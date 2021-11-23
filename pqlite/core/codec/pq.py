@@ -136,12 +136,6 @@ class PQCodec(BaseCodec):
         # dtable[m] : distance between m-th subvec and m-th codewords (m-th subspace)
         # dtable[m][ks] : distance between m-th subvec and ks-th codeword of m-th codewords
 
-        # numpy version for
-        # dtable = np.empty((self.n_subvectors, self.n_clusters), dtype=np.float32)
-        # for m in range(self.n_subvectors):
-        #    query_sub = query[m * self.d_subvector : (m + 1) * self.d_subvector]
-        #    dtable[m, :] = np.linalg.norm(self.codebooks[m] - query_sub, axis=1) ** 2
-
         dtable = np.asarray(
             pq_bind.precompute_adc_table(
                 query, self.d_subvector, self.n_clusters, self.codebooks
@@ -187,10 +181,6 @@ class DistanceTable(object):
         """
 
         assert codes.ndim == 2
-
-        # Fetch distance values using codes. The following codes are
-        # N, M = codes.shape
-        # dists = np.sum(self.dtable[range(M), codes], axis=1)
         dists = pq_bind.dist_pqcodes_to_codebooks(self.dtable, codes)
 
         # The above line is equivalent to the followings:
