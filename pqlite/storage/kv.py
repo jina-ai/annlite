@@ -1,4 +1,6 @@
 import lmdb
+import shutil
+
 from typing import Union
 from pathlib import Path
 from typing import List, Union
@@ -73,8 +75,8 @@ class DocStorage:
         return docs
 
     def clear(self):
-        with self._env.begin(write=True) as txn:
-            txn.drop(self._env.open_db(txn=txn), delete=False)
+        shutil.rmtree(self._path)
+        self._open(self._path)
 
     @property
     def stat(self):

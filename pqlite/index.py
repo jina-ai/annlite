@@ -77,17 +77,17 @@ class PQLite(CellContainer):
             self.data_path.mkdir(parents=True, exist_ok=True)
 
         self.vq_codec = None
-        if self._vq_codec_path.exists():
+        if self._vq_codec_path.exists() and n_cells > 1:
             logger.info(
                 f'Load trained VQ codec (K={self.n_cells}) from {self.model_path}'
             )
             self.vq_codec = VQCodec.load(self._vq_codec_path)
         elif n_cells > 1:
-            logger.info(f'Initialize PQ codec (K={self.n_cells})')
+            logger.info(f'Initialize VQ codec (K={self.n_cells})')
             self.vq_codec = VQCodec(self.n_cells, metric=self.metric)
 
         self.pq_codec = None
-        if self._pq_codec_path.exists():
+        if self._pq_codec_path.exists() and n_subvectors:
             logger.info(
                 f'Load trained PQ codec (n_subvectors={self.n_subvectors}) from {self.model_path}'
             )
@@ -129,7 +129,7 @@ class PQLite(CellContainer):
 
         if self.is_trained and not force_retrain:
             logger.warning(
-                'The pqlite has been trained. Please use ``force_retrain=True`` to retrain.'
+                'The pqlite has been trained or is not trainable. Please use ``force_retrain=True`` to retrain.'
             )
             return
 
@@ -253,8 +253,12 @@ class PQLite(CellContainer):
         doc_ids = docs.get_attributes('id') if isinstance(docs, DocumentArray) else docs
         super().delete(doc_ids)
 
-    def load(self, data_path: Path):
-        pass
+    def clear(self):
+        """Clear the whole database"""
+        for cell_id in range(self.n_cells):
+            logger.info(f'Clear the index of cell-{cell_id}')
+            self.vec_index(cell_id).reset()
+            self.doc_store(cell_id).clear()
 
     def encode(self, x: np.ndarray):
         n_data, _ = self._sanity_check(x)
