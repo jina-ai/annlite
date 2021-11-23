@@ -135,11 +135,12 @@ class PQCodec(BaseCodec):
 
         # dtable[m] : distance between m-th subvec and m-th codewords (m-th subspace)
         # dtable[m][ks] : distance between m-th subvec and ks-th codeword of m-th codewords
-        dtable = np.asarray(
-            pq_bind.precompute_adc_table(
-                query, self.d_subvector, self.n_clusters, self.codebooks
-            )
-        )
+
+        # Warning: the following line produces `ValueError: buffer source array is read-only`
+        # if no `const` is used in the cython implementation using a memoryview
+        dtable = pq_bind.precompute_adc_table(query, self.d_subvector,
+                                              self.n_clusters, self.codebooks)
+
 
         return DistanceTable(dtable)
 
@@ -166,7 +167,6 @@ class DistanceTable(object):
     def __init__(self, dtable: 'np.ndarray'):
 
         assert dtable.ndim == 2
-        assert dtable.dtype == np.float32
         self.dtable = dtable
 
     def adist(self, codes):

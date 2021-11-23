@@ -19,11 +19,11 @@ ctypedef fused any_int:
 
 @cython.boundscheck(False)
 @cython.wraparound(False)
-cdef inline dist_pqcode_to_codebook(long M, float[:,:] dtable, any_int[:] pq_code):
+cdef inline dist_pqcode_to_codebook(long M,const float[:,:] adtable, any_int[:] pq_code):
     """Compute the distance between each codevector and the pq_code of a query.
 
     :param M: Number of sub-vectors in the original feature space.
-    :param dtable: 2D Memoryview[float] containing precomputed Asymmetric Distances.
+    :param adtable: 2D Memoryview[float] containing precomputed Asymmetric Distances.
     :param pq_code: 1D Memoriview[any_int] containing a pq code.
 
     :return: Distance between pq code and query according to the Asymmetric Distance table.
@@ -34,18 +34,18 @@ cdef inline dist_pqcode_to_codebook(long M, float[:,:] dtable, any_int[:] pq_cod
         int m
 
     for m in range(M):
-        dist += dtable[m, pq_code[m]]
+        dist += adtable[m, pq_code[m]]
 
     return dist
 
 
 @cython.boundscheck(False)
 @cython.wraparound(False)
-cpdef dist_pqcodes_to_codebooks(float[:,:] dtable, any_int[:,:] pq_codes):
+cpdef dist_pqcodes_to_codebooks(const float[:,:] adtable, any_int[:,:] pq_codes):
     """
-    Compute the distance between each row in pq_codes and each codevector using a dtable.
+    Compute the distance between each row in pq_codes and each codevector using a adtable.
 
-    :param dtable: 2D Memoryview of precomputed Asymmetric Distances.
+    :param adtable: 2D Memoryview of precomputed Asymmetric Distances.
     :param pq_codes: 2D Memoryview of pq_codes.
 
     :return: List of Asymmetric Distances distances between pq_codes and the query.
@@ -55,7 +55,7 @@ cpdef dist_pqcodes_to_codebooks(float[:,:] dtable, any_int[:,:] pq_codes):
         dists = np.zeros((N, )).astype(np.float32)
         for n in range(N):
             for m in range(M):
-                dists[n] += self.dtable[m][codes[n][m]]
+                dists[n] += self.adtable[m][codes[n][m]]
     '''
 
     """
@@ -67,17 +67,17 @@ cpdef dist_pqcodes_to_codebooks(float[:,:] dtable, any_int[:,:] pq_codes):
         vector[float] dists
 
     for n in range(N):
-        dists.push_back(dist_pqcode_to_codebook(M, dtable, pq_codes[n,:]))
+        dists.push_back(dist_pqcode_to_codebook(M, adtable, pq_codes[n,:]))
 
     return dists
 
 
 @cython.boundscheck(False)
 @cython.wraparound(False)
-cpdef float[:,:] precompute_adc_table(float[:] query,
+cpdef precompute_adc_table(const float[:] query,
                                       long d_subvector,
                                       long n_clusters,
-                                      float[:,:,:] codebooks):
+                                      const float[:,:,:] codebooks):
     """
     Compute the  Asymmetric Distance Table between a query and a PQ space.
 
@@ -92,12 +92,12 @@ cpdef float[:,:] precompute_adc_table(float[:] query,
     This function is equivalent to
         '''
         def numpy_adc_table(query, n_subvectors, n_clusters, d_subvector, codebooks):
-        dtable = np.empty((n_subvectors, n_clusters), dtype=np.float32)
+        adtable = np.empty((n_subvectors, n_clusters), dtype=np.float32)
         for m in range(n_subvectors):
             query_sub = query[m * d_subvector: (m + 1) * d_subvector]
-            dtable[m, :] = np.linalg.norm(codebooks[m] - query_sub, axis=1) ** 2
+            adtable[m, :] = np.linalg.norm(codebooks[m] - query_sub, axis=1) ** 2
 
-        return dtable
+        return adtable
         '''
     But avoids generating views and calling numpy functions.
     """
@@ -107,7 +107,7 @@ cpdef float[:,:] precompute_adc_table(float[:] query,
         int M = int(D/d_subvector)
         int n_subvectors = int(D/d_subvector)
         int m, i, k, ind_prototype, j
-        float[:, ::1] dtable = np.empty((M, n_clusters), dtype=np.float32)
+        float[:, ::1] adtable = np.empty((M, n_clusters), dtype=np.float32)
         float[:] query_subvec = np.empty(d_subvector, dtype=np.float32)
         float[:] query_subcodeword = np.empty(d_subvector, dtype=np.float32)
         float dist_subprototype_to_subquery, coord_j
@@ -132,6 +132,6 @@ cpdef float[:,:] precompute_adc_table(float[:] query,
                 coord_j = query_subcodeword[j] - query_subvec[j]
                 dist_subprototype_to_subquery += coord_j * coord_j
 
-            dtable[m, ind_prototype] = dist_subprototype_to_subquery
+            adtable[m, ind_prototype] = dist_subprototype_to_subquery
 
-    return dtable
+    return adtable
