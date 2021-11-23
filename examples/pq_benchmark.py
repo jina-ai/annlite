@@ -108,8 +108,8 @@ for n_cells in [8, 16, 32, 64, 128]:
             'train_time': train_time,
             'index_time': index_time,
             'query_time': query_time,
-            'query_qps': query_time / len(Xte),
-            'index_qps': index_time / len(Xte),
+            'query_qps': len(Xte) / query_time,
+            'index_qps': len(Xtr) / index_time,
             'indexer_hyperparams': {'n_cells': n_cells, 'n_subvectors': n_subvectors},
         }
         print(results_dict)
