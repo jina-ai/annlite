@@ -49,31 +49,44 @@ except FileNotFoundError:
     base_deps = []
 
 COMPILER_DIRECTIVES = {
-    "language_level": -3,
-    "embedsignature": True,
-    "annotation_typing": False,
+    'language_level': -3,
+    'embedsignature': True,
+    'annotation_typing': False,
 }
 
 ext_modules = [
-                  Extension(
-                      'pqlite.hnsw_bind',
-                      ['./bindings/hnsw_bindings.cpp'],
-                      include_dirs=include_dirs + ['./include/hnswlib'],
-                      libraries=libraries,
-                      language='c++',
-                      extra_objects=extra_objects,
-                  )
-              ] + cythonize([
-                Extension(
-                    'pqlite.pq_bind',
-                    ['./bindings/pq_bindings.pyx'],
-                    include_dirs=include_dirs + [get_python_inc(plat_specific=True)],
-                    libraries=libraries,
-                    language='c++',
-                    extra_objects=extra_objects,
-                ),
-            ], compiler_directives=COMPILER_DIRECTIVES)
-
+    Extension(
+        'pqlite.hnsw_bind',
+        ['./bindings/hnsw_bindings.cpp'],
+        include_dirs=include_dirs + ['./include/hnswlib'],
+        libraries=libraries,
+        language='c++',
+        extra_objects=extra_objects,
+    )
+] + cythonize(
+    [
+        Extension(
+            'pqlite.pq_bind',
+            ['./bindings/pq_bindings.pyx'],
+            include_dirs=include_dirs + [get_python_inc(plat_specific=True)],
+            libraries=libraries,
+            language='c++',
+            extra_objects=extra_objects,
+        ),
+    ],
+    compiler_directives=COMPILER_DIRECTIVES,
+)
+#
+# ext_modules = cythonize([
+#                 Extension(
+#                     'pqlite.pq_bind',
+#                     ['./bindings/pq_bindings.pyx'],
+#                     include_dirs=include_dirs + [get_python_inc(plat_specific=True)],
+#                     libraries=libraries,
+#                     language='c++',
+#                     extra_objects=extra_objects,
+#                 ),
+#             ], compiler_directives=COMPILER_DIRECTIVES)
 
 # As of Python 3.6, CCompiler has a `has_flag` method.
 # cf http://bugs.python.org/issue26689
@@ -128,13 +141,13 @@ class BuildExt(build_ext):
     def build_extensions(self):
         ct = self.compiler.compiler_type
         opts = self.c_opts.get(ct, [])
-        if ct == 'unix':
-            opts.append('-DVERSION_INFO="%s"' % self.distribution.get_version())
-            opts.append(cpp_flag(self.compiler))
-            if has_flag(self.compiler, '-fvisibility=hidden'):
-                opts.append('-fvisibility=hidden')
-        elif ct == 'msvc':
-            opts.append('/DVERSION_INFO=\\"%s\\"' % self.distribution.get_version())
+        # if ct == 'unix':
+        #     opts.append('-DVERSION_INFO="%s"' % self.distribution.get_version())
+        #     opts.append(cpp_flag(self.compiler))
+        #     if has_flag(self.compiler, '-fvisibility=hidden'):
+        #         opts.append('-fvisibility=hidden')
+        # elif ct == 'msvc':
+        #     opts.append('/DVERSION_INFO=\\"%s\\"' % self.distribution.get_version())
 
         for ext in self.extensions:
             ext.extra_compile_args.extend(opts)

@@ -135,5 +135,3 @@ cpdef float[:,:] precompute_adc_table(float[:] query,
             dtable[m, ind_prototype] = dist_subprototype_to_subquery
 
     return dtable
-
-

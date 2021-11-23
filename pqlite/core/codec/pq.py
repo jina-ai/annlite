@@ -3,6 +3,7 @@ from loguru import logger
 
 from scipy.cluster.vq import kmeans2, vq
 from pqlite import pq_bind
+
 # from pqlite.pq_bind import precompute_adc_table, dist_pqcodes_to_codebooks
 
 from .base import BaseCodec
@@ -136,15 +137,16 @@ class PQCodec(BaseCodec):
         # dtable[m][ks] : distance between m-th subvec and ks-th codeword of m-th codewords
 
         # numpy version for
-        #dtable = np.empty((self.n_subvectors, self.n_clusters), dtype=np.float32)
-        #for m in range(self.n_subvectors):
+        # dtable = np.empty((self.n_subvectors, self.n_clusters), dtype=np.float32)
+        # for m in range(self.n_subvectors):
         #    query_sub = query[m * self.d_subvector : (m + 1) * self.d_subvector]
         #    dtable[m, :] = np.linalg.norm(self.codebooks[m] - query_sub, axis=1) ** 2
 
-        dtable = np.asarray(pq_bind.precompute_adc_table(query,
-                                                 self.d_subvector,
-                                                 self.n_clusters,
-                                                 self.codebooks))
+        dtable = np.asarray(
+            pq_bind.precompute_adc_table(
+                query, self.d_subvector, self.n_clusters, self.codebooks
+            )
+        )
 
         return DistanceTable(dtable)
 

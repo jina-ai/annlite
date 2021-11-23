@@ -10,7 +10,6 @@ from .core import VQCodec, PQCodec
 from .storage.cell import CellContainer
 from .enums import Metric
 
-from pqlite.utils.asymmetric_distance import dist_pqcodes_to_codebooks
 
 class PQLite(CellContainer):
     """:class:`PQLite` is an implementation of IVF-PQ being with equipped with SQLite.
