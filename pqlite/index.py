@@ -284,7 +284,7 @@ class PQLite(CellContainer):
 
     def _rebuild_index(self):
         for cell_id in range(self.n_cells):
-            logger.info(f'Rebuild the index for cell-{cell_id}...')
+            logger.info(f'Rebuild the index of cell-{cell_id}...')
             for docs in self.documents_generator(cell_id):
                 x = docs.embeddings
                 assigned_cells = np.ones(len(docs), dtype=np.int64) * cell_id
