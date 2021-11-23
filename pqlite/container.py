@@ -243,6 +243,10 @@ class CellContainer:
 
         logger.debug(f'=> {len(ids)} items deleted')
 
+    def documents_generator(self, cell_id: int, batch_size: int = 256):
+        for docs in self.doc_store(cell_id).batched_iterator(batch_size=batch_size):
+            yield docs
+
     @property
     def cell_tables(self):
         return self._cell_tables

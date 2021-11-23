@@ -78,18 +78,22 @@ class PQLite(CellContainer):
 
         self.vq_codec = None
         if self._vq_codec_path.exists():
-            logger.info(f'Load VQ codec (K={self.n_cells}) from {self.data_path}')
+            logger.info(
+                f'Load trained VQ codec (K={self.n_cells}) from {self.model_path}'
+            )
             self.vq_codec = VQCodec.load(self._vq_codec_path)
         elif n_cells > 1:
-            logger.info(
-                f'Load PQ codec (n_subvectors={self.n_subvectors}) from {self.data_path}'
-            )
+            logger.info(f'Initialize PQ codec (K={self.n_cells})')
             self.vq_codec = VQCodec(self.n_cells, metric=self.metric)
 
         self.pq_codec = None
         if self._pq_codec_path.exists():
+            logger.info(
+                f'Load trained PQ codec (n_subvectors={self.n_subvectors}) from {self.model_path}'
+            )
             self.pq_codec = PQCodec.load(self._pq_codec_path)
         elif n_subvectors:
+            logger.info(f'Initialize PQ codec (n_subvectors={self.n_subvectors})')
             self.pq_codec = PQCodec(
                 dim, n_subvectors=n_subvectors, n_clusters=256, metric=self.metric
             )
@@ -104,6 +108,8 @@ class PQLite(CellContainer):
             columns=columns,
             data_path=data_path,
         )
+        if self.total_docs > 0:
+            self._rebuild_index()
 
     def _sanity_check(self, x: np.ndarray):
         assert len(x.shape) == 2
@@ -275,6 +281,14 @@ class PQLite(CellContainer):
             self.vq_codec.dump(self._vq_codec_path)
         if self.pq_codec:
             self.pq_codec.dump(self._pq_codec_path)
+
+    def _rebuild_index(self):
+        for cell_id in range(self.n_cells):
+            logger.info(f'Rebuild the index for cell-{cell_id}...')
+            for docs in self.documents_generator(cell_id):
+                x = docs.embeddings
+                assigned_cells = np.ones(len(docs), dtype=np.int64) * cell_id
+                super().insert(x, assigned_cells, docs)
 
     @property
     def is_trained(self):
