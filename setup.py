@@ -7,6 +7,9 @@ import setuptools
 from setuptools.command.build_ext import build_ext
 from setuptools import setup, find_packages, Extension
 
+from Cython.Build import cythonize
+from distutils.sysconfig import get_python_inc
+
 if sys.version_info >= (3, 10, 0) or sys.version_info < (3, 7, 0):
     raise OSError(f'PQlite requires Python 3.7/3.8/3.9, but yours is {sys.version}')
 
@@ -45,17 +48,32 @@ try:
 except FileNotFoundError:
     base_deps = []
 
+COMPILER_DIRECTIVES = {
+    "language_level": -3,
+    "embedsignature": True,
+    "annotation_typing": False,
+}
 
 ext_modules = [
-    Extension(
-        'pqlite.hnsw_bind',
-        ['./bindings/hnsw_bindings.cpp'],
-        include_dirs=include_dirs + ['./include/hnswlib'],
-        libraries=libraries,
-        language='c++',
-        extra_objects=extra_objects,
-    ),
-]
+                  Extension(
+                      'pqlite.hnsw_bind',
+                      ['./bindings/hnsw_bindings.cpp'],
+                      include_dirs=include_dirs + ['./include/hnswlib'],
+                      libraries=libraries,
+                      language='c++',
+                      extra_objects=extra_objects,
+                  )
+              ] + cythonize([
+                Extension(
+                    'pqlite.pq_bind',
+                    ['./bindings/pq_bindings.pyx'],
+                    include_dirs=include_dirs + [get_python_inc(plat_specific=True)],
+                    libraries=libraries,
+                    language='c++',
+                    extra_objects=extra_objects,
+                ),
+            ], compiler_directives=COMPILER_DIRECTIVES)
+
 
 # As of Python 3.6, CCompiler has a `has_flag` method.
 # cf http://bugs.python.org/issue26689
@@ -128,29 +146,10 @@ class BuildExt(build_ext):
 extras = {}
 extras['testing'] = ['pytest']
 
-####### Cython begin #######
-include_dirs = [
-        numpy.get_include(),
-        get_python_inc(plat_specific=True),
-]
-MOD_NAMES = ['pqlite.utils.asymmetric_distance']
-
-ext_modules = []
-for name in MOD_NAMES:
-    mod_path = name.replace(".", "/") + ".pyx"
-    ext = Extension( name, [mod_path], language="c++", include_dirs=include_dirs, extra_compile_args=["-std=c++11"])
-    ext_modules.append(ext)
-
-COMPILER_DIRECTIVES = {
-    "language_level": -3,
-    "embedsignature": True,
-    "annotation_typing": False,
-}
-####### Cython end #######
+# for e in ext_modules:
+#     e.cython_directives = COMPILER_DIRECTIVES
 
 setup(
-    ext_modules=cythonize(ext_modules, compiler_directives=COMPILER_DIRECTIVES),
-    include_dirs=include_dirs,
     name='pqlite',
     version=__version__,
     description='Blaze Fast and Light Approximate Nearest Neighbor Search Database',
@@ -165,7 +164,7 @@ setup(
     ext_modules=ext_modules,
     cmdclass={'build_ext': BuildExt},
     install_requires=base_deps,
-    setup_requires=['setuptools>=18.0', 'wheel'],
+    setup_requires=['setuptools>=18.0', 'wheel', 'cython'],
     classifiers=[
         'Intended Audience :: Developers',
         'Intended Audience :: Science/Research',
@@ -189,7 +188,6 @@ setup(
             'executor',
         ]
     ),
-    #package_data={"": ["*.pyx", "*.pxd", "*.pxi"]},
     zip_safe=False,
     keywords='product-quantization approximate-nearest-neighbor',
 )
