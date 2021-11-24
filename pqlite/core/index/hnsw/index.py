@@ -6,7 +6,6 @@ from loguru import logger
 from pqlite.hnsw_bind import Index
 from ..base import BaseIndex
 from ....enums import Metric
-from ....helper import str2dtype
 
 
 class HnswIndex(BaseIndex):
