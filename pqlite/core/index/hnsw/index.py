@@ -13,7 +13,7 @@ class HnswIndex(BaseIndex):
     def __init__(
         self,
         dim: int,
-        dtype: np.dtype= np.float32,
+        dtype: np.dtype = np.float32,
         metric: Metric = Metric.EUCLIDEAN,
         ef_construction: int = 200,
         ef_search: int = 100,

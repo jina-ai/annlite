@@ -72,9 +72,10 @@ class PQLite(CellContainer):
 
         self.read_only = read_only
 
-        self.data_path = Path(data_path)
+        data_path = Path(data_path)
         if create:
-            self.data_path.mkdir(parents=True, exist_ok=True)
+            data_path.mkdir(parents=True, exist_ok=True)
+        self.data_path = data_path
 
         self.vq_codec = None
         if self._vq_codec_path.exists() and n_cells > 1:
@@ -108,6 +109,7 @@ class PQLite(CellContainer):
             columns=columns,
             data_path=data_path,
         )
+
         if self.total_docs > 0:
             self._rebuild_index()
 

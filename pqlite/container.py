@@ -220,9 +220,6 @@ class CellContainer:
                 # relpace
                 self.cell_table(_cell_id).delete_by_offset(_offset)
 
-                # # TODO
-                # self.vec_index(cell_id).delete(_offset)
-
                 new_data.append(x)
                 new_cells.append(cell_id)
                 new_docs.append(doc)

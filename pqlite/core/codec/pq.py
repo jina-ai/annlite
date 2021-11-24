@@ -138,9 +138,9 @@ class PQCodec(BaseCodec):
 
         # Warning: the following line produces `ValueError: buffer source array is read-only`
         # if no `const` is used in the cython implementation using a memoryview
-        dtable = pq_bind.precompute_adc_table(query, self.d_subvector,
-                                              self.n_clusters, self.codebooks)
-
+        dtable = pq_bind.precompute_adc_table(
+            query, self.d_subvector, self.n_clusters, self.codebooks
+        )
 
         return DistanceTable(dtable)
 

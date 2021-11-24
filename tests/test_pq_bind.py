@@ -25,9 +25,7 @@ def build_data():
 @pytest.fixture
 def build_pq_codec(build_data):
     Xt = build_data
-    pq_codec = PQCodec(
-        dim=n_features, n_subvectors=n_subvectors, n_clusters=n_clusters
-    )
+    pq_codec = PQCodec(dim=n_features, n_subvectors=n_subvectors, n_clusters=n_clusters)
     pq_codec.fit(Xt)
     return pq_codec
 
