@@ -17,7 +17,7 @@ D = 128  # dimentionality / number of features
 
 def gen_docs(num):
     res = DocumentArray()
-    k = np.random.random((num, 128)).astype(
+    k = np.random.random((num, D)).astype(
         np.float32
     )
     for i in range(num):
