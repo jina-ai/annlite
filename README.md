@@ -26,68 +26,36 @@ $ git clone https://github.com/jina-ai/pqlite.git \
 
 1. Create a new `pqlite`
 
-Here we suggest two use cases, the following one is used for small-scale data (e.g., < 10M docs):
 ```python
-from jina import Document, DocumentArray
 import random
-import numpy as np 
+import numpy as np
 from pqlite import PQLite
 
 N = 10000 # number of data points
-Nt = 2000 # number for training
+Nt = 2000
 Nq = 10
 D = 128 # dimentionality / number of features
 
-pq = PQLite(dim=D) # Create a pqlite that is able to store 128-dim vectors
-```
-
-For large-scale data (e.g., > 10M docs), the creating process combine Product Qunantization, IVF and HNSW
-
-To be specific, the process is:
-1) train the VQ to conduct IVF index
-2) train the PQ to compress embeddings
-3) build the IVF-HNSW indexing using pq codes (dtype=np.uint8)
-
-```python
 Xt = np.random.random((Nt, D)).astype(np.float32)  # 2,000 128-dim vectors for training
 
 # the column schema: (name:str, dtype:type, create_index: bool)
-pq = PQLite(d_vector=D, n_cells=64, n_subvectors=8, columns=[('x', float, True)])
-pq.fit(Xt)
+pqlite = PQLite(d_vector=D, n_cells=64, n_subvectors=8, columns=[('x', float, True)])
+pqlite.fit(Xt)
 ```
 
-2. DocumentArray generator
-
-Since we use PQLite to deal with Document, here is a simple function to generate DocumentArray
+2. Add new data
 
 ```python
-def gen_docs(num):
-  docs = DocumentArray()
-  k = np.random.random((num, D)).astype(
-    np.float32
-  ) # Here we generate 128-dim vectors 
-  # Seperately put vectors above into Documents and sieze them into DocumentArray
-  for i in range(num):
-    doc = Document(id=i,embedding=k[i],tags={'x': random.random()})
-    docs.append(doc)
-  return docs
-```
+X = np.random.random((N, D)).astype(np.float32)  # 10,000 128-dim vectors to be indexed
 
-
-2. Add(Index) new data
-
-use PQLite.index to add new data
-
-```python
-docs_index = gen_docs(N) # generating a DocumentArray containing 10000 documents which have 128-dim vectors for embeddings
-
-pq.index(docs_index)
+tags = [{'x': random.random()} for _ in range(N)]
+pqlite.add(X, ids=list(range(len(X))), doc_tags=tags)
 ```
 
 3. Search with Filtering
 
 ```python
-query = gen_docs(Nq)  # 10 Documents for query
+query = np.random.random((Nq, D)).astype(np.float32)  # a 128-dim query vector
 
 # without filtering
 dists, ids = pqlite.search(query, k=5)
@@ -105,23 +73,19 @@ print(f'the result with filtering:')
 for i, (dist, idx) in enumerate(zip(dists, ids)):
     print(f'query [{i}]: {dist} {idx}')
 ```
-
 4. Update data
 
-Using PQLite.update to update data, the process is from new to old, which means it will update recent data first.
-
 ```python
-doc_update = gen_docs(100) # 100 document for update
+Xn = np.random.random((10, D)).astype(np.float32)  # 10,000 128-dim vectors to be indexed
 
-pq.update(doc_update) # this will update the latest 100 data in pq
+tags = [{'x': random.random()} for _ in range(10)]
+pqlite.update(Xn, ids=list(range(len(Xn))), doc_tags=tags)
 ```
 
 5. Delete data
 
-Delete data according to their id
-
 ```python
-pq.delete(ids=['1', '2'])
+pqlite.delete(ids=['1', '2'])
 ```
 ## Benchmark
 
