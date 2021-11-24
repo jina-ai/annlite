@@ -76,7 +76,7 @@ class DocStorage:
 
     def clear(self):
         shutil.rmtree(self._path)
-        self._open(self._path)
+        self._env = self._open(self._path)
 
     @property
     def stat(self):
