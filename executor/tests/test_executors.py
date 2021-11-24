@@ -1,11 +1,16 @@
-from jina import Document, DocumentArray
-# from executor import PQLiteIndexer
-from pqlite import PQLite
+from jina import Document, DocumentArray, Flow, Executor
+import sys
+from pathlib import Path
+sys.path.append(str(Path(__file__).resolve().parents[1]))
+from executor_pqlite import PQLiteIndexer
 import random
 import numpy as np
+import pytest
 
-N = 10000  # number of data points
+
+N = 1000  # number of data points
 Nt = 2000
+Nu = 999 # number of data update
 Nq = 10
 D = 128  # dimentionality / number of features
 
@@ -16,58 +21,86 @@ def gen_docs(num):
         np.float32
     )
     for i in range(num):
-        # k[i][0] = float(i)
         doc = Document(id=i,embedding=k[i],tags={'x': random.random()})
         res.append(doc)
     return res
 
 
-def test_train():
-    Xt = np.random.random((Nt, D)).astype(
-        np.float32
-    )  # 2,000 128-dim vectors for training
-    pq = PQLite(dim=D, n_cells=64, n_subvectors=8, columns=[('x', float, True)])
-    pq.fit(Xt)
-    return pq
+# currently the executor don't have function for training
+# def test_train():
+#     Xt = np.random.random((Nt, D)).astype(
+#         np.float32
+#     )  # 2,000 128-dim vectors for training
+#     pq = PQLite(dim=D, n_cells=64, n_subvectors=8, columns=[('x', float, True)])
+#     pq.fit(Xt)
+#     return pq
+
 
 def test_index():
-    pq = PQLite(dim=128)
-    docs = gen_docs(1000)
-    pq.index(docs)
-    # len = pq.doc_size
-    # assert len == 1000
-
-
-def test_search(pq):
-    doc = gen_docs(5)
-    # conditions = [('x', '>', 0.6)]
-    print(doc[0].id)
-    dists, ids = pq.search(docs= doc)
-    for i, (dist, idx) in enumerate(zip(dists, ids)):
-        print(f'query [{i}]: {dist} {idx}')
+    docs = gen_docs(N)
+    f = Flow().add(
+        uses = PQLiteIndexer,
+        uses_with={
+            'dim': D,
+        },
+    )
+    with f:
+        result = f.post(on='/index', inputs = docs,return_results=True)
+        # assert len(result[0].data)==1000
 
 
 def test_update():
-    pq = PQLite(dim=128)
-    docs = gen_docs(1000)
-    pq.index(docs)
-    docs_update = gen_docs(999)
-    pq.update(docs_update)
-    # len = pq.doc_size
-    # assert len == 1000
+    docs = gen_docs(N)
+    docs_update = gen_docs(Nu)
+    f = Flow().add(
+        uses=PQLiteIndexer,
+        uses_with={
+            'dim': D,
+        },
+    )
+    with f:
+        f.post(on='/index', inputs=docs)
+        update_res = f.post(on='/update', inputs=docs_update, return_results=True)
+        # assert len(update_res[0].data)==1000
 
 
-def test_delete():
-    pq = PQLite(dim=128)
-    docs = gen_docs(100)
-    pq.delete(['0','66'])
-    # len = pq.doc_size
-    # assert len == 98
+def test_search():
+    docs = gen_docs(N)
+    docs_query = gen_docs(Nq)
+    f = Flow().add(
+        uses=PQLiteIndexer,
+        uses_with={
+            'dim': D,
+        },
+    )
+    with f:
+        f.post(on='/index', inputs=docs)
+        query_res = f.post(on='/query', inputs=docs_query, return_results=True)
 
 
-if __name__ == "__main__":
-    # pq = test_train()
-    test_index()
-    test_update()
-    test_delete()
-    # test_search(pq)
+def test_status():
+    docs = gen_docs(N)
+    f = Flow().add(
+        uses=PQLiteIndexer,
+        uses_with={
+            'dim': D,
+        },
+    )
+    with f:
+        f.post(on='/index', inputs=docs)
+        res = f.post(on='/status',return_results=True)
+
+
+def test_clear():
+    docs = gen_docs(N)
+    f = Flow().add(
+        uses=PQLiteIndexer,
+        uses_with={
+            'dim': D,
+        },
+    )
+    with f:
+        f.post(on='/index', inputs=docs)
+        res = f.post(on='/clear',return_results=True)
+        # assert len(res[0].data)==0
+

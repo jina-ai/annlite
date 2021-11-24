@@ -1,4 +1,4 @@
 jtype: PQLiteIndexer
 metas:
   py_modules:
-    - __init__.py
+    - executor_pqlite.py
