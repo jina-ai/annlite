@@ -1,4 +1,5 @@
 click
+cython
 jina
 lmdb
 loguru

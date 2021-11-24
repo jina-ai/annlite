@@ -7,6 +7,9 @@ import setuptools
 from setuptools.command.build_ext import build_ext
 from setuptools import setup, find_packages, Extension
 
+from Cython.Build import cythonize
+from distutils.sysconfig import get_python_inc
+
 if sys.version_info >= (3, 10, 0) or sys.version_info < (3, 7, 0):
     raise OSError(f'PQlite requires Python 3.7/3.8/3.9, but yours is {sys.version}')
 
@@ -45,6 +48,11 @@ try:
 except FileNotFoundError:
     base_deps = []
 
+COMPILER_DIRECTIVES = {
+    'language_level': -3,
+    'embedsignature': True,
+    'annotation_typing': False,
+}
 
 ext_modules = [
     Extension(
@@ -54,8 +62,31 @@ ext_modules = [
         libraries=libraries,
         language='c++',
         extra_objects=extra_objects,
-    ),
-]
+    )
+] + cythonize(
+    [
+        Extension(
+            'pqlite.pq_bind',
+            ['./bindings/pq_bindings.pyx'],
+            include_dirs=include_dirs + [get_python_inc(plat_specific=True)],
+            libraries=libraries,
+            language='c++',
+            extra_objects=extra_objects,
+        ),
+    ],
+    compiler_directives=COMPILER_DIRECTIVES,
+)
+#
+# ext_modules = cythonize([
+#                 Extension(
+#                     'pqlite.pq_bind',
+#                     ['./bindings/pq_bindings.pyx'],
+#                     include_dirs=include_dirs + [get_python_inc(plat_specific=True)],
+#                     libraries=libraries,
+#                     language='c++',
+#                     extra_objects=extra_objects,
+#                 ),
+#             ], compiler_directives=COMPILER_DIRECTIVES)
 
 # As of Python 3.6, CCompiler has a `has_flag` method.
 # cf http://bugs.python.org/issue26689
@@ -110,13 +141,13 @@ class BuildExt(build_ext):
     def build_extensions(self):
         ct = self.compiler.compiler_type
         opts = self.c_opts.get(ct, [])
-        if ct == 'unix':
-            opts.append('-DVERSION_INFO="%s"' % self.distribution.get_version())
-            opts.append(cpp_flag(self.compiler))
-            if has_flag(self.compiler, '-fvisibility=hidden'):
-                opts.append('-fvisibility=hidden')
-        elif ct == 'msvc':
-            opts.append('/DVERSION_INFO=\\"%s\\"' % self.distribution.get_version())
+        # if ct == 'unix':
+        #     opts.append('-DVERSION_INFO="%s"' % self.distribution.get_version())
+        #     opts.append(cpp_flag(self.compiler))
+        #     if has_flag(self.compiler, '-fvisibility=hidden'):
+        #         opts.append('-fvisibility=hidden')
+        # elif ct == 'msvc':
+        #     opts.append('/DVERSION_INFO=\\"%s\\"' % self.distribution.get_version())
 
         for ext in self.extensions:
             ext.extra_compile_args.extend(opts)
@@ -127,6 +158,9 @@ class BuildExt(build_ext):
 
 extras = {}
 extras['testing'] = ['pytest']
+
+# for e in ext_modules:
+#     e.cython_directives = COMPILER_DIRECTIVES
 
 setup(
     name='pqlite',
@@ -143,7 +177,7 @@ setup(
     ext_modules=ext_modules,
     cmdclass={'build_ext': BuildExt},
     install_requires=base_deps,
-    setup_requires=['setuptools>=18.0', 'wheel'],
+    setup_requires=['setuptools>=18.0', 'wheel', 'cython'],
     classifiers=[
         'Intended Audience :: Developers',
         'Intended Audience :: Science/Research',

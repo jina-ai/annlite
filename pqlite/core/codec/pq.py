@@ -2,6 +2,10 @@ import numpy as np
 from loguru import logger
 
 from scipy.cluster.vq import kmeans2, vq
+from pqlite import pq_bind
+
+# from pqlite.pq_bind import precompute_adc_table, dist_pqcodes_to_codebooks
+
 from .base import BaseCodec
 from ...enums import Metric
 
@@ -23,7 +27,7 @@ class PQCodec(BaseCodec):
     :param n_subvectors: The number of sub-space
     :param n_clusters: The number of codewords for each subspace
             (typically 256, so that each sub-vector is quantized
-            into 256 bits = 1 byte = uint8)
+            into 256 bits pqlite.utils.asymmetric_distance= 1 byte = uint8)
     """
 
     def __init__(
@@ -114,7 +118,7 @@ class PQCodec(BaseCodec):
 
         return vecs
 
-    def precompute_adc(self, query):
+    def precompute_adc(self, query: object) -> object:
         """Compute a distance table for a query vector.
         The distances are computed by comparing each sub-vector of the query
         to the codewords for each sub-subspace.
@@ -128,17 +132,15 @@ class PQCodec(BaseCodec):
         """
         assert query.dtype == np.float32
         assert query.ndim == 1, 'input must be a single vector'
-        (D,) = query.shape
-        assert (
-            D == self.d_subvector * self.n_subvectors
-        ), 'input dimension must be Ds * M'
 
         # dtable[m] : distance between m-th subvec and m-th codewords (m-th subspace)
         # dtable[m][ks] : distance between m-th subvec and ks-th codeword of m-th codewords
-        dtable = np.empty((self.n_subvectors, self.n_clusters), dtype=np.float32)
-        for m in range(self.n_subvectors):
-            query_sub = query[m * self.d_subvector : (m + 1) * self.d_subvector]
-            dtable[m, :] = np.linalg.norm(self.codebooks[m] - query_sub, axis=1) ** 2
+
+        # Warning: the following line produces `ValueError: buffer source array is read-only`
+        # if no `const` is used in the cython implementation using a memoryview
+        dtable = pq_bind.precompute_adc_table(query, self.d_subvector,
+                                              self.n_clusters, self.codebooks)
+
 
         return DistanceTable(dtable)
 
@@ -163,8 +165,8 @@ class DistanceTable(object):
     """
 
     def __init__(self, dtable: 'np.ndarray'):
+
         assert dtable.ndim == 2
-        assert dtable.dtype == np.float32
         self.dtable = dtable
 
     def adist(self, codes):
@@ -178,16 +180,11 @@ class DistanceTable(object):
         """
 
         assert codes.ndim == 2
-        N, M = codes.shape
-        assert M == self.dtable.shape[0]
-
-        # Fetch distance values using codes. The following codes are
-        dists = np.sum(self.dtable[range(M), codes], axis=1)
+        dists = pq_bind.dist_pqcodes_to_codebooks(self.dtable, codes)
 
         # The above line is equivalent to the followings:
         # dists = np.zeros((N, )).astype(np.float32)
         # for n in range(N):
         #     for m in range(M):
         #         dists[n] += self.dtable[m][codes[n][m]]
-
         return dists
