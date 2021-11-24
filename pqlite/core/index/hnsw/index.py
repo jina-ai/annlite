@@ -95,6 +95,7 @@ class HnswIndex(BaseIndex):
         )
 
     def reset(self):
+        super().reset()
         self._init_hnsw_index()
 
     @property
