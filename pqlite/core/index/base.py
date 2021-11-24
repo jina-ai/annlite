@@ -42,8 +42,7 @@ class BaseIndex(abc.ABC):
 
     @abc.abstractmethod
     def reset(self):
-        self._size = 0
-        self._capacity = self.initial_size
+        ...
 
     @abc.abstractmethod
     def add_with_ids(self, x: np.ndarray, ids: List[int], **kwargs):

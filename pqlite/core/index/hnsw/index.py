@@ -95,8 +95,11 @@ class HnswIndex(BaseIndex):
         )
 
     def reset(self):
-        super().reset()
         self._init_hnsw_index()
+
+    @property
+    def size(self):
+        return self._index.element_count
 
     @property
     def space_name(self):

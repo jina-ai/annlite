@@ -59,7 +59,8 @@ class FlatIndex(BaseIndex):
         )
 
     def reset(self):
-        super().reset()
+        self._size = 0
+        self._capacity = self.initial_size
         self._data = np.zeros((self.initial_size, self.dim), dtype=self.dtype)
 
     def delete(self, ids: List[int]):
