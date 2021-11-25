@@ -9,8 +9,8 @@ class PQLiteIndexer(Executor):
         self,
         metric: str = 'euclidean',
         limit: int = 10,
-        index_traversal_paths: Iterable[str] = ('r',),
-        search_traversal_paths: Iterable[str] = ('r',),
+        index_traversal_paths: str = 'r',
+        search_traversal_paths: str = 'r',
         is_distance: bool = True,
         *args,
         **kwargs
@@ -24,19 +24,29 @@ class PQLiteIndexer(Executor):
         self.index_traversal_paths = index_traversal_paths
         self.search_traversal_paths = search_traversal_paths
 
-        self._index = pqlite.PQLite(metric=metric, **kwargs)
+        self._index = pqlite.PQLite(metric=metric, data_path=self.workspace, **kwargs)
 
     @requests(on='/index')
-    def index(self, docs: DocumentArray, parameters: Optional[dict] = {}, **kwargs):
+    def index(
+        self, docs: Optional[DocumentArray] = None, parameters: dict = {}, **kwargs
+    ):
+        if not docs:
+            return
+
         traversal_paths = parameters.get('traversal_paths', self.index_traversal_paths)
         flat_docs = docs.traverse_flat(traversal_paths)
         if len(flat_docs) == 0:
             return
 
-        self._index.add(flat_docs)
+        self._index.index(flat_docs)
 
     @requests(on='/update')
-    def update(self, docs: DocumentArray, parameters: Optional[dict] = {}, **kwargs):
+    def update(
+        self, docs: Optional[DocumentArray] = None, parameters: dict = {}, **kwargs
+    ):
+        if not docs:
+            return
+
         traversal_paths = parameters.get('traversal_paths', self.index_traversal_paths)
         flat_docs = docs.traverse_flat(traversal_paths)
         if len(flat_docs) == 0:
@@ -45,7 +55,11 @@ class PQLiteIndexer(Executor):
         self._index.update(flat_docs)
 
     @requests(on='/search')
-    def search(self, docs: DocumentArray, parameters: Optional[dict] = {}, **kwargs):
+    def search(
+        self, docs: Optional[DocumentArray] = None, parameters: dict = {}, **kwargs
+    ):
+        if not docs:
+            return
         limit = int(parameters.get('limit', self.limit))
         traversal_paths = parameters.get('traversal_paths', self.search_traversal_paths)
         flat_docs = docs.traverse_flat(traversal_paths)
@@ -62,10 +76,10 @@ class PQLiteIndexer(Executor):
         documents, and on the number of (searchable) documents currently in the index.
         """
 
-        status = Document(tags={})
+        status = Document(tags=self._index.stat)
         return DocumentArray([status])
 
     @requests(on='/clear')
     def clear(self, **kwargs):
         """Clear the index of all entries."""
-        pass
+        self._index.clear()

@@ -75,10 +75,6 @@ class CellContainer:
 
         self._meta_table = MetaTable('metas', data_path=data_path, in_memory=True)
 
-    def clean(self):
-        # TODO:
-        pass
-
     def ivf_search(
         self,
         x: np.ndarray,
@@ -256,6 +252,10 @@ class CellContainer:
 
     def vec_index(self, cell_id: int):
         return self._vec_indexes[cell_id]
+
+    @property
+    def meta_table(self):
+        return self._meta_table
 
     @property
     def total_docs(self):

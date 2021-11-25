@@ -90,6 +90,18 @@ class Table:
     def commit(self):
         self._conn.commit()
 
+    def create_table(self):
+        ...
+
+    def drop_table(self):
+        self._conn.execute(f'DROP table {self.name}')
+        self._conn.commit()
+
+    def clear(self):
+        """Drop the table and create a new one"""
+        self.drop_table()
+        self.create_table()
+
     @property
     def name(self):
         return self._name
@@ -288,11 +300,13 @@ class MetaTable(Table):
         in_memory: bool = False,
     ):
         super(MetaTable, self).__init__(name, data_path=data_path, in_memory=in_memory)
+        self.create_table()
 
+    def create_table(self):
         sql = f'''CREATE TABLE {self.name}
-                (_doc_id TEXT NOT NULL PRIMARY KEY,
-                 cell_id INTEGER NOT NULL,
-                 offset INTEGER NOT NULL)'''
+                        (_doc_id TEXT NOT NULL PRIMARY KEY,
+                         cell_id INTEGER NOT NULL,
+                         offset INTEGER NOT NULL)'''
 
         self._conn.execute(sql)
         self._conn.commit()
