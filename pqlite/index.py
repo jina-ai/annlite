@@ -262,6 +262,11 @@ class PQLite(CellContainer):
             self.vec_index(cell_id).reset()
             self.doc_store(cell_id).clear()
 
+    def close(self):
+        for cell_id in range(self.n_cells):
+            self.vec_index(cell_id).reset()
+            self.doc_store(cell_id).close()
+
     def encode(self, x: np.ndarray):
         n_data, _ = self._sanity_check(x)
         y = self.pq_codec.encode(x)

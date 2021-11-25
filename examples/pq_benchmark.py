@@ -116,6 +116,7 @@ for n_cells in [8, 16, 32, 64, 128]:
 
         results.append(results_dict)
         pq.clear()
+        pq.close()
 
 today = date.today()
 results_df = pd.DataFrame(results)
