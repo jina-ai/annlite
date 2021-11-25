@@ -260,11 +260,12 @@ class PQLite(CellContainer):
         for cell_id in range(self.n_cells):
             logger.info(f'Clear the index of cell-{cell_id}')
             self.vec_index(cell_id).reset()
+            self.cell_table(cell_id).clear()
             self.doc_store(cell_id).clear()
+        self.meta_table.clear()
 
     def close(self):
         for cell_id in range(self.n_cells):
-            self.vec_index(cell_id).reset()
             self.doc_store(cell_id).close()
 
     def encode(self, x: np.ndarray):

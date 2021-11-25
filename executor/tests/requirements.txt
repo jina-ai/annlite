@@ -1,2 +1,2 @@
-git+https://github.com/jina-ai/pqlite
+pqlite
 pytest==6.2.4
