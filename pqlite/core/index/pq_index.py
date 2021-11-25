@@ -1,25 +1,21 @@
 from typing import Optional, List, Union
 import numpy as np
 from jina.math.helper import top_k
-from .base_index import BaseIndex
+from .flat_index import FlatIndex
 from ..codec.pq import PQCodec
-from ...enums import Metric
 
 
-class PQIndex(BaseIndex):
+class PQIndex(FlatIndex):
     def __init__(
         self,
         dim: int,
         pq_codec: PQCodec,
-        dtype: Union[np.dtype, str] = np.float32,
-        metric: Metric = Metric.EUCLIDEAN,
         **kwargs,
     ):
         assert pq_codec is not None
         self._dense_dim = dim
-        self._dense_dtype = dtype
         super(PQIndex, self).__init__(
-            pq_codec.n_subvectors, dtype=pq_codec.code_dtype, metric=metric, **kwargs
+            pq_codec.n_subvectors, dtype=pq_codec.code_dtype, **kwargs
         )
         self._pq_codec = pq_codec
 

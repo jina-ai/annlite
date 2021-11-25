@@ -1,13 +1,13 @@
+import abc
 from typing import Optional, List, Union
 
 import numpy as np
-from loguru import logger
 
 from ...enums import ExpandMode, Metric
 from ...helper import str2dtype
 
 
-class BaseIndex:
+class BaseIndex(abc.ABC):
     def __init__(
         self,
         dim: int,
@@ -16,11 +16,12 @@ class BaseIndex:
         initial_size: Optional[int] = None,
         expand_step_size: int = 10240,
         expand_mode: ExpandMode = ExpandMode.STEP,
-        **kwargs,
+        *args,
+        **kwargs
     ):
         assert expand_step_size > 0
-
         self.initial_size = initial_size or expand_step_size
+
         self.expand_step_size = expand_step_size
         self.expand_mode = expand_mode
 
@@ -28,26 +29,29 @@ class BaseIndex:
         self.dtype = str2dtype(dtype) if isinstance(dtype, str) else dtype
         self.metric = metric
 
-        self._data = np.zeros((self.initial_size, dim), dtype=self.dtype)
         self._size = 0
         self._capacity = self.initial_size
 
-    def add_with_ids(self, x: np.ndarray, ids: List[int]):
-        for idx in ids:
-            if idx >= self._capacity:
-                self._expand_capacity()
+    @property
+    def capacity(self) -> int:
+        return self._capacity
 
-        start = self._size
-        end = start + len(x)
+    @property
+    def size(self):
+        return self._size
 
-        self._data[ids, :] = x
-        self._size = end
+    @abc.abstractmethod
+    def add_with_ids(self, x: np.ndarray, ids: List[int], **kwargs):
+        ...
 
-    def _expand_capacity(self):
-        new_block = np.zeros((self.expand_step_size, self.dim), dtype=self.dtype)
-        self._data = np.concatenate((self._data, new_block), axis=0)
+    @abc.abstractmethod
+    def delete(self, ids: List[int]):
+        ...
 
-        self._capacity += self.expand_step_size
-        logger.debug(
-            f'=> total storage capacity is expanded by {self.expand_step_size}',
-        )
+    @abc.abstractmethod
+    def update_with_ids(self, x: np.ndarray, ids: List[int], **kwargs):
+        ...
+
+    def reset(self):
+        self._size = 0
+        self._capacity = self.initial_size

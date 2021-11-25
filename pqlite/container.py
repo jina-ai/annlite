@@ -1,19 +1,18 @@
-import pathlib
 from typing import Optional, List, Union
 
 import numpy as np
 from loguru import logger
+from pathlib import Path
 
 from jina import DocumentArray
-from .base import ExpandMode
-from .kv import DocStorage
-from .table import CellTable, MetaTable
-from ..core.index.pq_index import PQIndex
-from ..core.index.flat_index import FlatIndex
-from ..core.index.hnsw import HnswIndex
-from ..helper import str2dtype
-from ..enums import Metric
-from ..core.codec.pq import PQCodec
+from .storage.base import ExpandMode
+from .storage.kv import DocStorage
+from .storage.table import CellTable, MetaTable
+from .core.index.pq_index import PQIndex
+from .core.index.flat_index import FlatIndex
+from .core.index.hnsw import HnswIndex
+from .enums import Metric
+from .core.codec.pq import PQCodec
 
 
 class CellContainer:
@@ -27,13 +26,12 @@ class CellContainer:
         expand_step_size: Optional[int] = 1024,
         expand_mode: ExpandMode = ExpandMode.STEP,
         columns: Optional[List[tuple]] = None,
-        data_path: pathlib.Path = pathlib.Path('.'),
+        data_path: Path = Path('./data'),
     ):
-
-        self._data_path = data_path
         self.dim = dim
         self.metric = metric
         self.n_cells = n_cells
+        self.data_path = data_path
 
         if pq_codec is not None:
             self._vec_indexes = [
@@ -69,17 +67,13 @@ class CellContainer:
                 )
                 for _ in range(n_cells)
             ]
-        self._doc_stores = [
-            DocStorage(data_path / f'cell_store_{_}') for _ in range(n_cells)
+        self._doc_stores = [DocStorage(data_path / f'cell_{_}') for _ in range(n_cells)]
+
+        self._cell_tables = [
+            CellTable(f'table_{c}', columns=columns) for c in range(n_cells)
         ]
 
-        self._cell_tables = [CellTable(f'cell_table_{c}') for c in range(n_cells)]
-        if columns is not None:
-            for name, dtype, create_index in columns:
-                self._add_column(name, dtype, create_index=create_index)
-        self._create_tables()
-
-        self._meta_table = MetaTable(data_path=data_path, in_memory=True)
+        self._meta_table = MetaTable('metas', data_path=data_path, in_memory=True)
 
     def clean(self):
         # TODO:
@@ -99,14 +93,13 @@ class CellContainer:
         count = 0
         for cell_id in cells:
             indices = None
-
-            if conditions is not None:
+            cell_table = self.cell_table(cell_id)
+            if (conditions is not None) or (cell_table.deleted_count() > 0):
                 indices = []
-                for doc in self.cell_table(cell_id).query(conditions=conditions):
+                for doc in cell_table.query(conditions=conditions):
                     indices.append(doc['_id'])
 
                 if len(indices) == 0:
-                    indices = None
                     continue
 
                 indices = np.array(indices, dtype=np.int64)
@@ -227,9 +220,6 @@ class CellContainer:
                 # relpace
                 self.cell_table(_cell_id).delete_by_offset(_offset)
 
-                # # TODO
-                # self.vec_index(cell_id).delete(_offset)
-
                 new_data.append(x)
                 new_cells.append(cell_id)
                 new_docs.append(doc)
@@ -250,6 +240,10 @@ class CellContainer:
 
         logger.debug(f'=> {len(ids)} items deleted')
 
+    def documents_generator(self, cell_id: int, batch_size: int = 256):
+        for docs in self.doc_store(cell_id).batched_iterator(batch_size=batch_size):
+            yield docs
+
     @property
     def cell_tables(self):
         return self._cell_tables
@@ -263,12 +257,10 @@ class CellContainer:
     def vec_index(self, cell_id: int):
         return self._vec_indexes[cell_id]
 
-    def _add_column(
-        self, name: str, dtype: Union[str, type], create_index: bool = False
-    ):
-        for table in self.cell_tables:
-            table.add_column(name, dtype, create_index=create_index)
+    @property
+    def total_docs(self):
+        return sum([store.size for store in self._doc_stores])
 
-    def _create_tables(self):
-        for table in self.cell_tables:
-            table.create_table()
+    @property
+    def index_size(self):
+        return sum([table.size for table in self._cell_tables])

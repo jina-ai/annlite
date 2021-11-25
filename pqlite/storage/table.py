@@ -1,10 +1,9 @@
-from typing import Optional, Any, Iterable, Iterator, List
-import pathlib
+from typing import Optional, Any, Iterator, List
+from pathlib import Path
 import sqlite3
 import datetime
-from jina import Document, DocumentArray
+from jina import DocumentArray
 import numpy as np
-from ..helper import open_lmdb, dumps_doc
 
 sqlite3.register_adapter(np.int64, lambda x: int(x))
 sqlite3.register_adapter(np.int32, lambda x: int(x))
@@ -77,7 +76,7 @@ class Table:
     def __init__(
         self,
         name: str,
-        data_path: Optional[pathlib.Path] = None,
+        data_path: Optional[Path] = None,
         in_memory: bool = True,
     ):
         if in_memory:
@@ -110,13 +109,21 @@ class CellTable(Table):
     def __init__(
         self,
         name: str,
-        data_path: pathlib.Path = pathlib.Path('.'),
+        columns: Optional[List[tuple]] = None,
         in_memory: bool = True,
+        data_path: Optional[Path] = None,
+        lazy_create: bool = False,
     ):
         super().__init__(name, data_path=data_path, in_memory=in_memory)
 
         self._columns = []
         self._indexed_keys = set()
+
+        if columns is not None:
+            for name, dtype, create_index in columns:
+                self.add_column(name, dtype, create_index)
+        if not lazy_create:
+            self.create_table()
 
     @property
     def columns(self) -> List[str]:
@@ -185,12 +192,15 @@ class CellTable(Table):
             self._conn.commit()
         return row_ids
 
-    def query(self, conditions: List[tuple] = []) -> Iterator[dict]:
+    def query(self, conditions: Optional[List[tuple]] = None) -> Iterator[dict]:
         """Query the records which matches the given conditions
 
         :param conditions: the conditions in the format of tuple `(name: str, op: str, value: any)`
         :return: iterator to yield matched doc
         """
+        if conditions is None:
+            conditions = []
+
         sql = 'SELECT _id, _doc_id from {table} WHERE {where} ORDER BY _id ASC;'
 
         where_conds = ['_deleted = ?']
@@ -206,6 +216,7 @@ class CellTable(Table):
         keys = [d[0] for d in cursor.description]
 
         for row in cursor:
+            row = list(row)
             row[0] -= 1
             yield dict(zip(keys, row))
 
@@ -259,12 +270,21 @@ class CellTable(Table):
         params = tuple([0] + [_converting(cond[2]) for cond in conditions])
         return self._conn.execute(sql, params).fetchone()[0]
 
+    def deleted_count(self):
+        """Return the total number of record what is marked as soft-deleted."""
+        sql = f'SELECT count(*) from {self.name} WHERE _deleted = 1'
+        return self._conn.execute(sql).fetchone()[0]
+
+    @property
+    def size(self):
+        return self.count()
+
 
 class MetaTable(Table):
     def __init__(
         self,
         name: str = 'meta',
-        data_path: Optional[pathlib.Path] = None,
+        data_path: Optional[Path] = None,
         in_memory: bool = False,
     ):
         super(MetaTable, self).__init__(name, data_path=data_path, in_memory=in_memory)

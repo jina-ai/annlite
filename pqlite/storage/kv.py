@@ -1,12 +1,18 @@
 import lmdb
+import shutil
+
 from typing import Union
 from pathlib import Path
 from typing import List, Union
 from jina import Document, DocumentArray
 import numpy as np
 
+LMDB_MAP_SIZE = 100 * 1024 * 1024 * 1024
+
 
 class DocStorage:
+    """The backend storage engine of Documents"""
+
     def __init__(self, path: Union[str, Path]):
         self._path = path
         self._env = self._open(path)
@@ -14,8 +20,8 @@ class DocStorage:
     def _open(self, db_path: str):
         return lmdb.Environment(
             str(self._path),
-            map_size=int(3.436e10),  # in bytes, 32G,
-            subdir=False,
+            map_size=LMDB_MAP_SIZE,
+            subdir=True,
             readonly=False,
             metasync=True,
             sync=True,
@@ -73,8 +79,12 @@ class DocStorage:
         return docs
 
     def clear(self):
-        with self._env.begin(write=True) as txn:
-            txn.drop(self._env.open_db(txn=txn), delete=False)
+        self._env.close()
+        shutil.rmtree(self._path)
+        self._env = self._open(self._path)
+
+    def close(self):
+        self._env.close()
 
     @property
     def stat(self):
