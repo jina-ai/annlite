@@ -16,7 +16,7 @@ def _precision(predicted, relevant, eval_at):
     """
     fraction of retrieved documents that are relevant to the query
     """
-    if eval_at == 0:
+    if eval_at == 0 or len(predicted)==0:
         return 0.0
     predicted_at_k = predicted[:eval_at]
     n_predicted_and_relevant = len(set(predicted_at_k).intersection(set(relevant)))
@@ -28,7 +28,7 @@ def _recall(predicted, relevant, eval_at):
     """
     fraction of the relevant documents that are successfully retrieved
     """
-    if eval_at == 0:
+    if eval_at == 0 or len(relevant)==0:
         return 0.0
     predicted_at_k = predicted[:eval_at]
     n_predicted_and_relevant = len(set(predicted_at_k).intersection(set(relevant)))

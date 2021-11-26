@@ -100,26 +100,29 @@ class CellContainer:
 
                 indices = np.array(indices, dtype=np.int64)
 
-            _dists, _doc_idx = self.vec_index(cell_id).search(
-                x, limit=limit, indices=indices
-            )
+            if indices is not None:
+                _dists, _doc_idx = self.vec_index(cell_id).search(
+                    x, limit=limit, indices=indices
+                )
 
-            if count >= limit and _dists[0] > dists[-1][-1]:
-                continue
+                if count >= limit and _dists[0] > dists[-1][-1]:
+                    continue
 
-            dists.append(_dists)
-            doc_idx.append(_doc_idx)
-            cell_ids.extend([cell_id] * len(_dists))
-            count += len(_dists)
+                dists.append(_dists)
+                doc_idx.append(_doc_idx)
+                cell_ids.extend([cell_id] * len(_dists))
+                count += len(_dists)
 
-        cell_ids = np.array(cell_ids, dtype=np.int64)
-        dists = np.hstack(dists)
-        doc_idx = np.hstack(doc_idx)
-
-        indices = dists.argsort(axis=0)[:limit]
-        dists = dists[indices]
-        cell_ids = cell_ids[indices]
-        doc_idx = doc_idx[indices]
+        if len(dists) > 0:
+            cell_ids = np.array(cell_ids, dtype=np.int64)
+            dists = np.hstack(dists)
+            doc_idx = np.hstack(doc_idx)
+            indices = dists.argsort(axis=0)[:limit]
+            dists = dists[indices]
+            cell_ids = cell_ids[indices]
+            doc_idx = doc_idx[indices]
+        else:
+            logger.debug(f'=> No matches retrieved in any cell')
 
         doc_ids = []
         for cell_id, offset in zip(cell_ids, doc_idx):
