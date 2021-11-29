@@ -663,8 +663,8 @@ public:
         }
 
         // FuseFilter constructing
-        binary_fuse8_t filter;
-        binary_fuse8_allocate(appr_alg->max_elements_, &filter);
+        binary_fuse16_t filter;
+        binary_fuse16_allocate(appr_alg->max_elements_, &filter);
 
         if (!candidate_ids_.is_none()) {
             py::array_t < size_t, py::array::c_style | py::array::forcecast > items(candidate_ids_);
@@ -677,7 +677,7 @@ public:
                     big_set[i] = items.data()[i]; // we use contiguous values
                 }
 
-                binary_fuse8_populate(big_set, size, &filter);
+                binary_fuse16_populate(big_set, size, &filter);
                 free(big_set);
             }
             else
@@ -731,7 +731,7 @@ public:
             }
         }
 
-        binary_fuse8_free(&filter);
+        binary_fuse16_free(&filter);
 
         py::capsule free_when_done_l(data_numpy_l, [](void *f) {
             delete[] f;

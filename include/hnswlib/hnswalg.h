@@ -335,7 +335,7 @@ namespace hnswlib {
 
         template <bool has_deletions, bool collect_metrics=false>
         std::priority_queue<std::pair<dist_t, tableint>, std::vector<std::pair<dist_t, tableint>>, CompareByFirst>
-        searchBaseLayerSTWithFilter(tableint ep_id, const void *data_point, const binary_fuse8_t *filter, size_t ef) const {
+        searchBaseLayerSTWithFilter(tableint ep_id, const void *data_point, const binary_fuse16_t *filter, size_t ef) const {
             VisitedList *vl = visited_list_pool_->getFreeVisitedList();
             vl_type *visited_array = vl->mass;
             vl_type visited_array_tag = vl->curV;
@@ -346,7 +346,7 @@ namespace hnswlib {
             dist_t lowerBound;
 
             uint64_t label = getExternalLabel(ep_id);
-            if (binary_fuse8_contain(label, filter)) {
+            if (binary_fuse16_contain(label, filter)) {
                 dist_t dist = fstdistfunc_(data_point, getDataByInternalId(ep_id), dist_func_param_);
                 lowerBound = dist;
                 top_candidates.emplace(dist, ep_id);
@@ -408,7 +408,7 @@ namespace hnswlib {
 
                             uint64_t et_label = getExternalLabel(candidate_id);
 
-                            if (binary_fuse8_contain(et_label, filter))
+                            if (binary_fuse16_contain(et_label, filter))
                                 top_candidates.emplace(dist, candidate_id);
 
                             if (top_candidates.size() > ef)
@@ -1248,7 +1248,7 @@ namespace hnswlib {
         };
 
         std::priority_queue<std::pair<dist_t, labeltype >>
-        searchKnnWithFilter(const void *query_data, const binary_fuse8_t *filter, size_t k) const {
+        searchKnnWithFilter(const void *query_data, const binary_fuse16_t *filter, size_t k) const {
             std::priority_queue<std::pair<dist_t, labeltype >> result;
             if (cur_element_count == 0) return result;
 
