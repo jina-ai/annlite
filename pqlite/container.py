@@ -88,8 +88,12 @@ class CellContainer:
         cell_ids = []
         count = 0
         for cell_id in cells:
-            indices = None
             cell_table = self.cell_table(cell_id)
+            cell_size = cell_table.count()
+            if cell_size == 0:
+                continue
+
+            indices = None
             if (conditions is not None) or (cell_table.deleted_count() > 0):
                 indices = []
                 for doc in cell_table.query(conditions=conditions):
@@ -101,7 +105,7 @@ class CellContainer:
                 indices = np.array(indices, dtype=np.int64)
 
             _dists, _doc_idx = self.vec_index(cell_id).search(
-                x, limit=limit, indices=indices
+                x, limit=min(limit, cell_size), indices=indices
             )
 
             if count >= limit and _dists[0] > dists[-1][-1]:
