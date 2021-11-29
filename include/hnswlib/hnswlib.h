@@ -105,4 +105,5 @@ namespace hnswlib {
 #include "space_l2.h"
 #include "space_ip.h"
 #include "bruteforce.h"
+#include "fusefilter.h"
 #include "hnswalg.h"
