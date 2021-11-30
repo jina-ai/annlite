@@ -29,63 +29,72 @@ $ git clone https://github.com/jina-ai/pqlite.git \
 ```python
 import random
 import numpy as np
+from jina import Document, DocumentArray
 from pqlite import PQLite
 
 N = 10000 # number of data points
-Nt = 2000
-Nq = 10
+Nq = 10 # number of query data
 D = 128 # dimentionality / number of features
 
-Xt = np.random.random((Nt, D)).astype(np.float32)  # 2,000 128-dim vectors for training
-
 # the column schema: (name:str, dtype:type, create_index: bool)
-pqlite = PQLite(d_vector=D, n_cells=64, n_subvectors=8, columns=[('x', float, True)])
-pqlite.fit(Xt)
+pqlite = PQLite(dim=D, columns=[('x', float, True)], data_path='./data')
 ```
 
 2. Add new data
 
 ```python
 X = np.random.random((N, D)).astype(np.float32)  # 10,000 128-dim vectors to be indexed
-
-tags = [{'x': random.random()} for _ in range(N)]
-pqlite.add(X, ids=list(range(len(X))), doc_tags=tags)
+docs = DocumentArray(
+    [
+        Document(id=f'{i}', embedding=X[i], tags={'x': random.random()})
+        for i in range(N)
+    ]
+)
+pqlite.index(docs)
 ```
 
 3. Search with Filtering
 
 ```python
-query = np.random.random((Nq, D)).astype(np.float32)  # a 128-dim query vector
+Xq = np.random.random((Nq, D)).astype(np.float32)  # a 128-dim query vector
+query = DocumentArray([Document(embedding=Xq[i]) for i in range(Nq)])
 
 # without filtering
-dists, ids = pqlite.search(query, k=5)
+pqlite.search(query, limit=10)
 
 print(f'the result without filtering:')
-for i, (dist, idx) in enumerate(zip(dists, ids)):
-    print(f'query [{i}]: {dist} {idx}')
+for i, q in enumerate(query):
+    print(f'query [{i}]:')
+    for m in q.matches:
+        print(f'\t{m.id} ({m.scores["euclidean"].value})')
 
 # with filtering
 # condition schema: (column_name: str, relation: str, value: any)
 conditions = [('x', '<', 0.3)]
-dists, ids = pqlite.search(query, conditions=conditions, k=5)
-
+pqlite.search(query, conditions=conditions, limit=10)
 print(f'the result with filtering:')
-for i, (dist, idx) in enumerate(zip(dists, ids)):
-    print(f'query [{i}]: {dist} {idx}')
+for i, q in enumerate(query):
+    print(f'query [{i}]:')
+    for m in q.matches:
+        print(f'\t{m.id} {m.scores["euclidean"].value} (x={m.tags["x"]})')
 ```
 4. Update data
 
 ```python
 Xn = np.random.random((10, D)).astype(np.float32)  # 10,000 128-dim vectors to be indexed
-
-tags = [{'x': random.random()} for _ in range(10)]
-pqlite.update(Xn, ids=list(range(len(Xn))), doc_tags=tags)
+docs = DocumentArray(
+    [
+        Document(id=f'{i}', embedding=Xn[i], tags={'x': random.random()})
+        for i in range(10)
+    ]
+)
+pqlite.update(docs)
 ```
 
 5. Delete data
 
 ```python
-pqlite.delete(ids=['1', '2'])
+pqlite.delete(['1', '2'])
 ```
 ## Benchmark
 
