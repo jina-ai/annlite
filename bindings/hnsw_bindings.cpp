@@ -590,8 +590,6 @@ public:
             else{
                 std::vector<float> norm_array(num_threads*features);
                 ParallelFor(0, rows, num_threads, [&](size_t row, size_t threadId) {
-                                float *data= (float *) items.data(row);
-
                                 size_t start_idx = threadId * dim;
                                 normalize_vector((float *) items.data(row), (norm_array.data()+start_idx));
 
@@ -657,12 +655,12 @@ public:
 
         // avoid using threads when the number of searches is small:
 
-        if(rows <= num_threads*4){
+        if(rows<=num_threads*4){
             num_threads=1;
         }
 
         // FuseFilter constructing
-        binary_fuse16_t filter(appr_alg->max_elements);
+        binary_fuse16_t filter(appr_alg->max_elements_);
 
         if (!candidate_ids_.is_none()) {
             py::array_t < size_t, py::array::c_style | py::array::forcecast > items(candidate_ids_);
@@ -670,14 +668,13 @@ public:
 
             if(ids_numpy.ndim==1) {
                 const size_t size = ids_numpy.shape[0];
-                //std::array<uint64_t, size> big_set;
-                uint64_t *big_set = (uint64_t *)malloc(sizeof(uint64_t) * size);
+                std::vector<uint64_t> big_set;
+                big_set.reserve(size);
                 for (size_t i = 0; i < size; i++) {
                     big_set[i] = items.data()[i]; // we use contiguous values
                 }
 
-                binary_fuse16_populate(big_set, size, &filter);
-                free(big_set);
+                binary_fuse16_populate(big_set.data(), size, &filter);
             }
             else
                 throw std::runtime_error("wrong dimensionality of the filter labels");
