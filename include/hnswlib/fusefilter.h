@@ -380,6 +380,42 @@ typedef struct binary_fuse16_s {
   uint32_t SegmentCountLength;
   uint32_t ArrayLength;
   uint16_t *Fingerprints;
+
+  binary_fuse16_s(uint32_t size) {
+      uint32_t arity = 3;
+      SegmentLength = size == 0 ? 4 : binary_fuse_calculate_segment_length(arity, size);
+      if (SegmentLength > 262144) {
+        SegmentLength = 262144;
+      }
+      SegmentLengthMask = SegmentLength - 1;
+      double sizeFactor = size <= 1 ? 0 : binary_fuse_calculate_size_factor(arity, size);
+      uint32_t capacity = (uint32_t)(round((double)size * sizeFactor));
+      uint32_t initSegmentCount =
+          (capacity + SegmentLength - 1) / SegmentLength -
+          (arity - 1);
+      ArrayLength = (initSegmentCount + arity - 1) * SegmentLength;
+      SegmentCount =
+          (ArrayLength + SegmentLength - 1) / SegmentLength;
+      if (SegmentCount <= arity - 1) {
+        SegmentCount = 1;
+      } else {
+        SegmentCount = SegmentCount - (arity - 1);
+      }
+      ArrayLength =
+          (SegmentCount + arity - 1) *SegmentLength;
+      SegmentCountLength = SegmentCount * SegmentLength;
+      Fingerprints = (uint16_t*)malloc(ArrayLength * sizeof(uint16_t));
+  }
+  ~binary_fuse16_s() {
+      free(Fingerprints);
+      Fingerprints = NULL;
+      Seed = 0;
+      SegmentLength = 0;
+      SegmentLengthMask = 0;
+      SegmentCount = 0;
+      SegmentCountLength = 0;
+      ArrayLength = 0;
+  }
 } binary_fuse16_t;
 
 static inline uint64_t binary_fuse16_fingerprint(uint64_t hash) {

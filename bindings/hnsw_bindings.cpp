@@ -641,37 +641,36 @@ public:
         auto buffer = items.request();
         hnswlib::labeltype *data_numpy_l;
         dist_t *data_numpy_d;
-        size_t rows, features;
 
         if (num_threads <= 0)
             num_threads = num_threads_default;
 
         if (buffer.ndim != 2 && buffer.ndim != 1) throw std::runtime_error("data must be a 1d/2d array");
+
+        size_t rows = 1;
+        size_t features = buffer.shape[0];
+
         if (buffer.ndim == 2) {
             rows = buffer.shape[0];
             features = buffer.shape[1];
         }
-        else{
-            rows = 1;
-            features = buffer.shape[0];
-        }
 
         // avoid using threads when the number of searches is small:
 
-        if(rows<=num_threads*4){
+        if(rows <= num_threads*4){
             num_threads=1;
         }
 
         // FuseFilter constructing
-        binary_fuse16_t filter;
-        binary_fuse16_allocate(appr_alg->max_elements_, &filter);
+        binary_fuse16_t filter(appr_alg->max_elements);
 
         if (!candidate_ids_.is_none()) {
             py::array_t < size_t, py::array::c_style | py::array::forcecast > items(candidate_ids_);
             auto ids_numpy = items.request();
 
             if(ids_numpy.ndim==1) {
-                size_t size = ids_numpy.shape[0];
+                const size_t size = ids_numpy.shape[0];
+                //std::array<uint64_t, size> big_set;
                 uint64_t *big_set = (uint64_t *)malloc(sizeof(uint64_t) * size);
                 for (size_t i = 0; i < size; i++) {
                     big_set[i] = items.data()[i]; // we use contiguous values
@@ -688,6 +687,7 @@ public:
         {
             py::gil_scoped_release l;
 
+            // would like to check the ownership of this data in more detail
             data_numpy_l = new hnswlib::labeltype[rows * k];
             data_numpy_d = new dist_t[rows * k];
 
@@ -730,8 +730,6 @@ public:
                 );
             }
         }
-
-        binary_fuse16_free(&filter);
 
         py::capsule free_when_done_l(data_numpy_l, [](void *f) {
             delete[] f;
