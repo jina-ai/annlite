@@ -62,31 +62,16 @@ ext_modules = [
         libraries=libraries,
         language='c++',
         extra_objects=extra_objects,
-    )
-] + cythonize(
-    [
-        Extension(
-            'pqlite.pq_bind',
-            ['./bindings/pq_bindings.pyx'],
-            include_dirs=include_dirs + [get_python_inc(plat_specific=True)],
-            libraries=libraries,
-            language='c++',
-            extra_objects=extra_objects,
-        ),
-    ],
-    compiler_directives=COMPILER_DIRECTIVES,
-)
-#
-# ext_modules = cythonize([
-#                 Extension(
-#                     'pqlite.pq_bind',
-#                     ['./bindings/pq_bindings.pyx'],
-#                     include_dirs=include_dirs + [get_python_inc(plat_specific=True)],
-#                     libraries=libraries,
-#                     language='c++',
-#                     extra_objects=extra_objects,
-#                 ),
-#             ], compiler_directives=COMPILER_DIRECTIVES)
+    ),
+    Extension(
+        'pqlite.pq_bind',
+        ['./bindings/pq_bindings.pyx'],
+        include_dirs=include_dirs + [get_python_inc(plat_specific=True)],
+        libraries=libraries,
+        language='c++',
+        extra_objects=extra_objects,
+    ),
+]
 
 # As of Python 3.6, CCompiler has a `has_flag` method.
 # cf http://bugs.python.org/issue26689
@@ -159,9 +144,6 @@ class BuildExt(build_ext):
 extras = {}
 extras['testing'] = ['pytest']
 
-# for e in ext_modules:
-#     e.cython_directives = COMPILER_DIRECTIVES
-
 setup(
     name='pqlite',
     version=__version__,
@@ -202,5 +184,5 @@ setup(
         ]
     ),
     zip_safe=False,
-    keywords='product-quantization approximate-nearest-neighbor',
+    keywords='product-quantization hnsw approximate-nearest-neighbor',
 )
