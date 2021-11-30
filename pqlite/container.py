@@ -116,14 +116,16 @@ class CellContainer:
             cell_ids.extend([cell_id] * len(_dists))
             count += len(_dists)
 
-        cell_ids = np.array(cell_ids, dtype=np.int64)
-        dists = np.hstack(dists)
-        doc_idx = np.hstack(doc_idx)
 
-        indices = dists.argsort(axis=0)[:limit]
-        dists = dists[indices]
-        cell_ids = cell_ids[indices]
-        doc_idx = doc_idx[indices]
+        cell_ids = np.array(cell_ids, dtype=np.int64)
+        if len(dists) != 0:
+            dists = np.hstack(dists)
+            doc_idx = np.hstack(doc_idx)
+
+            indices = dists.argsort(axis=0)[:limit]
+            dists = dists[indices]
+            cell_ids = cell_ids[indices]
+            doc_idx = doc_idx[indices]
 
         doc_ids = []
         for cell_id, offset in zip(cell_ids, doc_idx):
@@ -153,6 +155,7 @@ class CellContainer:
                 doc.scores[self.metric.name.lower()].value = dist
                 match_docs.append(doc)
             topk_docs.append(match_docs)
+
 
         return topk_dists, topk_docs
 
