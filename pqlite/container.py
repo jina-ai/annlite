@@ -214,6 +214,7 @@ class CellContainer:
             if cell_id == _cell_id:
                 self.vec_index(cell_id).add_with_ids(x.reshape(1, -1), [_offset])
                 self.cell_table(cell_id).undo_delete_by_offset(_offset)
+                self.doc_store(cell_id).update([doc])
 
             elif _cell_id is None:
                 new_data.append(x)
@@ -222,6 +223,7 @@ class CellContainer:
             else:
                 # relpace
                 self.cell_table(_cell_id).delete_by_offset(_offset)
+                self.doc_store(_cell_id).delete([doc.id])
 
                 new_data.append(x)
                 new_cells.append(cell_id)

@@ -63,17 +63,19 @@ class HnswIndex(BaseIndex):
             _dim == self.dim
         ), f'the query embedding dimension does not match with index dimension: {_dim} vs {self.dim}'
 
-        if indices is not None:
-            raise NotImplementedError(
-                f'the index {self.__class__.__name__} does not pre-filtering now'
-            )
-
         query = query.reshape((-1, self.dim))
 
         ef_search = max(self.ef_search, limit)
         self._index.set_ef(ef_search)
 
-        ids, dists = self._index.knn_query(query, k=limit)
+        if indices is not None:
+            # TODO: add a smart strategy to speed up this case (bruteforce search would be better)
+            if len(indices) < limit:
+                limit = len(indices)
+
+            ids, dists=self._index.knn_query_with_filter(query, filters=indices, k=limit)
+        else:
+            ids, dists = self._index.knn_query(query, k=limit)
         return dists[0], ids[0]
 
     def delete(self, ids: List[int]):
