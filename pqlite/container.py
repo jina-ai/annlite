@@ -45,7 +45,7 @@ class CellContainer:
                 )
                 for _ in range(n_cells)
             ]
-        elif columns is None:
+        else:
             self._vec_indexes = [
                 HnswIndex(
                     dim,
@@ -56,17 +56,7 @@ class CellContainer:
                 )
                 for _ in range(n_cells)
             ]
-        else:
-            self._vec_indexes = [
-                FlatIndex(
-                    dim,
-                    metric=metric,
-                    initial_size=initial_size,
-                    expand_step_size=expand_step_size,
-                    expand_mode=expand_mode,
-                )
-                for _ in range(n_cells)
-            ]
+
         self._doc_stores = [DocStorage(data_path / f'cell_{_}') for _ in range(n_cells)]
 
         self._cell_tables = [
@@ -115,7 +105,6 @@ class CellContainer:
             doc_idx.append(_doc_idx)
             cell_ids.extend([cell_id] * len(_dists))
             count += len(_dists)
-
 
         cell_ids = np.array(cell_ids, dtype=np.int64)
         if len(dists) != 0:
@@ -214,6 +203,7 @@ class CellContainer:
             if cell_id == _cell_id:
                 self.vec_index(cell_id).add_with_ids(x.reshape(1, -1), [_offset])
                 self.cell_table(cell_id).undo_delete_by_offset(_offset)
+                self.doc_store(cell_id).update([doc])
 
             elif _cell_id is None:
                 new_data.append(x)
@@ -222,6 +212,7 @@ class CellContainer:
             else:
                 # relpace
                 self.cell_table(_cell_id).delete_by_offset(_offset)
+                self.doc_store(_cell_id).delete([doc.id])
 
                 new_data.append(x)
                 new_cells.append(cell_id)

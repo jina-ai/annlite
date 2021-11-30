@@ -82,3 +82,4 @@ def test_index_query_with_filtering(pqlite_with_data):
             query[0].matches[i].scores['euclidean'].value
             <= query[0].matches[i + 1].scores['euclidean'].value
         )
+        assert query[0].matches[i].tags['x'] > 0.6
