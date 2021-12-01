@@ -660,7 +660,8 @@ public:
         }
 
         // FuseFilter constructing
-        binary_fuse16_t filter(appr_alg->max_elements_);
+        binary_fuse16_t filter;
+        binary_fuse16_allocate(appr_alg->max_elements_, &filter);
 
         if (!candidate_ids_.is_none()) {
             py::array_t < size_t, py::array::c_style | py::array::forcecast > items(candidate_ids_);
@@ -674,7 +675,9 @@ public:
                     big_set[i] = items.data()[i]; // we use contiguous values
                 }
 
-                binary_fuse16_populate(big_set.data(), size, &filter);
+                if(!binary_fuse16_populate(big_set.data(), size, &filter)) {
+                    throw std::runtime_error("failure to populate the fuse filter");
+                }
             }
             else
                 throw std::runtime_error("wrong dimensionality of the filter labels");
@@ -735,6 +738,10 @@ public:
             delete[] f;
         });
 
+        binary_fuse16_free(&filter);
+
+        // TODO: temp solution to reset the fingerprints
+//        binary_fuse16_allocate(appr_alg->max_elements_, &filter);
 
         return py::make_tuple(
                 py::array_t<hnswlib::labeltype>(

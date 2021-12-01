@@ -72,7 +72,6 @@ class HnswIndex(BaseIndex):
             # TODO: add a smart strategy to speed up this case (bruteforce search would be better)
             if len(indices) < limit:
                 limit = len(indices)
-
             ids, dists=self._index.knn_query_with_filter(query, filters=indices, k=limit)
         else:
             ids, dists = self._index.knn_query(query, k=limit)

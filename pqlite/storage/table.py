@@ -219,7 +219,7 @@ class CellTable(Table):
         for cond in conditions:
             cond = f'{cond[0]} {cond[1]} ?'
             where_conds.append(cond)
-        where = 'and '.join(where_conds)
+        where = ' and '.join(where_conds)
         sql = sql.format(table=self.name, where=where)
 
         params = tuple([0] + [_converting(cond[2]) for cond in conditions])
