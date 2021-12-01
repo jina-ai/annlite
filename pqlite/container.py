@@ -231,6 +231,7 @@ class CellContainer:
             cell_id, offset = self._meta_table.get_address(doc_id)
             if cell_id is not None:
                 self.cell_table(cell_id).delete_by_offset(offset)
+                self.doc_store(cell_id).delete([doc_id])
 
         logger.debug(f'=> {len(ids)} items deleted')
 

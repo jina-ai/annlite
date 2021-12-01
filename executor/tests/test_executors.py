@@ -1,10 +1,6 @@
 from jina import Document, DocumentArray, Flow, Executor
-import sys
-from pathlib import Path
 
-sys.path.append(str(Path(__file__).resolve().parents[1]))
 from executor_pqlite import PQLiteIndexer
-import random
 import numpy as np
 import pytest
 
@@ -46,7 +42,7 @@ def test_index(tmpdir):
         uses_metas=metas,
     )
     with f:
-        result = f.post(on='/index', inputs=docs, request_size=500, return_results=True)
+        result = f.post(on='/index', inputs=docs, return_results=True)
         assert sum([len(r.docs) for r in result]) == N
 
 
@@ -66,6 +62,10 @@ def test_update(tmpdir):
         update_res = f.post(on='/update', inputs=docs_update, return_results=True)
         assert sum([len(r.docs) for r in update_res]) == Nu
 
+        res = f.post(on='/status', return_results=True)
+        assert int(res[0].docs[0].tags['total_docs']) == N
+        assert int(res[0].docs[0].tags['index_size']) == N
+
 
 def test_search(tmpdir):
     metas = {'workspace': str(tmpdir)}
@@ -80,8 +80,39 @@ def test_search(tmpdir):
     )
     with f:
         f.post(on='/index', inputs=docs)
-        query_res = f.post(on='/query', inputs=docs_query, return_results=True)
+        query_res = f.post(on='/search', inputs=docs_query, return_results=True)
         assert sum([len(r.docs) for r in query_res]) == Nq
+
+        for i in range(len(query_res[0].docs[0].matches) - 1):
+            assert (
+                    query_res[0].docs[0].matches[i].scores['euclidean'].value
+                    <= query_res[0].docs[0].matches[i+1].scores['euclidean'].value
+            )
+
+def test_delete(tmpdir):
+    metas = {'workspace': str(tmpdir)}
+    docs = gen_docs(N)
+    f = Flow().add(
+        uses=PQLiteIndexer,
+        uses_with={
+            'dim': D,
+        },
+        uses_metas=metas,
+    )
+    with f:
+        f.post(on='/index', inputs=docs)
+        res = f.post(on='/status', return_results=True)
+        assert int(res[0].docs[0].tags['total_docs']) == N
+        assert int(res[0].docs[0].tags['index_size']) == N
+
+        f.post(on='/delete', parameters={'ids': ['1', '2', '3', '4', '5']})
+        res = f.post(on='/status', return_results=True)
+        assert int(res[0].docs[0].tags['total_docs']) == N - 5
+        assert int(res[0].docs[0].tags['index_size']) == N - 5
+
+        docs_query = gen_docs(Nq)
+        query_res = f.post(on='/search', inputs=docs_query, return_results=True)
+
 
 
 def test_status(tmpdir):
