@@ -57,7 +57,7 @@ class PQLiteIndexer(Executor):
 
     @requests(on='/index')
     def index(
-        self, docs: Optional[DocumentArray] = None, parameters: dict = {}, **kwargs
+        self, docs: DocumentArray, parameters: dict = {}, **kwargs
     ):
         """Index new documents
 
@@ -66,8 +66,6 @@ class PQLiteIndexer(Executor):
         Keys accepted:
             - 'traversal_paths' (str): traversal path for the docs
         """
-        if not docs:
-            return
 
         traversal_paths = parameters.get('traversal_paths', self.index_traversal_paths)
         flat_docs = docs.traverse_flat(traversal_paths)
@@ -123,7 +121,15 @@ class PQLiteIndexer(Executor):
     def search(
         self, docs: Optional[DocumentArray] = None, parameters: dict = {}, **kwargs
     ):
-        """Perform a vector similarity search and retrieve the full Document match
+        """Perform a vector similarity search and retrieve Document matches
+
+        Search can be performed with candidate filtering. Filters are a triplet (column,operator,value).
+        More than a filter can be applied during search. Therefore, conditions for a filter are specified as a list triplets.
+        Each triplet contains:
+
+        - column: Column used to filter.
+        - operator: Binary operation between two values. Some supported operators include `['>','<','=','<=','>=']`.
+        - value: value used to compare a candidate.
 
         :param docs: the Documents to search with
         :param parameters: dictionary for parameters for the search operation
