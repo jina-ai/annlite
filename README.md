@@ -14,7 +14,7 @@
 ```bash
 $ git clone https://github.com/jina-ai/pqlite.git \
   && cd pqlite \
-  && pip install .
+  && pip install -e .
 ```
 ## How to use?
 
