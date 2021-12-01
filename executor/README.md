@@ -1,7 +1,7 @@
 # PQLiteIndexer
 
 `PQLiteIndexer` uses `PQLite` for indexing `Document`. It is recommended to be used when you want hybrid search supported. 
-By default, it calculates the `cosine` distance and returns all the indexed `Document`.
+By default, it calculates the `euclidean` distance and returns all the indexed `Document`.
 
 ## Basic Usage
 
