@@ -136,13 +136,10 @@ class PQLiteIndexer(Executor):
         if not docs:
             return
 
-        import epdb
-
-        epdb.set_trace()
-
         limit = int(parameters.get('limit', self.limit))
-        conditions = parameters.get('conditions', self.conditions)
+        conditions = parameters.get('conditions', None)
         if conditions:
+
             conditions = [
                 (col, operator, eval(value)) for (col, operator, value) in conditions
             ]

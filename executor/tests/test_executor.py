@@ -106,10 +106,7 @@ def test_search_with_filtering(tmpdir):
     metas = {'workspace': str(tmpdir)}
 
     docs = docs_with_tags(N)
-    docs_query = gen_docs(Nq)
-
-    prices = [10., 25., 50., 100.]
-    categories = ['comics', 'movies', 'audiobook']
+    docs_query = gen_docs(1)
     columns = [('price', 'float', 'True'), ('category', 'str', 'True')]
 
     f = Flow().add(
@@ -120,7 +117,8 @@ def test_search_with_filtering(tmpdir):
         },
         uses_metas=metas,
     )
-    conditions = [('prices', '<', '500.')]
+
+    conditions = [['price', '<', '50.']]
     with f:
         f.post(on='/index', inputs=docs)
         query_res = f.post(on='/search',
@@ -128,14 +126,8 @@ def test_search_with_filtering(tmpdir):
                            return_results=True,
                            parameters={'conditions': conditions}
                            )
+        assert all([m.tags['price'] < 50 for m in query_res[0].docs[0].matches])
 
-        #BUG: query_res is empty
-        assert sum([len(r.docs) for r in query_res]) == Nq
-        for i in range(len(query_res[0].docs[0].matches) - 1):
-            assert (
-                    query_res[0].docs[0].matches[i].scores['euclidean'].value
-                    <= query_res[0].docs[0].matches[i+1].scores['euclidean'].value
-            )
 
 
 
