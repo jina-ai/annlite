@@ -100,30 +100,14 @@ pqlite.delete(['1', '2'])
 
 ## Benchmark
 
-All experiments were performed with a Intel(R) Xeon(R) CPU @ 2.00GHz and Nvidia Tesla T4 GPU.
+TBD...
 
-- [Yandex Research](https://research.yandex.com/datasets/biganns) Benchmarks for Billion-Scale Similarity Search
+## Research foundations of PQLite
 
-## TODO
-
-- [Scalene](https://github.com/plasma-umass/scalene) a high-performance, high-precision CPU, GPU, and memory profiler for Python
-- [Bolt](https://github.com/dblalock/bolt) 10x faster matrix and vector operations.
-- [MADDNESS](https://arxiv.org/abs/2106.10860) Multiplying Matrices Without Multiplying [code](https://github.com/dblalock/bolt)
-- [embeddinghub](https://github.com/featureform/embeddinghub) A vector database for machine learning embeddings.
-- [mobius](https://github.com/sunbelbd/mobius) Möbius Transformation for Fast Inner Product Search on Graph
-
-## References
-
-- [hyperfine](https://github.com/sharkdp/hyperfine) Good UX example
-- [PGM-index](https://github.com/gvinciguerra/PGM-index) State-of-the-art learned data structure that enables fast lookup, predecessor, range searches and updates in arrays of billions of items using orders of magnitude less space than traditional indexes
 - [Xor Filters](https://lemire.me/blog/2019/12/19/xor-filters-faster-and-smaller-than-bloom-filters/) Faster and Smaller Than Bloom Filters
 - [CVPR20 Tutorial](https://www.youtube.com/watch?v=SKrHs03i08Q&list=PLKQB14e0EJUWaTnwgQogJ3nSLzEFNn9d8&t=849s) Billion-scale Approximate Nearest Neighbor Search
 - [XOR-Quantization](https://arxiv.org/pdf/2008.02002.pdf) Fast top-K Cosine Similarity Search through XOR-Friendly Binary Quantization on GPUs
 - [NeurIPS21 Challenge](http://big-ann-benchmarks.com/index.html) Billion-Scale Approximate Nearest Neighbor Search Challenge [NeurIPS'21 competition track](https://neurips.cc/Conferences/2021/CompetitionTrack)
-
-
-## Research foundations of PQLite
-
 - [PAMI 2011](https://hal.inria.fr/inria-00514462v1/document) Product quantization for nearest neighbor search
 - [CVPR 2016](https://research.yandex.com/publications/138) Efficient Indexing of Billion-Scale Datasets of Deep Descriptors
 - [NIPs 2017](https://papers.nips.cc/paper/2017/file/b6617980ce90f637e68c3ebe8b9be745-Paper.pdf) Multiscale Quantization for Fast Similarity Search
