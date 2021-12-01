@@ -1,1 +1,1 @@
-pqlite
+pqlite==0.0.3

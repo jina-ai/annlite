@@ -204,7 +204,7 @@ class PQLite(CellContainer):
         """Search the index, and attach matches to the query Documents in `docs`
 
         :param docs: the query documents to search
-        :param conditions: the filtring conditions
+        :param conditions: the filtering conditions
         :param limit: the number of results to get for each query document in search
         :return:
         """
