@@ -7,7 +7,6 @@ import setuptools
 from setuptools.command.build_ext import build_ext
 from setuptools import setup, find_packages, Extension
 
-from Cython.Build import cythonize
 from distutils.sysconfig import get_python_inc
 
 if sys.version_info >= (3, 10, 0) or sys.version_info < (3, 7, 0):
