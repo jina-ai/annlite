@@ -1,11 +1,11 @@
 # PQLite
 
-`PQLite` is a blaze fast **Approximate Nearest Neighbor Search** (ANNS) library.
+`PQLite` is a blazing fast **Approximate Nearest Neighbor Search** (ANNS) library.
 
 ## WARNING
 
 - `PQLite` is still in the very early stages of development. APIs can and will change (now is the time to make suggestions!). Important features are missing. Documentation is sparse.
-- `PQLite` contains code that must be compiled to be used. The build is prepared in `setup.py`, users only need to `pip install .` from the root directory.
+- `PQLite` contains code that must be compiled to be used. The build is prepared in `setup.py`. Users only need to `pip install .` from the root directory.
 
 ## About
 
@@ -53,7 +53,7 @@ docs = DocumentArray(
 pqlite.index(docs)
 ```
 
-3. Search with Filtering
+3. Search with filtering
 
 ```python
 Xq = np.random.random((Nq, D)).astype(np.float32)  # a 128-dim query vector
@@ -78,6 +78,7 @@ for i, q in enumerate(query):
     for m in q.matches:
         print(f'\t{m.id} {m.scores["euclidean"].value} (x={m.tags["x"]})')
 ```
+
 4. Update data
 
 ```python
@@ -96,6 +97,7 @@ pqlite.update(docs)
 ```python
 pqlite.delete(['1', '2'])
 ```
+
 ## Benchmark
 
 All experiments were performed with a Intel(R) Xeon(R) CPU @ 2.00GHz and Nvidia Tesla T4 GPU.
