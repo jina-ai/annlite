@@ -11,6 +11,7 @@ You can override the default configuration as below,
 ```python
 f = Flow().add(
     uses='jinahub://PQLiteIndexer',
+    uses_with={'dim': 256, 'metric': 'euclidean'},
     uses_metas={'workspace': '/my/tmp_folder'})
 ```
 
