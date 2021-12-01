@@ -1,11 +1,14 @@
 # PQLiteIndexer
 
-`PQLiteIndexer` uses `PQLite` for indexing `Document`. It is recommended to be used when you want hybrid search supported. 
-By default, it calculates the `euclidean` distance and returns all the indexed `Document`.
+`PQLiteIndexer` uses the `PQLite` class for indexing Jina `Document` objects. The `PQLite` class partitions the data into cells at index time, and instanciates a "sub-indexer" in each cell.  Search is performed agregating results retrieved from cells. 
+
+This indexer is recommended to be used when you want to search with filters applied on tags. For example, if documents have a tag `'price'`  that stores floating point values this indexer allows searching documents with a filter, such as  `price < 100`.
+
+By default, it uses the `euclidean` distance to rank results.
 
 ## Basic Usage
 
-`PQLiteIndexer` stores the `Document` at the directory, which is specified by `workspace` field under the [`metas`](https://docs.jina.ai/fundamentals/executor/executor-built-in-features/#meta-attributes) attribute. 
+`PQLiteIndexer` stores  `Document` objects at the  `workspace` directory, specified under the [`metas`](https://docs.jina.ai/fundamentals/executor/executor-built-in-features/#meta-attributes) attribute. 
 You can override the default configuration as below,
 
 ```python

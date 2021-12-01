@@ -1,6 +1,8 @@
 # PQLite
 
-`PQLite` is a blazing fast **Approximate Nearest Neighbor Search** (ANNS) library.
+`PQLite` is an  **Approximate Nearest Neighbor Search** (ANNS) library integrated with the Jina Ecosystem.
+
+
 
 ## WARNING
 
