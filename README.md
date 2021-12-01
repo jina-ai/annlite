@@ -7,12 +7,6 @@
 - `PQLite` is still in the very early stages of development. APIs can and will change (now is the time to make suggestions!). Important features are missing. Documentation is sparse.
 - `PQLite` contains code that must be compiled to be used. The build is prepared in `setup.py`. Users only need to `pip install .` from the root directory.
 
-## About
-
-- **Features**: A quick overview of PQlite's features.
-- **Roadmap**: The PQLite team's development plan.
-- **Introducing PQLite**: A blog post covering some of PQLite's features
-
 ## Quick Start
 
 ### Setup
