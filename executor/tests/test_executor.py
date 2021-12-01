@@ -20,6 +20,17 @@ def gen_docs(num):
         res.append(doc)
     return res
 
+def docs_with_tags(N):
+    prices = [10., 25., 50., 100.]
+    categories = ['comics', 'movies', 'audiobook']
+    X = np.random.random((N, D)).astype(
+        np.float32
+    )
+    docs = [Document(id=f'{i}', embedding=X[i], tags={'price': np.random.choice(prices),
+                                                      'category': np.random.choice(categories)}) for i in range(N)]
+    da = DocumentArray(docs)
+
+    return da
 
 # currently the executor don't have function for training
 # def test_train():
@@ -88,6 +99,45 @@ def test_search(tmpdir):
                     query_res[0].docs[0].matches[i].scores['euclidean'].value
                     <= query_res[0].docs[0].matches[i+1].scores['euclidean'].value
             )
+
+
+
+def test_search_with_filtering(tmpdir):
+    metas = {'workspace': str(tmpdir)}
+
+    docs = docs_with_tags(N)
+    docs_query = gen_docs(Nq)
+
+    prices = [10., 25., 50., 100.]
+    categories = ['comics', 'movies', 'audiobook']
+    columns = [('price', 'float', 'True'), ('category', 'str', 'True')]
+
+    f = Flow().add(
+        uses=PQLiteIndexer,
+        uses_with={
+            'dim': D,
+            'columns': columns
+        },
+        uses_metas=metas,
+    )
+    conditions = [('prices', '<', '500.')]
+    with f:
+        f.post(on='/index', inputs=docs)
+        query_res = f.post(on='/search',
+                           inputs=docs_query,
+                           return_results=True,
+                           parameters={'conditions': conditions}
+                           )
+
+        #BUG: query_res is empty
+        assert sum([len(r.docs) for r in query_res]) == Nq
+        for i in range(len(query_res[0].docs[0].matches) - 1):
+            assert (
+                    query_res[0].docs[0].matches[i].scores['euclidean'].value
+                    <= query_res[0].docs[0].matches[i+1].scores['euclidean'].value
+            )
+
+
 
 def test_delete(tmpdir):
     metas = {'workspace': str(tmpdir)}
