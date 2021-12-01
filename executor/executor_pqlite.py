@@ -1,8 +1,7 @@
-from typing import Optional, Iterable, List
+from typing import Optional, List, Tuple
 from jina import Document, DocumentArray, Executor, requests
 from jina.logging.logger import JinaLogger
 import pqlite
-
 
 
 class PQLiteIndexer(Executor):
@@ -11,6 +10,7 @@ class PQLiteIndexer(Executor):
 
     To be used as a hybrid indexer, supporting pre-filtering searching.
     """
+
     def __init__(
         self,
         dim: int = 0,
@@ -18,16 +18,16 @@ class PQLiteIndexer(Executor):
         limit: int = 10,
         index_traversal_paths: str = 'r',
         search_traversal_paths: str = 'r',
-        columns: Optional[List[tuple]] = None,
+        columns: Optional[List[Tuple[str, str, bool]]] = None,
         *args,
-        **kwargs
+        **kwargs,
     ):
         """
         :param dim: Dimensionality of vectors to index
         :param metric: Distance metric type. Can be 'euclidean', 'inner_product', or 'cosine'
         :param limit: Number of results to get for each query document in search
         :param index_traversal_paths: Default traversal paths on docs
-        :param columns: List of tuples of the form (str, type, bool) that define the columns used to filter
+        :param columns: List of tuples of the form (column_name, str_type, create_col_in_database). Here str_type must be a string that can be parsed as a valid Python type) and create_col_in_database a boolean stating whether to add a col to the database.
         (used for indexing, delete and update), e.g. 'r', 'c', 'r,c'
         :param search_traversal_paths: Default traversal paths on docs
         (used for search), e.g. 'r', 'c', 'r,c'
@@ -45,12 +45,15 @@ class PQLiteIndexer(Executor):
         if columns:
             cols = []
             for n, t, f in columns:
-                assert t in self._valid_input_columns, f"column of type={t} is not in {self._valid_input_columns}"
+                assert (
+                    t in self._valid_input_columns
+                ), f'column of type={t} is not supported. Supported types are {self._valid_input_columns}'
                 cols.append((n, eval(t), f))
             columns = cols
 
-        self._index = pqlite.PQLite(dim=dim, metric=metric, columns=columns,
-                                    data_path=self.workspace, **kwargs)
+        self._index = pqlite.PQLite(
+            dim=dim, metric=metric, columns=columns, data_path=self.workspace, **kwargs
+        )
 
     @requests(on='/index')
     def index(
@@ -133,20 +136,22 @@ class PQLiteIndexer(Executor):
         if not docs:
             return
 
+        import epdb
+
+        epdb.set_trace()
 
         limit = int(parameters.get('limit', self.limit))
         conditions = parameters.get('conditions', self.conditions)
         if conditions:
-            conditions = [(col, operator, eval(value)) for (col, operator, value) in conditions]
+            conditions = [
+                (col, operator, eval(value)) for (col, operator, value) in conditions
+            ]
 
         traversal_paths = parameters.get('traversal_paths', self.search_traversal_paths)
         flat_docs = docs.traverse_flat(traversal_paths)
         if len(flat_docs) == 0:
             return
 
-        print('\n\n\n#####################')
-        print(conditions)
-        print('\n\n\n####################')
         self._index.search(flat_docs, conditions=conditions, limit=limit)
 
     @requests(on='/status')
