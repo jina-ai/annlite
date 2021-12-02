@@ -737,9 +737,6 @@ public:
             delete[] f;
         });
 
-        // TODO: temp solution to reset the fingerprints
-//        binary_fuse16_allocate(appr_alg->max_elements_, &filter);
-
         return py::make_tuple(
                 py::array_t<hnswlib::labeltype>(
                         {rows, k}, // shape
