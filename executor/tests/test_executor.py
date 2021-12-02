@@ -32,15 +32,6 @@ def docs_with_tags(N):
 
     return da
 
-# currently the executor don't have function for training
-# def test_train():
-#     Xt = np.random.random((Nt, D)).astype(
-#         np.float32
-#     )  # 2,000 128-dim vectors for training
-#     pq = PQLite(dim=D, n_cells=64, n_subvectors=8, columns=[('x', float, True)])
-#     pq.fit(Xt)
-#     return pq
-
 
 def test_index(tmpdir):
     metas = {'workspace': str(tmpdir)}
