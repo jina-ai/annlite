@@ -1,4 +1,4 @@
-from typing import Optional, Iterable
+from typing import Optional, List, Tuple
 from jina import Document, DocumentArray, Executor, requests
 from jina.logging.logger import JinaLogger
 import pqlite
@@ -10,6 +10,7 @@ class PQLiteIndexer(Executor):
 
     To be used as a hybrid indexer, supporting pre-filtering searching.
     """
+
     def __init__(
         self,
         dim: int = 0,
@@ -17,14 +18,16 @@ class PQLiteIndexer(Executor):
         limit: int = 10,
         index_traversal_paths: str = 'r',
         search_traversal_paths: str = 'r',
+        columns: Optional[List[Tuple[str, str, bool]]] = None,
         *args,
-        **kwargs
+        **kwargs,
     ):
         """
         :param dim: Dimensionality of vectors to index
         :param metric: Distance metric type. Can be 'euclidean', 'inner_product', or 'cosine'
         :param limit: Number of results to get for each query document in search
         :param index_traversal_paths: Default traversal paths on docs
+        :param columns: List of tuples of the form (column_name, str_type, create_col_in_database). Here str_type must be a string that can be parsed as a valid Python type) and create_col_in_database a boolean stating whether to add a col to the database.
         (used for indexing, delete and update), e.g. 'r', 'c', 'r,c'
         :param search_traversal_paths: Default traversal paths on docs
         (used for search), e.g. 'r', 'c', 'r,c'
@@ -37,12 +40,24 @@ class PQLiteIndexer(Executor):
         self.limit = limit
         self.index_traversal_paths = index_traversal_paths
         self.search_traversal_paths = search_traversal_paths
+        self._valid_input_columns = ['str', 'float', 'int']
 
-        self._index = pqlite.PQLite(dim=dim, metric=metric, data_path=self.workspace, **kwargs)
+        if columns:
+            cols = []
+            for n, t, f in columns:
+                assert (
+                    t in self._valid_input_columns
+                ), f'column of type={t} is not supported. Supported types are {self._valid_input_columns}'
+                cols.append((n, eval(t), f))
+            columns = cols
+
+        self._index = pqlite.PQLite(
+            dim=dim, metric=metric, columns=columns, data_path=self.workspace, **kwargs
+        )
 
     @requests(on='/index')
     def index(
-        self, docs: Optional[DocumentArray] = None, parameters: dict = {}, **kwargs
+        self, docs: DocumentArray, parameters: dict = {}, **kwargs
     ):
         """Index new documents
 
@@ -51,8 +66,6 @@ class PQLiteIndexer(Executor):
         Keys accepted:
             - 'traversal_paths' (str): traversal path for the docs
         """
-        if not docs:
-            return
 
         traversal_paths = parameters.get('traversal_paths', self.index_traversal_paths)
         flat_docs = docs.traverse_flat(traversal_paths)
@@ -85,20 +98,38 @@ class PQLiteIndexer(Executor):
         self._index.update(flat_docs)
 
     @requests(on='/delete')
-    def delete(self, parameters: dict, **kwargs):
-        """Delete entries from the index by id
+    def delete(self, docs: Optional[DocumentArray] = None, parameters: dict = {}, **kwargs):
+        """Delete existing documents
 
-        :param parameters: parameters to the request
+        :param docs: the Documents to delete
+        :param parameters: dictionary with options for deletion
+
+        Keys accepted:
+            - 'traversal_paths' (str): traversal path for the docs
         """
-        deleted_ids = parameters.get('ids', [])
+        if not docs:
+            return
 
-        self._index.delete(deleted_ids)
+        traversal_paths = parameters.get('traversal_paths', self.index_traversal_paths)
+        flat_docs = docs.traverse_flat(traversal_paths)
+        if len(flat_docs) == 0:
+            return
+
+        self._index.delete(flat_docs)
 
     @requests(on='/search')
     def search(
         self, docs: Optional[DocumentArray] = None, parameters: dict = {}, **kwargs
     ):
-        """Perform a vector similarity search and retrieve the full Document match
+        """Perform a vector similarity search and retrieve Document matches
+
+        Search can be performed with candidate filtering. Filters are a triplet (column,operator,value).
+        More than a filter can be applied during search. Therefore, conditions for a filter are specified as a list triplets.
+        Each triplet contains:
+
+        - column: Column used to filter.
+        - operator: Binary operation between two values. Some supported operators include `['>','<','=','<=','>=']`.
+        - value: value used to compare a candidate.
 
         :param docs: the Documents to search with
         :param parameters: dictionary for parameters for the search operation
@@ -110,13 +141,21 @@ class PQLiteIndexer(Executor):
         """
         if not docs:
             return
+
         limit = int(parameters.get('limit', self.limit))
+        conditions = parameters.get('conditions', None)
+        if conditions:
+
+            conditions = [
+                (col, operator, eval(value)) for (col, operator, value) in conditions
+            ]
+
         traversal_paths = parameters.get('traversal_paths', self.search_traversal_paths)
         flat_docs = docs.traverse_flat(traversal_paths)
         if len(flat_docs) == 0:
             return
 
-        self._index.search(flat_docs, conditions=parameters.get('conditions', None), limit=limit)
+        self._index.search(flat_docs, conditions=conditions, limit=limit)
 
     @requests(on='/status')
     def status(self, **kwargs) -> DocumentArray:

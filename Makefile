@@ -2,7 +2,7 @@ pypi: dist
 	twine upload dist/*
 
 dist:
-	-rm dist/*
+	rm -rf dist/*
 	pip install build
 	python -m build --sdist
 
