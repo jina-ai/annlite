@@ -56,3 +56,7 @@ You can perform all the usual operations on the respective endpoints
 - `/delete` Delete documents
 - `/clear` Clear the index
 - `/status` Return the status of index
+  - `total_docs`: the total number of indexed documents  
+  - `dim`: the dimension of the embeddings 
+  - `metric`: the distance metric type
+  - `is_trained`: whether the index is already trained
