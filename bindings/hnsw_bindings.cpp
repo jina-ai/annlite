@@ -660,8 +660,7 @@ public:
         }
 
         // FuseFilter constructing
-        binary_fuse16_t filter;
-        binary_fuse16_allocate(appr_alg->max_elements_, &filter);
+        binary_fuse16_t filter(appr_alg->max_elements_);
 
         if (!candidate_ids_.is_none()) {
             py::array_t < size_t, py::array::c_style | py::array::forcecast > items(candidate_ids_);
@@ -737,8 +736,6 @@ public:
         py::capsule free_when_done_d(data_numpy_d, [](void *f) {
             delete[] f;
         });
-
-        binary_fuse16_free(&filter);
 
         // TODO: temp solution to reset the fingerprints
 //        binary_fuse16_allocate(appr_alg->max_elements_, &filter);
