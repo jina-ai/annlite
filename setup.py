@@ -165,7 +165,7 @@ extras['testing'] = ['pytest']
 setup(
     name='pqlite',
     version=__version__,
-    description='Blaze Fast and Light Approximate Nearest Neighbor Search Database',
+    description='Fast and Light Approximate Nearest Neighbor Search Database integrated with the Jina Ecosystem',
     long_description=_long_description,
     long_description_content_type='text/markdown',
     author='Jina AI',
@@ -176,7 +176,7 @@ setup(
     extras_require=extras,
     ext_modules=ext_modules,
     cmdclass={'build_ext': BuildExt},
-    package_data={"": ["*.pyx", "*.pxd", "*.pxi"]},
+    package_data={"bindings": ["*.pyx", "*.pxd", "*.pxi"]},
     install_requires=base_deps,
     setup_requires=['setuptools>=18.0', 'wheel', 'cython'],
     classifiers=[
