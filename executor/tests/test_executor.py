@@ -20,15 +20,17 @@ def gen_docs(num):
         res.append(doc)
     return res
 
+def docs_with_tags(N):
+    prices = [10., 25., 50., 100.]
+    categories = ['comics', 'movies', 'audiobook']
+    X = np.random.random((N, D)).astype(
+        np.float32
+    )
+    docs = [Document(id=f'{i}', embedding=X[i], tags={'price': np.random.choice(prices),
+                                                      'category': np.random.choice(categories)}) for i in range(N)]
+    da = DocumentArray(docs)
 
-# currently the executor don't have function for training
-# def test_train():
-#     Xt = np.random.random((Nt, D)).astype(
-#         np.float32
-#     )  # 2,000 128-dim vectors for training
-#     pq = PQLite(dim=D, n_cells=64, n_subvectors=8, columns=[('x', float, True)])
-#     pq.fit(Xt)
-#     return pq
+    return da
 
 
 def test_index(tmpdir):
@@ -89,6 +91,37 @@ def test_search(tmpdir):
                     <= query_res[0].docs[0].matches[i+1].scores['euclidean'].value
             )
 
+
+
+def test_search_with_filtering(tmpdir):
+    metas = {'workspace': str(tmpdir)}
+
+    docs = docs_with_tags(N)
+    docs_query = gen_docs(1)
+    columns = [('price', 'float', 'True'), ('category', 'str', 'True')]
+
+    f = Flow().add(
+        uses=PQLiteIndexer,
+        uses_with={
+            'dim': D,
+            'columns': columns
+        },
+        uses_metas=metas,
+    )
+
+    conditions = [['price', '<', '50.']]
+    with f:
+        f.post(on='/index', inputs=docs)
+        query_res = f.post(on='/search',
+                           inputs=docs_query,
+                           return_results=True,
+                           parameters={'conditions': conditions}
+                           )
+        assert all([m.tags['price'] < 50 for m in query_res[0].docs[0].matches])
+
+
+
+
 def test_delete(tmpdir):
     metas = {'workspace': str(tmpdir)}
     docs = gen_docs(N)
@@ -105,7 +138,7 @@ def test_delete(tmpdir):
         assert int(res[0].docs[0].tags['total_docs']) == N
         assert int(res[0].docs[0].tags['index_size']) == N
 
-        f.post(on='/delete', parameters={'ids': ['1', '2', '3', '4', '5']})
+        f.post(on='/delete', inputs=docs[:5])
         res = f.post(on='/status', return_results=True)
         assert int(res[0].docs[0].tags['total_docs']) == N - 5
         assert int(res[0].docs[0].tags['index_size']) == N - 5
