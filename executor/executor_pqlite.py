@@ -85,14 +85,24 @@ class PQLiteIndexer(Executor):
         self._index.update(flat_docs)
 
     @requests(on='/delete')
-    def delete(self, parameters: dict, **kwargs):
-        """Delete entries from the index by id
+    def delete(self, docs: Optional[DocumentArray] = None, parameters: dict = {}, **kwargs):
+        """Delete existing documents
 
-        :param parameters: parameters to the request
+        :param docs: the Documents to delete
+        :param parameters: dictionary with options for deletion
+
+        Keys accepted:
+            - 'traversal_paths' (str): traversal path for the docs
         """
-        deleted_ids = parameters.get('ids', [])
+        if not docs:
+            return
 
-        self._index.delete(deleted_ids)
+        traversal_paths = parameters.get('traversal_paths', self.index_traversal_paths)
+        flat_docs = docs.traverse_flat(traversal_paths)
+        if len(flat_docs) == 0:
+            return
+
+        self._index.delete(flat_docs)
 
     @requests(on='/search')
     def search(

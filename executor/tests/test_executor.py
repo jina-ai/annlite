@@ -105,7 +105,7 @@ def test_delete(tmpdir):
         assert int(res[0].docs[0].tags['total_docs']) == N
         assert int(res[0].docs[0].tags['index_size']) == N
 
-        f.post(on='/delete', parameters={'ids': ['1', '2', '3', '4', '5']})
+        f.post(on='/delete', inputs=docs[:5])
         res = f.post(on='/status', return_results=True)
         assert int(res[0].docs[0].tags['total_docs']) == N - 5
         assert int(res[0].docs[0].tags['index_size']) == N - 5
