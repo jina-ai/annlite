@@ -380,6 +380,47 @@ typedef struct binary_fuse16_s {
   uint32_t SegmentCountLength;
   uint32_t ArrayLength;
   uint16_t *Fingerprints;
+
+  binary_fuse16_s(uint32_t size) {
+     uint32_t arity = 3;
+     SegmentLength = size == 0 ? 4 : binary_fuse_calculate_segment_length(arity, size);
+     if (SegmentLength > 262144) {
+       SegmentLength = 262144;
+     }
+     SegmentLengthMask = SegmentLength - 1;
+     double sizeFactor = size <= 1 ? 0 : binary_fuse_calculate_size_factor(arity, size);
+     uint32_t capacity = (uint32_t)(round((double)size * sizeFactor));
+     uint32_t initSegmentCount =
+         (capacity + SegmentLength - 1) / SegmentLength -
+         (arity - 1);
+     ArrayLength = (initSegmentCount + arity - 1) * SegmentLength;
+     SegmentCount =
+         (ArrayLength + SegmentLength - 1) / SegmentLength;
+     if (SegmentCount <= arity - 1) {
+       SegmentCount = 1;
+     } else {
+       SegmentCount = SegmentCount - (arity - 1);
+     }
+     ArrayLength =
+         (SegmentCount + arity - 1) * SegmentLength;
+     SegmentCountLength = SegmentCount * SegmentLength;
+     Fingerprints = (uint16_t*)malloc(ArrayLength * sizeof(uint16_t));
+     memset(Fingerprints, 0, ArrayLength * sizeof(uint16_t));
+     if (Fingerprints == NULL) {
+        throw std::runtime_error("not enough memory to hold the fuse filter");
+     }
+  }
+
+  ~binary_fuse16_s() {
+    free(Fingerprints);
+    Fingerprints = NULL;
+    Seed = 0;
+    SegmentLength = 0;
+    SegmentLengthMask = 0;
+    SegmentCount = 0;
+    SegmentCountLength = 0;
+    ArrayLength = 0;
+  }
 } binary_fuse16_t;
 
 static inline uint64_t binary_fuse16_fingerprint(uint64_t hash) {
@@ -419,56 +460,10 @@ static inline bool binary_fuse16_contain(uint64_t key,
   return f == 0;
 }
 
-
-// allocate enough capacity for a set containing up to 'size' elements
-// caller is responsible to call binary_fuse16_free(filter)
-// size should be at least 2.
-static inline bool binary_fuse16_allocate(uint32_t size,
-                                         binary_fuse16_t *filter) {
-  uint32_t arity = 3;
-  filter->SegmentLength = size == 0 ? 4 : binary_fuse_calculate_segment_length(arity, size);
-  if (filter->SegmentLength > 262144) {
-    filter->SegmentLength = 262144;
-  }
-  filter->SegmentLengthMask = filter->SegmentLength - 1;
-  double sizeFactor = size <= 1 ? 0 : binary_fuse_calculate_size_factor(arity, size);
-  uint32_t capacity = (uint32_t)(round((double)size * sizeFactor));
-  uint32_t initSegmentCount =
-      (capacity + filter->SegmentLength - 1) / filter->SegmentLength -
-      (arity - 1);
-  filter->ArrayLength = (initSegmentCount + arity - 1) * filter->SegmentLength;
-  filter->SegmentCount =
-      (filter->ArrayLength + filter->SegmentLength - 1) / filter->SegmentLength;
-  if (filter->SegmentCount <= arity - 1) {
-    filter->SegmentCount = 1;
-  } else {
-    filter->SegmentCount = filter->SegmentCount - (arity - 1);
-  }
-  filter->ArrayLength =
-      (filter->SegmentCount + arity - 1) * filter->SegmentLength;
-  filter->SegmentCountLength = filter->SegmentCount * filter->SegmentLength;
-  filter->Fingerprints = (uint16_t*)malloc(filter->ArrayLength * sizeof(uint16_t));
-  memset(filter->Fingerprints, 0, filter->ArrayLength * sizeof(uint16_t));
-  return filter->Fingerprints != NULL;
-}
-
 // report memory usage
 static inline size_t binary_fuse16_size_in_bytes(const binary_fuse16_t *filter) {
   return filter->ArrayLength * sizeof(uint16_t) + sizeof(binary_fuse16_t);
 }
-
-// release memory
-static inline void binary_fuse16_free(binary_fuse16_t *filter) {
-  free(filter->Fingerprints);
-  filter->Fingerprints = NULL;
-  filter->Seed = 0;
-  filter->SegmentLength = 0;
-  filter->SegmentLengthMask = 0;
-  filter->SegmentCount = 0;
-  filter->SegmentCountLength = 0;
-  filter->ArrayLength = 0;
-}
-
 
 // construct the filter, returns true on success, false on failure.
 // most likely, a failure is due to too high a memory usage
