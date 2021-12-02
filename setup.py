@@ -176,6 +176,7 @@ setup(
     extras_require=extras,
     ext_modules=ext_modules,
     cmdclass={'build_ext': BuildExt},
+    package_data={"": ["*.pyx", "*.pxd", "*.pxi"]},
     install_requires=base_deps,
     setup_requires=['setuptools>=18.0', 'wheel', 'cython'],
     classifiers=[
