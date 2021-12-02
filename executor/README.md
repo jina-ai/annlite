@@ -1,41 +1,36 @@
 # PQLiteIndexer
 
-`PQLiteIndexer` uses the `PQLite` class for indexing Jina `Document` objects. The `PQLite` class partitions the data into cells at index time, and instantiates a "sub-indexer" in each cell.  Search is performed aggregating results retrieved from cells. 
+`PQLiteIndexer` uses the [PQLite](https://github.com/jina-ai/pqlite) class for indexing Jina `Document` objects. 
+The `PQLite` class partitions the data into cells at index time, and instantiates a "sub-indexer" in each cell.  Search is performed aggregating results retrieved from cells. 
 
-This indexer is recommended to be used when an application requires search with filters applied on `Document` tags. For example, if documents have a tag `'price'`  that stores floating point values this indexer allows searching documents with a filter, such as  `price <= 100`.
+This indexer is recommended to be used when an application requires **search with filters** applied on `Document` tags. 
+Each filter is a **triplet** (_column_, _operator_, _value_). More than one filter can be applied during search. Therefore, conditions for a filter are specified as a list of triplets.
+Each triplet contains:
 
-By default, it uses the `euclidean` distance to rank results.
+- column: Column used to filter.
+- operator: Binary operation between two values. Supported operators are `['>','<','<=','>=', '=', '!=']`.
+- value: value used to compare a candidate.
 
 ## Basic Usage
 
 `PQLiteIndexer` stores  `Document` objects at the  `workspace` directory, specified under the [`metas`](https://docs.jina.ai/fundamentals/executor/executor-built-in-features/#meta-attributes) attribute. 
-You can override the default configuration as below,
-
-```python
-f = Flow().add(
-    uses='jinahub://PQLiteIndexer',
-    uses_with={'dim': 256, 'metric': 'euclidean'},
-    uses_metas={'workspace': '/my/tmp_folder'})
-```
-
-Find more information about how to override `metas` attributes at [Jina Docs](https://docs.jina.ai/fundamentals/flow/add-exec-to-flow/#override-metas-configuration)
-
-## Filtering nearest neighbor candidates
-
-Search can be performed with candidate filtering. Filters are a triplet (column,operator,value).
-More than a filter can be applied during search. Therefore, conditions for a filter are specified as a list triplets.
-Each triplet contains:
-
-- column: Column used to filter.
-- operator: Binary operation between two values. Some supported operators include `['>','<','=','<=','>=']`.
-- value: value used to compare a candidate.
 
 #### Example: Selecting items whose 'price' is less than 50 
-```
+
+If documents have a tag `'price'`  that stores floating point values this indexer allows searching documents with a filter, such as  `price <= 50`.
+
+```python
 columns = [('price', 'float', 'True')]
 
-f = Flow().add(uses=PQLiteIndexer,
-               uses_with={'dim': D, 'columns': columns})
+f = Flow().add(
+    uses='jinahub://PQLiteIndexer',
+    uses_with={
+      'dim': 256, 
+      'columns': columns,
+      'metric': 'euclidean'
+    },
+    uses_metas={'workspace': '/my/tmp_folder'}
+)
 
 conditions = [['price', '<', '50.']]
 with f:
@@ -45,6 +40,7 @@ with f:
                        return_results=True,
                        parameters={'conditions': conditions})
 ```
+
 
 ## CRUD operations
 
