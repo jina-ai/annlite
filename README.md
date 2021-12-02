@@ -1,6 +1,16 @@
 # PQLite
 
-`PQLite` is a blazing fast **Approximate Nearest Neighbor Search** (ANNS) library.
+`PQLite` is an  **Approximate Nearest Neighbor Search** (ANNS) library integrated with the Jina ecosystem.
+The `PQLite` class partitions the data into cells at index time, and instantiates a "sub-indexer" in each cell.  Search is performed aggregating results retrieved from cells. 
+
+This indexer is recommended to be used when an application requires **search with filters** applied on `Document` tags. 
+Each filter is a **triplet** (_column_, _operator_, _value_). More than one filter can be applied during search. Therefore, conditions for a filter are specified as a list of triplets.
+Each triplet contains:
+
+- column: Column used to filter.
+- operator: Binary operation between two values. Supported operators are `['>','<','<=','>=', '=', '!=']`.
+- value: value used to compare a candidate.
+
 
 ## WARNING
 

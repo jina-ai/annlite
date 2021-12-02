@@ -132,7 +132,7 @@ class BuildExt(build_ext):
     }
 
     if sys.platform == 'darwin':
-        c_opts['unix'] += ['-stdlib=libc++', '-mmacosx-version-min=10.7', '-std=c++11']
+        c_opts['unix'] += ['-stdlib=libc++', '-mmacosx-version-min=10.7']
         link_opts['unix'] += ['-stdlib=libc++', '-mmacosx-version-min=10.7']
     else:
         c_opts['unix'].append('-fopenmp')
@@ -141,13 +141,13 @@ class BuildExt(build_ext):
     def build_extensions(self):
         ct = self.compiler.compiler_type
         opts = self.c_opts.get(ct, [])
-        # if ct == 'unix':
-        #     opts.append('-DVERSION_INFO="%s"' % self.distribution.get_version())
-        #     opts.append(cpp_flag(self.compiler))
-        #     if has_flag(self.compiler, '-fvisibility=hidden'):
-        #         opts.append('-fvisibility=hidden')
-        # elif ct == 'msvc':
-        #     opts.append('/DVERSION_INFO=\\"%s\\"' % self.distribution.get_version())
+        if ct == 'unix':
+            opts.append('-DVERSION_INFO="%s"' % self.distribution.get_version())
+            opts.append(cpp_flag(self.compiler))
+            # if has_flag(self.compiler, '-fvisibility=hidden'):
+            #     opts.append('-fvisibility=hidden')
+        elif ct == 'msvc':
+            opts.append('/DVERSION_INFO=\\"%s\\"' % self.distribution.get_version())
 
         for ext in self.extensions:
             ext.extra_compile_args.extend(opts)
@@ -165,7 +165,7 @@ extras['testing'] = ['pytest']
 setup(
     name='pqlite',
     version=__version__,
-    description='Blaze Fast and Light Approximate Nearest Neighbor Search Database',
+    description='Fast and Light Approximate Nearest Neighbor Search Database integrated with the Jina Ecosystem',
     long_description=_long_description,
     long_description_content_type='text/markdown',
     author='Jina AI',
@@ -176,6 +176,7 @@ setup(
     extras_require=extras,
     ext_modules=ext_modules,
     cmdclass={'build_ext': BuildExt},
+    package_data={"bindings": ["*.pyx", "*.pxd", "*.pxi"]},
     install_requires=base_deps,
     setup_requires=['setuptools>=18.0', 'wheel', 'cython'],
     classifiers=[
