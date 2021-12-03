@@ -9,7 +9,7 @@ import numpy as np
 from jina import Document, DocumentArray
 from jina.math.distance import cdist
 from jina.math.helper import top_k as _top_k
-from executor_pqlite import PQLiteIndexer
+from executor.executor_pqlite import PQLiteIndexer
 
 import pandas as pd
 from sklearn.datasets import make_blobs
@@ -17,6 +17,18 @@ from sklearn.model_selection import train_test_split
 
 ## We can download SimpleIndexer and load it  locally or we can use JinaHub
 # from executor_simpleindexer import SimpleIndexer
+
+Nq = 1
+D = 128
+top_k = 10
+n_cells = 64
+n_subvectors = 64
+n_queries = 1
+n_datasets = [10001, 50001, 200001, 400001 ]
+
+BENCHMARK_SIMPLEINDEXER = True
+BENCHMARK_PQLITE = True
+
 
 
 def _precision(predicted, relevant, eval_at):
@@ -67,26 +79,6 @@ def create_data(n_examples, D):
     )
     return Xtr, Xte
 
-"""
-Stored data	Indexing time	Query size=1	Query size=8	Query size=64
-10000	     0.256	         0.019	        0.029        	0.086
-50000	     1.156	         0.147	        0.177        	0.314
-100000	     2.329	         0.297	        0.332        	0.536
-200000	     4.704	         0.656	        0.744        	1.050
-400000	     11.105          1.289	        1.536        	2.793
-"""
-
-Nq = 1
-D = 128
-top_k = 10
-n_cells = 64
-n_subvectors = 64
-n_queries = 1
-n_datasets = [10001, 50001, 200001, 400001 ]
-
-BENCHMARK_SIMPLEINDEXER = False
-BENCHMARK_PQLITE = True
-
 
 if BENCHMARK_SIMPLEINDEXER:
 
@@ -133,8 +125,9 @@ if BENCHMARK_SIMPLEINDEXER:
 if BENCHMARK_PQLITE:
 
     ################ PqLite Benchmark BEGIN ######################
-    n_datasets = [10001, 50001, 200001, 400001, 1_000_001, 5_000_001]
+    n_datasets = [10001, 50001, 200001, 400001]
     times = []
+    metas = {'workspace': './workspace'}
 
     for n_examples in n_datasets:
         time_taken = 0
@@ -155,6 +148,7 @@ if BENCHMARK_PQLITE:
             resp = f.post(
                 on='/index',
                 inputs=docs,
+                request_size=10000
             )
 
         with f:
