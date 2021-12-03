@@ -78,6 +78,10 @@ for n_examples in n_datasets:
     if os.path.exists('./SimpleIndexer'):
         shutil.rmtree('./SimpleIndexer')
 
+    if os.path.exists('./workspace'):
+        shutil.rmtree('./workspace')
+
+
     # 2,000 128-dim vectors for training
     np.random.seed(123)
     Xtr, Xte = train_test_split(
