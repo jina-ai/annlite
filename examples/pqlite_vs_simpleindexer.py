@@ -1,17 +1,19 @@
 
 ## Benchmark PQLITE vs SimpleIndexer
+import time
+import os
+import shutil
 
 from jina import Flow
 import numpy as np
 from jina import Document, DocumentArray
 from jina.math.distance import cdist
 from jina.math.helper import top_k as _top_k
+from executor_pqlite import PQLiteIndexer
+
 import pandas as pd
 from sklearn.datasets import make_blobs
 from sklearn.model_selection import train_test_split
-import time
-import os
-import shutil
 
 ## We can download SimpleIndexer and load it  locally or we can use JinaHub
 # from executor_simpleindexer import SimpleIndexer
@@ -58,6 +60,21 @@ def clean_workspace():
     if os.path.exists('./workspace'):
         shutil.rmtree('./workspace')
 
+def create_data(n_examples, D):
+    np.random.seed(123)
+    Xtr, Xte = train_test_split(
+        make_blobs(n_samples=n_examples, n_features=D)[0].astype(np.float32), test_size=1
+    )
+    return Xtr, Xte
+
+"""
+Stored data	Indexing time	Query size=1	Query size=8	Query size=64
+10000	     0.256	         0.019	        0.029        	0.086
+50000	     1.156	         0.147	        0.177        	0.314
+100000	     2.329	         0.297	        0.332        	0.536
+200000	     4.704	         0.656	        0.744        	1.050
+400000	     11.105          1.289	        1.536        	2.793
+"""
 
 Nq = 1
 D = 128
@@ -65,53 +82,96 @@ top_k = 10
 n_cells = 64
 n_subvectors = 64
 n_queries = 1
-n_datasets = [1001, 10_001, 500_001, 1_000_001 ]
+n_datasets = [10001, 50001, 200001, 400001 ]
 
-times = []
+BENCHMARK_SIMPLEINDEXER = False
+BENCHMARK_PQLITE = True
 
-for n_examples in n_datasets:
-    time_taken = 0
+
+if BENCHMARK_SIMPLEINDEXER:
+
+    ################ SimpleIndexer Benchmark BEGIN #################
+    times = []
+
+    for n_examples in n_datasets:
+        time_taken = 0
+        clean_workspace()
+        Xtr, Xte = create_data(n_examples, D)
+
+        f = Flow().add(
+            uses='jinahub://SimpleIndexer',
+            uses_with={'match_args': {'metric': 'euclidean',
+                                      'limit': 10}}
+        )
+        docs = [Document(id=f'{i}', embedding=Xtr[i]) for i in range(len(Xtr))]
+
+        with f:
+            resp = f.post(
+                on='/index',
+                inputs=docs,
+            )
+
+        with f:
+            t0 = time.time()
+            resp = f.post(
+                on='/search',
+                inputs=DocumentArray([Document(embedding=Xte[0])]),
+                return_results=True,
+            )
+            time_taken = time.time() - t0
+
+        times.append(time_taken)
+
+
+    df = pd.DataFrame({'n_examples': n_datasets, 'times':times})
+    df.to_csv('simpleindexer.csv')
+    print(df)
     clean_workspace()
-    np.random.seed(123)
-    Xtr, Xte = train_test_split(
-        make_blobs(n_samples=n_examples, n_features=D)[0].astype(np.float32), test_size=1
-    )
-    print(f'Xtr: {Xtr.shape} vs Xte: {Xte.shape}')
-    f = Flow().add(
-        uses='jinahub://SimpleIndexer',
-        uses_with={'match_args': {'metric': 'euclidean',
-                                  'limit': 10}}
-    )
-    docs = [Document(id='i', embedding=Xtr[i]) for i in range(len(Xtr))]
+    ################ SimpleIndexer Benchmark END #################
 
-    with f:
-        resp = f.post(
-            on='/index',
-            inputs=docs,
+
+if BENCHMARK_PQLITE:
+
+    ################ PqLite Benchmark BEGIN ######################
+    n_datasets = [10001, 50001, 200001, 400001, 1_000_001, 5_000_001]
+    times = []
+
+    for n_examples in n_datasets:
+        time_taken = 0
+        clean_workspace()
+        Xtr, Xte = create_data(n_examples, D)
+
+        f = Flow().add(
+            uses=PQLiteIndexer,
+            uses_with={
+                'dim': D,
+                'limit':10,
+            },
+            uses_metas=metas,
         )
+        docs = [Document(id=f'{i}', embedding=Xtr[i]) for i in range(len(Xtr))]
 
-    with f:
-        t0 = time.time()
+        with f:
+            resp = f.post(
+                on='/index',
+                inputs=docs,
+            )
 
-        resp = f.post(
-            on='/search',
-            inputs=DocumentArray([Document(embedding=Xte[0])]),
-            return_results=True,
-        )
-        t1 = time.time()
-        time_taken = time.time() - t0
-        print(f'time_taken = {time_taken}')
-        print(f't1 = {t1}, t0 = {t0}, time_taken={time_taken}')
+        with f:
+            t0 = time.time()
+            resp = f.post(
+                on='/search',
+                inputs=DocumentArray([Document(embedding=Xte[0])]),
+                return_results=True,
+            )
+            time_taken = time.time() - t0
 
-    print(f'\n\nIndexed {len(docs)} documents')
-    print(f'\nSearch 1 query took {time_taken} sec\n\n')
-    times.append(time_taken)
-    # resp[0].docs DocumentArray with 2 docs
-    # resp[0].docs[0].matches
-    # resp[0].docs[0].matches[0].matches
+        times.append(time_taken)
 
 
-df = pd.DataFrame({'n_examples': n_datasets,'times':times})
-df.to_csv('simpleindexer.csv')
-print(df)
-clean_workspace()
+    df = pd.DataFrame({'n_examples': n_datasets, 'times':times})
+    df.to_csv('pqlite.csv')
+    print(df)
+    clean_workspace()
+    ################ PqLite Benchmark END #########################
+
