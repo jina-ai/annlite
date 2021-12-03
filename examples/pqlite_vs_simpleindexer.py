@@ -51,13 +51,21 @@ def evaluate(predicts, relevants, eval_at):
     return recall / len(predicts), precision / len(predicts)
 
 
+def clean_workspace():
+    if os.path.exists('./SimpleIndexer'):
+        shutil.rmtree('./SimpleIndexer')
+
+    if os.path.exists('./workspace'):
+        shutil.rmtree('./workspace')
+
+
 Nq = 1
 D = 128
 top_k = 10
 n_cells = 64
 n_subvectors = 64
 n_queries = 1
-n_datasets = [1001, 10_001, 500_001 ]
+n_datasets = [1001, 10_001, 500_001, 1_000_001 ]
 
 times = []
 
@@ -74,28 +82,18 @@ print(time_taken)
 times.append(time_taken)
 
 for n_examples in n_datasets:
-
-    if os.path.exists('./SimpleIndexer'):
-        shutil.rmtree('./SimpleIndexer')
-
-    if os.path.exists('./workspace'):
-        shutil.rmtree('./workspace')
-
-
-    # 2,000 128-dim vectors for training
+    time_taken = 0
+    clean_workspace()
     np.random.seed(123)
     Xtr, Xte = train_test_split(
         make_blobs(n_samples=n_examples, n_features=D)[0].astype(np.float32), test_size=1
     )
-
     print(f'Xtr: {Xtr.shape} vs Xte: {Xte.shape}')
-
     f = Flow().add(
         uses='jinahub://SimpleIndexer',
         uses_with={'match_args': {'metric': 'euclidean',
                                   'limit': 10}}
     )
-
     docs = [Document(id='i', embedding=Xtr[i]) for i in range(len(Xtr))]
 
     with f:
@@ -104,15 +102,16 @@ for n_examples in n_datasets:
             inputs=docs,
         )
 
-    t0 = time.time()
     with f:
+        t0 = time.time()
+
         resp = f.post(
             on='/search',
             inputs=DocumentArray([Document(embedding=Xte[0])]),
             return_results=True,
         )
+        time_taken = time.time() - t0
 
-    time_taken = abs(time.time() - t0)
     print(f'\n\nIndexed {len(docs)} documents')
     print(f'\nSearch 1 query took {time_taken} sec\n\n')
     times.append(time_taken)
@@ -125,4 +124,4 @@ n_datasets.insert(0,0)
 df = pd.DataFrame({'n_examples': n_datasets,'times':times})
 df.to_csv('simpleindexer.csv')
 print(df)
-
+clean_workspace()
