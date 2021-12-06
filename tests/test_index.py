@@ -10,15 +10,17 @@ Nq = 5
 Nt = 2000
 D = 128  # dimensionality / number of features
 
-numeric_operators = {'>=': operator.ge,
-                     '>': operator.gt,
-                     '<=': operator.le,
-                     '<': operator.lt,
-                     '=': operator.eq,
-                     '!=': operator.ne}
+numeric_operators = {
+    '>=': operator.ge,
+    '>': operator.gt,
+    '<=': operator.le,
+    '<': operator.lt,
+    '=': operator.eq,
+    '!=': operator.ne,
+}
 
-categorical_operators = {'=': operator.eq,
-                         '!=': operator.ne}
+categorical_operators = {'=': operator.eq, '!=': operator.ne}
+
 
 @pytest.fixture
 def pqlite_index(tmpdir):
@@ -51,7 +53,7 @@ def pqlite_with_data(tmpdir):
 
 @pytest.fixture
 def pqlite_with_heterogeneous_tags(tmpdir):
-    prices = [10., 25., 50., 100.]
+    prices = [10.0, 25.0, 50.0, 100.0]
     categories = ['comics', 'movies', 'audiobook']
 
     columns = [('price', float, True), ('category', str, True)]
@@ -60,13 +62,21 @@ def pqlite_with_heterogeneous_tags(tmpdir):
     X = np.random.random((N, D)).astype(
         np.float32
     )  # 10,000 128-dim vectors to be indexed
-    docs = [Document(id=f'{i}', embedding=X[i], tags={'price': np.random.choice(prices),
-                                                      'category': np.random.choice(categories)}) for i in range(N)]
+    docs = [
+        Document(
+            id=f'{i}',
+            embedding=X[i],
+            tags={
+                'price': np.random.choice(prices),
+                'category': np.random.choice(categories),
+            },
+        )
+        for i in range(N)
+    ]
     da = DocumentArray(docs)
 
     index.index(da)
     return index
-
 
 
 def test_index(pqlite_index):
@@ -100,6 +110,7 @@ def test_query(pqlite_with_data):
             <= query[0].matches[i + 1].scores['euclidean'].value
         )
 
+
 def test_index_query_with_filtering_sorted_results(pqlite_with_data):
     X = np.random.random((Nq, D)).astype(np.float32)
     query = DocumentArray([Document(embedding=X[i]) for i in range(5)])
@@ -113,6 +124,7 @@ def test_index_query_with_filtering_sorted_results(pqlite_with_data):
         )
         assert query[0].matches[i].tags['x'] > 0.6
 
+
 @pytest.mark.parametrize('operator', list(numeric_operators.keys()))
 def test_query_search_filter_float_type(pqlite_with_heterogeneous_tags, operator):
 
@@ -125,7 +137,12 @@ def test_query_search_filter_float_type(pqlite_with_heterogeneous_tags, operator
         conditions = [('price', operator, threshold)]
         pqlite_with_heterogeneous_tags.search(query_da, conditions=conditions)
         for query in query_da:
-            assert all([numeric_operators[operator](m.tags['price'], threshold) for m in query.matches])
+            assert all(
+                [
+                    numeric_operators[operator](m.tags['price'], threshold)
+                    for m in query.matches
+                ]
+            )
 
 
 @pytest.mark.parametrize('operator', list(categorical_operators.keys()))
@@ -138,5 +155,9 @@ def test_search_filter_str(pqlite_with_heterogeneous_tags, operator):
         conditions = [('category', operator, category)]
         pqlite_with_heterogeneous_tags.search(query_da, conditions=conditions)
         for query in query_da:
-            assert all([numeric_operators[operator](m.tags['category'], category) for m in query.matches])
-
+            assert all(
+                [
+                    numeric_operators[operator](m.tags['category'], category)
+                    for m in query.matches
+                ]
+            )

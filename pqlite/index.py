@@ -23,6 +23,7 @@ class PQLite(CellContainer):
 
     :param dim: dimensionality of input vectors. there are 2 constraints on dim:
             (1) it needs to be divisible by n_subvectors; (2) it needs to be a multiple of 4.*
+    :param metric: distance metric type, can be 'euclidean', 'inner_product', or 'cosine'.
     :param n_subvectors: number of sub-quantizers, essentially this is the byte size of
             each quantized vector, default is None.
     :param n_cells:  number of coarse quantizer clusters, default is 1.
@@ -199,6 +200,7 @@ class PQLite(CellContainer):
         docs: DocumentArray,
         conditions: Optional[list] = None,
         limit: int = 10,
+        include_metadata: bool = False,
         **kwargs,
     ):
         """Search the index, and attach matches to the query Documents in `docs`
@@ -206,7 +208,7 @@ class PQLite(CellContainer):
         :param docs: the query documents to search
         :param conditions: the filtering conditions
         :param limit: the number of results to get for each query document in search
-        :return:
+        :param include_metadata: whether to return document metadata in response.
         """
         query = docs.embeddings
         n_data, _ = self._sanity_check(query)
@@ -242,6 +244,7 @@ class PQLite(CellContainer):
             cells=cells,
             conditions=conditions,
             limit=limit,
+            include_metadata=include_metadata,
         )
 
         for doc, matches in zip(docs, match_docs):
@@ -296,9 +299,10 @@ class PQLite(CellContainer):
 
     def _rebuild_index(self):
         for cell_id in range(self.n_cells):
-            logger.info(f'Rebuild the index of cell-{cell_id}...')
-            self.vec_index(cell_id).reset()
-            for docs in self.documents_generator(cell_id):
+            cell_size = self.doc_store(cell_id).size
+            logger.info(f'Rebuild the index of cell-{cell_id} ({cell_size} docs)...')
+            self.vec_index(cell_id).reset(capacity=cell_size)
+            for docs in self.documents_generator(cell_id, batch_size=10240):
                 x = docs.embeddings
                 assigned_cells = np.ones(len(docs), dtype=np.int64) * cell_id
                 super().insert(x, assigned_cells, docs)

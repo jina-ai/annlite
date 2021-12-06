@@ -52,6 +52,6 @@ class BaseIndex(abc.ABC):
     def update_with_ids(self, x: np.ndarray, ids: List[int], **kwargs):
         ...
 
-    def reset(self):
+    def reset(self, capacity: Optional[int] = None):
         self._size = 0
-        self._capacity = self.initial_size
+        self._capacity = capacity or self.initial_size
