@@ -16,6 +16,7 @@ class PQLiteIndexer(Executor):
         dim: int = 0,
         metric: str = 'euclidean',
         limit: int = 10,
+        include_metadata: bool = False,
         index_traversal_paths: str = 'r',
         search_traversal_paths: str = 'r',
         columns: Optional[List[Tuple[str, str, bool]]] = None,
@@ -25,6 +26,7 @@ class PQLiteIndexer(Executor):
         """
         :param dim: Dimensionality of vectors to index
         :param metric: Distance metric type. Can be 'euclidean', 'inner_product', or 'cosine'
+        :param include_metadata: If True, return the document metadata in response
         :param limit: Number of results to get for each query document in search
         :param index_traversal_paths: Default traversal paths on docs
         :param columns: List of tuples of the form (column_name, str_type, create_col_in_database). Here str_type must be a string that can be parsed as a valid Python type) and create_col_in_database a boolean stating whether to add a col to the database.
@@ -38,6 +40,7 @@ class PQLiteIndexer(Executor):
 
         self.metric = metric
         self.limit = limit
+        self.include_metadata = include_metadata
         self.index_traversal_paths = index_traversal_paths
         self.search_traversal_paths = search_traversal_paths
         self._valid_input_columns = ['str', 'float', 'int']
@@ -52,13 +55,15 @@ class PQLiteIndexer(Executor):
             columns = cols
 
         self._index = pqlite.PQLite(
-            dim=dim, metric=metric, columns=columns, data_path=self.workspace, **kwargs
+            dim=dim,
+            metric=metric,
+            columns=columns,
+            data_path=self.workspace or './workspace',
+            **kwargs,
         )
 
     @requests(on='/index')
-    def index(
-        self, docs: DocumentArray, parameters: dict = {}, **kwargs
-    ):
+    def index(self, docs: DocumentArray, parameters: dict = {}, **kwargs):
         """Index new documents
 
         :param docs: the Documents to index
@@ -98,7 +103,9 @@ class PQLiteIndexer(Executor):
         self._index.update(flat_docs)
 
     @requests(on='/delete')
-    def delete(self, docs: Optional[DocumentArray] = None, parameters: dict = {}, **kwargs):
+    def delete(
+        self, docs: Optional[DocumentArray] = None, parameters: dict = {}, **kwargs
+    ):
         """Delete existing documents
 
         :param docs: the Documents to delete
@@ -144,6 +151,9 @@ class PQLiteIndexer(Executor):
 
         limit = int(parameters.get('limit', self.limit))
         conditions = parameters.get('conditions', None)
+        include_metadata = bool(
+            parameters.get('include_metadata', self.include_metadata)
+        )
         if conditions:
 
             conditions = [
@@ -155,7 +165,12 @@ class PQLiteIndexer(Executor):
         if len(flat_docs) == 0:
             return
 
-        self._index.search(flat_docs, conditions=conditions, limit=limit)
+        self._index.search(
+            flat_docs,
+            conditions=conditions,
+            limit=limit,
+            include_metadata=include_metadata,
+        )
 
     @requests(on='/status')
     def status(self, **kwargs) -> DocumentArray:
@@ -172,3 +187,6 @@ class PQLiteIndexer(Executor):
     def clear(self, **kwargs):
         """Clear the index of all entries."""
         self._index.clear()
+
+    def close(self, **kwargs):
+        self._index.close()

@@ -1,9 +1,9 @@
 # PQLite
 
 `PQLite` is an  **Approximate Nearest Neighbor Search** (ANNS) library integrated with the Jina ecosystem.
-The `PQLite` class partitions the data into cells at index time, and instantiates a "sub-indexer" in each cell.  Search is performed aggregating results retrieved from cells. 
+The `PQLite` class partitions the data into cells at index time, and instantiates a "sub-indexer" in each cell.  Search is performed aggregating results retrieved from cells.
 
-This indexer is recommended to be used when an application requires **search with filters** applied on `Document` tags. 
+This indexer is recommended to be used when an application requires **search with filters** applied on `Document` tags.
 Each filter is a **triplet** (_column_, _operator_, _value_). More than one filter can be applied during search. Therefore, conditions for a filter are specified as a list of triplets.
 Each triplet contains:
 
@@ -104,7 +104,14 @@ pqlite.delete(['1', '2'])
 
 ## Benchmark
 
-TBD...
+One can run `executor/benchmark.py` to get a quick performance overview.
+
+|Stored data| Indexing time | Query size=1 | Query size=8 | Query size=64|
+|---|---|---|---|---|
+|10000 | 19.766 | 0.002 | 0.016 | 0.133|
+|100000 | 325.413 | 0.010 | 0.084 | 0.671|
+|500000 | 2413.311 | 0.038 | 0.303 | 2.427|
+|1000000 | 5310.749 | 0.075 | 0.579 | 4.634|
 
 ## Research foundations of PQLite
 

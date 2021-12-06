@@ -1,4 +1,3 @@
-
 import time
 import os
 import shutil
@@ -17,6 +16,7 @@ from sklearn.model_selection import train_test_split
 Nq = 1
 D = 128
 top_k = 10
+R = 5
 n_cells = 64
 n_subvectors = 64
 n_queries = 1
@@ -70,7 +70,8 @@ def clean_workspace():
 def create_data(n_examples, D):
     np.random.seed(123)
     Xtr, Xte = train_test_split(
-        make_blobs(n_samples=n_examples, n_features=D)[0].astype(np.float32), test_size=1
+        make_blobs(n_samples=n_examples, n_features=D)[0].astype(np.float32),
+        test_size=1,
     )
     return Xtr, Xte
 
@@ -78,10 +79,19 @@ def create_data(n_examples, D):
 def create_data_online(n_examples, D, batch_size):
     np.random.seed(123)
     num = 0
-    while num < n_examples:
-        Xtr_batch = make_blobs(n_samples=n_examples, n_features=D)[0].astype(np.float32)
+    while True:
+        Xtr_batch = make_blobs(n_samples=batch_size, n_features=D)[0].astype(np.float32)
         yield DocumentArray([Document(embedding=x) for x in Xtr_batch])
         num += batch_size
+
+        if num + batch_size >= n_examples:
+            break
+
+    if num < n_examples:
+        Xtr_batch = make_blobs(n_samples=n_examples - num, n_features=D)[0].astype(
+            np.float32
+        )
+        yield DocumentArray([Document(embedding=x) for x in Xtr_batch])
 
 
 def create_test_data(D, Nq):
@@ -90,11 +100,10 @@ def create_test_data(D, Nq):
     return DocumentArray([Document(embedding=x) for x in Xte])
 
 
-
 if BENCHMARK_SIMPLEINDEXER:
 
     ################ SimpleIndexer Benchmark BEGIN #################
-    n_datasets = [10001, 50001, 200001, 400001 ]
+    n_datasets = [10001, 50001, 200001, 400001]
     times = []
 
     for n_examples in n_datasets:
@@ -104,8 +113,7 @@ if BENCHMARK_SIMPLEINDEXER:
 
         f = Flow().add(
             uses='jinahub://SimpleIndexer',
-            uses_with={'match_args': {'metric': 'euclidean',
-                                      'limit': 10}}
+            uses_with={'match_args': {'metric': 'euclidean', 'limit': 10}},
         )
         docs = [Document(id=f'{i}', embedding=Xtr[i]) for i in range(len(Xtr))]
 
@@ -126,8 +134,7 @@ if BENCHMARK_SIMPLEINDEXER:
 
         times.append(time_taken)
 
-
-    df = pd.DataFrame({'n_examples': n_datasets, 'times':times})
+    df = pd.DataFrame({'n_examples': n_datasets, 'times': times})
     df.to_csv('simpleindexer.csv')
     print(df)
     clean_workspace()
@@ -138,10 +145,10 @@ if BENCHMARK_PQLITE:
 
     ################ PqLite Benchmark BEGIN ######################
     n_datasets = [10_000, 100_000, 500_000, 1_000_000, 10_000_000]
-    #n_datasets = [10_000, 100_000]
+    # n_datasets = [10_000, 100_000]
     n_queries = [1, 8, 64]
 
-    batch_size = 5000
+    batch_size = 4096
     times = []
     metas = {'workspace': './workspace'}
 
@@ -155,12 +162,12 @@ if BENCHMARK_PQLITE:
             uses=PQLiteIndexer,
             uses_with={
                 'dim': D,
-                'limit':10,
+                'limit': 10,
             },
             uses_metas=metas,
         )
 
-        #docs = [Document(id=f'{i}', embedding=Xtr[i]) for i in range(len(Xtr))]
+        # docs = [Document(id=f'{i}', embedding=Xtr[i]) for i in range(len(Xtr))]
         docs = create_data_online(n_examples, D, batch_size)
 
         results_current = {}
@@ -168,30 +175,30 @@ if BENCHMARK_PQLITE:
             time_taken = 0
             for batch in docs:
                 t0 = time.time()
-                resp = f.post(
-                    on='/index',
-                    inputs=batch,
-                    request_size=10000
-                )
+                resp = f.post(on='/index', inputs=batch, request_size=10240)
                 # This is done to avoid data creation time loaded in index time
                 time_taken += time.time() - t0
             results_current['index_time'] = time_taken
 
         times_per_n_query = []
-        for n_query in n_queries:
-            da_queries = create_test_data(D, n_query)
-            with f:
-                t0 = time.time()
-                resp = f.post(
-                    on='/search',
-                    inputs=da_queries,
-                    return_results=True,
-                )
-                time_taken = time.time() - t0
-                times_per_n_query.append(time_taken)
+        with f:
+            for n_query in n_queries:
+                da_queries = create_test_data(D, n_query)
+                t_qs = []
+                for _ in range(R):
+                    t0 = time.time()
+                    resp = f.post(
+                        on='/search',
+                        inputs=da_queries,
+                        return_results=True,
+                    )
+                    time_taken = time.time() - t0
+                    t_qs.append(time_taken)
+                # remove warm-up
+                times_per_n_query.append(np.mean(t_qs[1:]))
 
         results_current['query_times'] = times_per_n_query
-
+        print(f'==> query_times: {times_per_n_query}')
         df = pd.DataFrame({'results': results_current})
         df.to_csv(f'pqlite_{n_examples}.csv')
         results[n_examples] = results_current
@@ -200,4 +207,3 @@ if BENCHMARK_PQLITE:
     df.to_csv('pqlite.csv')
     clean_workspace()
     ################ PqLite Benchmark END #########################
-
