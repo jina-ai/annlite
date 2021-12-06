@@ -58,9 +58,9 @@ class FlatIndex(BaseIndex):
             f'total storage capacity is expanded by {self.expand_step_size}',
         )
 
-    def reset(self):
-        super().reset()
-        self._data = np.zeros((self.initial_size, self.dim), dtype=self.dtype)
+    def reset(self, capacity: Optional[int] = None):
+        super().reset(capacity=capacity)
+        self._data = np.zeros((self.capacity, self.dim), dtype=self.dtype)
 
     def delete(self, ids: List[int]):
         raise RuntimeError(

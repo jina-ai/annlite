@@ -4,12 +4,11 @@ import numpy as np
 from loguru import logger
 from pathlib import Path
 
-from jina import DocumentArray
+from jina import DocumentArray, Document
 from .storage.base import ExpandMode
 from .storage.kv import DocStorage
 from .storage.table import CellTable, MetaTable
 from .core.index.pq_index import PQIndex
-from .core.index.flat_index import FlatIndex
 from .core.index.hnsw import HnswIndex
 from .enums import Metric
 from .core.codec.pq import PQCodec
@@ -128,6 +127,7 @@ class CellContainer:
         cells: np.ndarray,
         conditions: Optional[list] = None,
         limit: int = 10,
+        include_metadata: bool = False,
     ):
         topk_dists, topk_docs = [], []
         for x, cell_idx in zip(query, cells):
@@ -140,11 +140,13 @@ class CellContainer:
 
             match_docs = DocumentArray()
             for dist, doc_id, cell_id in zip(dists, doc_ids, cells):
-                doc = self.doc_store(cell_id).get([doc_id])[0]
+                doc = Document(id=doc_id)
+                if include_metadata:
+                    doc = self.doc_store(cell_id).get([doc_id])[0]
+
                 doc.scores[self.metric.name.lower()].value = dist
                 match_docs.append(doc)
             topk_docs.append(match_docs)
-
 
         return topk_dists, topk_docs
 
