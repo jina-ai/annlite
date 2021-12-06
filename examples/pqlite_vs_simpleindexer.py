@@ -138,7 +138,8 @@ if BENCHMARK_PQLITE:
 
     ################ PqLite Benchmark BEGIN ######################
     n_datasets = [10_000, 100_000, 500_000, 1_000_000, 10_000_000]
-    #n_datasets = [10_000, 100_000]
+    n_datasets = [100_000]#, 500_000, 1_000_000, 10_000_000]
+    
     n_queries = [1, 8, 64]
 
     batch_size = 5000
@@ -171,7 +172,7 @@ if BENCHMARK_PQLITE:
                 resp = f.post(
                     on='/index',
                     inputs=batch,
-                    request_size=10000
+                    request_size=1000
                 )
                 # This is done to avoid data creation time loaded in index time
                 time_taken += time.time() - t0
