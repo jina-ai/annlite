@@ -11,15 +11,15 @@ Nt = 2000
 D = 128  # dimensionality / number of features
 
 numeric_operators = {
-    '>=': operator.ge,
-    '>': operator.gt,
-    '<=': operator.le,
-    '<': operator.lt,
-    '=': operator.eq,
-    '!=': operator.ne,
+    '$gte': operator.ge,
+    '$gt': operator.gt,
+    '$lte': operator.le,
+    '$lt': operator.lt,
+    '$eq': operator.eq,
+    '$neq': operator.ne,
 }
 
-categorical_operators = {'=': operator.eq, '!=': operator.ne}
+categorical_operators = {'$eq': operator.eq, '$neq': operator.ne}
 
 
 @pytest.fixture
@@ -34,7 +34,7 @@ def pqlite_index(tmpdir):
 
 @pytest.fixture
 def pqlite_with_data(tmpdir):
-    columns = [('x', float, True)]
+    columns = [('x', float)]
     index = PQLite(dim=D, columns=columns, data_path=tmpdir / 'pqlite_test')
 
     X = np.random.random((N, D)).astype(
@@ -56,7 +56,7 @@ def pqlite_with_heterogeneous_tags(tmpdir):
     prices = [10.0, 25.0, 50.0, 100.0]
     categories = ['comics', 'movies', 'audiobook']
 
-    columns = [('price', float, True), ('category', str, True)]
+    columns = [('price', float), ('category', str)]
     index = PQLite(dim=D, columns=columns, data_path=tmpdir / 'pqlite_test')
 
     X = np.random.random((N, D)).astype(
@@ -114,8 +114,7 @@ def test_query(pqlite_with_data):
 def test_index_query_with_filtering_sorted_results(pqlite_with_data):
     X = np.random.random((Nq, D)).astype(np.float32)
     query = DocumentArray([Document(embedding=X[i]) for i in range(5)])
-    conditions = [('x', '>', 0.6)]
-    pqlite_with_data.search(query, conditions=conditions)
+    pqlite_with_data.search(query, filter={'x': {'$gt': 0.6}}, include_metadata=True)
 
     for i in range(len(query[0].matches) - 1):
         assert (
@@ -134,8 +133,9 @@ def test_query_search_filter_float_type(pqlite_with_heterogeneous_tags, operator
     thresholds = [20, 50, 100, 400]
 
     for threshold in thresholds:
-        conditions = [('price', operator, threshold)]
-        pqlite_with_heterogeneous_tags.search(query_da, conditions=conditions)
+        pqlite_with_heterogeneous_tags.search(
+            query_da, filter={'price': {operator: threshold}}, include_metadata=True
+        )
         for query in query_da:
             assert all(
                 [
@@ -152,8 +152,9 @@ def test_search_filter_str(pqlite_with_heterogeneous_tags, operator):
 
     categories = ['comics', 'movies', 'audiobook']
     for category in categories:
-        conditions = [('category', operator, category)]
-        pqlite_with_heterogeneous_tags.search(query_da, conditions=conditions)
+        pqlite_with_heterogeneous_tags.search(
+            query_da, filter={'category': {operator: category}}, include_metadata=True
+        )
         for query in query_da:
             assert all(
                 [

@@ -1,4 +1,4 @@
-from typing import Optional, List, Union
+from typing import Optional, List, Union, Dict
 import hashlib
 from pathlib import Path
 import numpy as np
@@ -10,6 +10,7 @@ from jina.math.helper import top_k
 from .core import VQCodec, PQCodec
 from .container import CellContainer
 from .enums import Metric
+from .filter import Filter
 
 
 class PQLite(CellContainer):
@@ -198,7 +199,7 @@ class PQLite(CellContainer):
     def search(
         self,
         docs: DocumentArray,
-        conditions: Optional[list] = None,
+        filter: Dict = {},
         limit: int = 10,
         include_metadata: bool = False,
         **kwargs,
@@ -206,7 +207,7 @@ class PQLite(CellContainer):
         """Search the index, and attach matches to the query Documents in `docs`
 
         :param docs: the query documents to search
-        :param conditions: the filtering conditions
+        :param filter: the filtering conditions
         :param limit: the number of results to get for each query document in search
         :param include_metadata: whether to return document metadata in response.
         """
@@ -239,10 +240,13 @@ class PQLite(CellContainer):
         #     n_probe_list = None
         #
 
+        where_clause, where_params = Filter(filter).parse_where_clause()
+
         match_dists, match_docs = self.search_cells(
             query=query,
             cells=cells,
-            conditions=conditions,
+            where_clause=where_clause,
+            where_params=where_params,
             limit=limit,
             include_metadata=include_metadata,
         )

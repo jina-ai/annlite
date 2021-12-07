@@ -1,4 +1,4 @@
-from typing import Optional, List, Union
+from typing import Optional, List, Union, Tuple
 
 import numpy as np
 from loguru import logger
@@ -68,7 +68,8 @@ class CellContainer:
         self,
         x: np.ndarray,
         cells: np.ndarray,
-        conditions: Optional[list] = None,
+        where_clause: str = '',
+        where_params: Tuple = (),
         limit: int = 10,
     ):
         dists = []
@@ -83,9 +84,11 @@ class CellContainer:
                 continue
 
             indices = None
-            if (conditions is not None) or (cell_table.deleted_count() > 0):
+            if where_clause or (cell_table.deleted_count() > 0):
                 indices = []
-                for doc in cell_table.query(conditions=conditions):
+                for doc in cell_table.query(
+                    where_clause=where_clause, where_params=where_params
+                ):
                     indices.append(doc['_id'])
 
                 if len(indices) == 0:
@@ -125,7 +128,8 @@ class CellContainer:
         self,
         query: np.ndarray,
         cells: np.ndarray,
-        conditions: Optional[list] = None,
+        where_clause: str = '',
+        where_params: Tuple = (),
         limit: int = 10,
         include_metadata: bool = False,
     ):
@@ -133,7 +137,11 @@ class CellContainer:
         for x, cell_idx in zip(query, cells):
             # x.shape = (self.dim,)
             dists, doc_ids, cells = self.ivf_search(
-                x, cells=cell_idx, conditions=conditions, limit=limit
+                x,
+                cells=cell_idx,
+                where_clause=where_clause,
+                where_params=where_params,
+                limit=limit,
             )
 
             topk_dists.append(dists)
