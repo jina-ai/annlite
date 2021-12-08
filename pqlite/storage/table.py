@@ -223,7 +223,7 @@ class CellTable(Table):
         where = ' and '.join(where_conds)
         sql = sql.format(table=self.name, where=where)
 
-        params = (0,) + where_params
+        params = (0,) + tuple([_converting(p) for p in where_params])
 
         cursor = self._conn.execute(sql, params)
         keys = [d[0] for d in cursor.description]
