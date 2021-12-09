@@ -19,7 +19,7 @@ class PQLiteIndexer(Executor):
         include_metadata: bool = False,
         index_traversal_paths: str = 'r',
         search_traversal_paths: str = 'r',
-        columns: Optional[List[Tuple[str, str, bool]]] = None,
+        columns: Optional[List[Tuple[str, str]]] = None,
         *args,
         **kwargs,
     ):
@@ -29,11 +29,10 @@ class PQLiteIndexer(Executor):
         :param include_metadata: If True, return the document metadata in response
         :param limit: Number of results to get for each query document in search
         :param index_traversal_paths: Default traversal paths on docs
-        :param columns: List of tuples of the form (column_name, str_type, create_col_in_database). Here str_type must be a string that can be parsed as a valid Python type) and create_col_in_database a boolean stating whether to add a col to the database.
-        (used for indexing, delete and update), e.g. 'r', 'c', 'r,c'
+                (used for indexing, delete and update), e.g. 'r', 'c', 'r,c'
         :param search_traversal_paths: Default traversal paths on docs
         (used for search), e.g. 'r', 'c', 'r,c'
-
+        :param columns: List of tuples of the form (column_name, str_type). Here str_type must be a string that can be parsed as a valid Python type.
         """
         super().__init__(*args, **kwargs)
         self.logger = JinaLogger(self.__class__.__name__)
@@ -47,11 +46,11 @@ class PQLiteIndexer(Executor):
 
         if columns:
             cols = []
-            for n, t, f in columns:
+            for n, t in columns:
                 assert (
                     t in self._valid_input_columns
                 ), f'column of type={t} is not supported. Supported types are {self._valid_input_columns}'
-                cols.append((n, eval(t), f))
+                cols.append((n, eval(t)))
             columns = cols
 
         self._index = pqlite.PQLite(
@@ -63,7 +62,7 @@ class PQLiteIndexer(Executor):
         )
 
     @requests(on='/index')
-    def index(self, docs: DocumentArray, parameters: dict = {}, **kwargs):
+    def index(self, docs: Optional[DocumentArray] = None, parameters: dict = {}, **kwargs):
         """Index new documents
 
         :param docs: the Documents to index
@@ -71,6 +70,8 @@ class PQLiteIndexer(Executor):
         Keys accepted:
             - 'traversal_paths' (str): traversal path for the docs
         """
+        if not docs:
+            return
 
         traversal_paths = parameters.get('traversal_paths', self.index_traversal_paths)
         flat_docs = docs.traverse_flat(traversal_paths)
@@ -142,7 +143,7 @@ class PQLiteIndexer(Executor):
         :param parameters: dictionary for parameters for the search operation
         Keys accepted:
 
-            - 'conditions' (dict): the filtering conditions on document tags
+            - 'filter' (dict): the filtering conditions on document tags
             - 'traversal_paths' (str): traversal paths for the docs
             - 'limit' (int): nr of matches to get per Document
         """
@@ -150,15 +151,10 @@ class PQLiteIndexer(Executor):
             return
 
         limit = int(parameters.get('limit', self.limit))
-        conditions = parameters.get('conditions', None)
+        search_filter = parameters.get('filter', None)
         include_metadata = bool(
             parameters.get('include_metadata', self.include_metadata)
         )
-        if conditions:
-
-            conditions = [
-                (col, operator, eval(value)) for (col, operator, value) in conditions
-            ]
 
         traversal_paths = parameters.get('traversal_paths', self.search_traversal_paths)
         flat_docs = docs.traverse_flat(traversal_paths)
@@ -167,7 +163,7 @@ class PQLiteIndexer(Executor):
 
         self._index.search(
             flat_docs,
-            conditions=conditions,
+            filter=search_filter,
             limit=limit,
             include_metadata=include_metadata,
         )
@@ -189,4 +185,5 @@ class PQLiteIndexer(Executor):
         self._index.clear()
 
     def close(self, **kwargs):
+        """Close the index."""
         self._index.close()

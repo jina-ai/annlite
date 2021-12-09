@@ -1,6 +1,6 @@
 from jina import Document, DocumentArray, Flow, Executor
 
-from executor_pqlite import PQLiteIndexer
+from ..executor import PQLiteIndexer
 import numpy as np
 import pytest
 
@@ -105,7 +105,7 @@ def test_search_with_filtering(tmpdir):
 
     docs = docs_with_tags(N)
     docs_query = gen_docs(1)
-    columns = [('price', 'float', 'True'), ('category', 'str', 'True')]
+    columns = [('price', 'float'), ('category', 'str')]
 
     f = Flow().add(
         uses=PQLiteIndexer,
@@ -113,14 +113,13 @@ def test_search_with_filtering(tmpdir):
         uses_metas=metas,
     )
 
-    conditions = [['price', '<', '50.']]
     with f:
         f.post(on='/index', inputs=docs)
         query_res = f.post(
             on='/search',
             inputs=docs_query,
             return_results=True,
-            parameters={'conditions': conditions},
+            parameters={'filter': {'price': {'$lt': 50.}}, 'include_metadata': True},
         )
         assert all([m.tags['price'] < 50 for m in query_res[0].docs[0].matches])
 
