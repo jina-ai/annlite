@@ -75,7 +75,6 @@ f = Flow().add(
       'columns': columns,
       'metric': 'euclidean'
     },
-    uses_metas={'workspace': '/my/tmp_folder'}
 )
 
 search_filter = {"price": {"$lte": 50}}
