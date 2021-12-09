@@ -27,7 +27,7 @@ More example filter expresses
 {
   "brand": {"$eq": "Nike"}, 
   "category": {"$eq": "Shoes"}, 
-  "color": {"$eq", "Whilte"}
+  "color": {"$eq": "White"}
 }
 ```
 
@@ -39,7 +39,7 @@ Or
     {
       "brand": {"$eq": "Nike"},
       "category": {"$eq": "Shoes"}, 
-      "color": {"$eq": "Whilte"}
+      "color": {"$eq": "White"}
     }
 }
 ```
@@ -52,10 +52,9 @@ Or
   "$or": 
     {
       "brand": {"$eq": "Nike"}, 
-      "price": {"$lt": 100}, 
+      "price": {"$lt": 100}
     }
 }
-
 ```
 
 

@@ -8,7 +8,7 @@ D = 768
 R = 5
 B = 4096
 
-from executor_pqlite import PQLiteIndexer
+from executor import PQLiteIndexer
 
 times = {}
 
