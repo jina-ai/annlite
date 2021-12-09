@@ -4,12 +4,59 @@
 The `PQLite` class partitions the data into cells at index time, and instantiates a "sub-indexer" in each cell.  Search is performed aggregating results retrieved from cells.
 
 This indexer is recommended to be used when an application requires **search with filters** applied on `Document` tags.
-Each filter is a **triplet** (_column_, _operator_, _value_). More than one filter can be applied during search. Therefore, conditions for a filter are specified as a list of triplets.
-Each triplet contains:
+The `filtering query language` is based on [MongoDB's query and projection operators](https://docs.mongodb.com/manual/reference/operator/query/). We currently support a subset of those selectors. 
+The tags filters can be combined with `$and` and `$or`:
 
-- column: Column used to filter.
-- operator: Binary operation between two values. Supported operators are `['>','<','<=','>=', '=', '!=']`.
-- value: value used to compare a candidate.
+- `$eq` - Equal to (number, string)
+- `$ne` - Not equal to (number, string)
+- `$gt` - Greater than (number)
+- `$gte` - Greater than or equal to (number)
+- `$lt` - Less than (number)
+- `$lte` - Less than or equal to (number)
+
+For example, we want to search for a product with a price no more than `50$`.
+```python
+index.search(query, filter={"price": {"$lte": 50}})
+```
+
+More example filter expresses
+
+- A Nike shoes with white color
+
+```JSON
+{
+  "brand": {"$eq": "Nike"}, 
+  "category": {"$eq": "Shoes"}, 
+  "color": {"$eq", "Whilte"}
+}
+```
+
+Or 
+
+```JSON
+{
+  "$and": 
+    {
+      "brand": {"$eq": "Nike"},
+      "category": {"$eq": "Shoes"}, 
+      "color": {"$eq": "Whilte"}
+    }
+}
+```
+
+
+- A Nike shoes or price less than `100$`
+
+```JSON
+{
+  "$or": 
+    {
+      "brand": {"$eq": "Nike"}, 
+      "price": {"$lt": 100}, 
+    }
+}
+
+```
 
 
 ## WARNING
@@ -41,7 +88,7 @@ Nq = 10 # number of query data
 D = 128 # dimentionality / number of features
 
 # the column schema: (name:str, dtype:type, create_index: bool)
-pqlite = PQLite(dim=D, columns=[('x', float, True)], data_path='./data')
+pqlite = PQLite(dim=D, columns=[('x', float)], data_path='./data')
 ```
 
 2. Add new data
@@ -73,9 +120,7 @@ for i, q in enumerate(query):
         print(f'\t{m.id} ({m.scores["euclidean"].value})')
 
 # with filtering
-# condition schema: (column_name: str, relation: str, value: any)
-conditions = [('x', '<', 0.3)]
-pqlite.search(query, conditions=conditions, limit=10)
+pqlite.search(query, filter={"price": {"$lte": 50}}, limit=10)
 print(f'the result with filtering:')
 for i, q in enumerate(query):
     print(f'query [{i}]:')

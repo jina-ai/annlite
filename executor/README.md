@@ -4,12 +4,59 @@
 The `PQLite` class partitions the data into cells at index time, and instantiates a "sub-indexer" in each cell.  Search is performed aggregating results retrieved from cells.
 
 This indexer is recommended to be used when an application requires **search with filters** applied on `Document` tags.
-Each filter is a **triplet** (_column_, _operator_, _value_). More than one filter can be applied during search. Therefore, conditions for a filter are specified as a list of triplets.
-Each triplet contains:
+The `filtering query language` is based on [MongoDB's query and projection operators](https://docs.mongodb.com/manual/reference/operator/query/). We currently support a subset of those selectors. 
+The tags filters can be combined with `$and` and `$or`:
 
-- column: Column used to filter.
-- operator: Binary operation between two values. Supported operators are `['>','<','<=','>=', '=', '!=']`.
-- value: value used to compare a candidate.
+- `$eq` - Equal to (number, string)
+- `$ne` - Not equal to (number, string)
+- `$gt` - Greater than (number)
+- `$gte` - Greater than or equal to (number)
+- `$lt` - Less than (number)
+- `$lte` - Less than or equal to (number)
+
+For example, we want to search for a product with a price no more than `50$`.
+```python
+index.search(query, filter={"price": {"$lte": 50}})
+```
+
+More example filter expresses
+
+- A Nike shoes with white color
+
+```JSON
+{
+  "brand": {"$eq": "Nike"}, 
+  "category": {"$eq": "Shoes"}, 
+  "color": {"$eq", "Whilte"}
+}
+```
+
+Or 
+
+```JSON
+{
+  "$and": 
+    {
+      "brand": {"$eq": "Nike"},
+      "category": {"$eq": "Shoes"}, 
+      "color": {"$eq": "Whilte"}
+    }
+}
+```
+
+
+- A Nike shoes or price less than `100$`
+
+```JSON
+{
+  "$or": 
+    {
+      "brand": {"$eq": "Nike"}, 
+      "price": {"$lt": 100}, 
+    }
+}
+
+```
 
 ## Basic Usage
 
@@ -20,7 +67,7 @@ Each triplet contains:
 If documents have a tag `'price'`  that stores floating point values this indexer allows searching documents with a filter, such as  `price <= 50`.
 
 ```python
-columns = [('price', 'float', 'True')]
+columns = [('price', 'float')]
 
 f = Flow().add(
     uses='jinahub://PQLiteIndexer',
@@ -32,13 +79,13 @@ f = Flow().add(
     uses_metas={'workspace': '/my/tmp_folder'}
 )
 
-conditions = [['price', '<', '50.']]
+search_filter = {"price": {"$lte": 50}}
 with f:
     f.post(on='/index', inputs=docs)
     query_res = f.post(on='/search',
-                       inputs=docs_query,
+                       inputs=query_docs,
                        return_results=True,
-                       parameters={'conditions': conditions})
+                       parameters={'filter': search_filter})
 ```
 
 ## Performance

@@ -1,4 +1,4 @@
-from typing import Optional, Any, Iterator, List
+from typing import Optional, Any, Iterator, List, Tuple
 from pathlib import Path
 import sqlite3
 import datetime
@@ -132,8 +132,8 @@ class CellTable(Table):
         self._indexed_keys = set()
 
         if columns is not None:
-            for name, dtype, create_index in columns:
-                self.add_column(name, dtype, create_index)
+            for name, dtype in columns:
+                self.add_column(name, dtype, True)
         if not lazy_create:
             self.create_table()
 
@@ -204,25 +204,26 @@ class CellTable(Table):
             self._conn.commit()
         return row_ids
 
-    def query(self, conditions: Optional[List[tuple]] = None) -> Iterator[dict]:
+    def query(
+        self,
+        where_clause: str = '',
+        where_params: Tuple = (),
+    ) -> Iterator[dict]:
         """Query the records which matches the given conditions
 
-        :param conditions: the conditions in the format of tuple `(name: str, op: str, value: any)`
+        :param where_clause: where clause for query
+        :param where_params: where parameters for query
         :return: iterator to yield matched doc
         """
-        if conditions is None:
-            conditions = []
-
         sql = 'SELECT _id, _doc_id from {table} WHERE {where} ORDER BY _id ASC;'
 
         where_conds = ['_deleted = ?']
-        for cond in conditions:
-            cond = f'{cond[0]} {cond[1]} ?'
-            where_conds.append(cond)
+        if where_clause:
+            where_conds.append(where_clause)
         where = ' and '.join(where_conds)
         sql = sql.format(table=self.name, where=where)
 
-        params = tuple([0] + [_converting(cond[2]) for cond in conditions])
+        params = (0,) + tuple([_converting(p) for p in where_params])
 
         cursor = self._conn.execute(sql, params)
         keys = [d[0] for d in cursor.description]
