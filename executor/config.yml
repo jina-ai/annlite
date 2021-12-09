@@ -1,5 +1,5 @@
 jtype: PQLiteIndexer
 metas:
   py_modules:
-    - executor_pqlite.py
+    - executor.py
   workspace: workspace/
