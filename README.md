@@ -87,8 +87,12 @@ Nq = 10 # number of query data
 D = 128 # dimentionality / number of features
 
 # the column schema: (name:str, dtype:type, create_index: bool)
-pqlite = PQLite(dim=D, columns=[('x', float)], data_path='./data')
+pqlite = PQLite(dim=D, columns=[('price', float)], data_path='./workspace_data')
 ```
+
+Note that this will create a folder `./workspace_data` where indexed data will be stored.
+If there is already a folder with this name and the code presented here is not working remove that folder.
+
 
 2. Add new data
 
@@ -96,7 +100,7 @@ pqlite = PQLite(dim=D, columns=[('x', float)], data_path='./data')
 X = np.random.random((N, D)).astype(np.float32)  # 10,000 128-dim vectors to be indexed
 docs = DocumentArray(
     [
-        Document(id=f'{i}', embedding=X[i], tags={'x': random.random()})
+        Document(id=f'{i}', embedding=X[i], tags={'price': random.random()})
         for i in range(N)
     ]
 )
@@ -133,7 +137,7 @@ for i, q in enumerate(query):
 Xn = np.random.random((10, D)).astype(np.float32)  # 10,000 128-dim vectors to be indexed
 docs = DocumentArray(
     [
-        Document(id=f'{i}', embedding=Xn[i], tags={'x': random.random()})
+        Document(id=f'{i}', embedding=Xn[i], tags={'price': random.random()})
         for i in range(10)
     ]
 )
