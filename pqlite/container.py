@@ -22,7 +22,7 @@ class CellContainer:
         pq_codec: Optional[PQCodec] = None,
         n_cells: int = 1,
         initial_size: Optional[int] = None,
-        expand_step_size: Optional[int] = 1024,
+        expand_step_size: Optional[int] = 50024,
         expand_mode: ExpandMode = ExpandMode.STEP,
         columns: Optional[List[tuple]] = None,
         data_path: Path = Path('./data'),
@@ -166,20 +166,41 @@ class CellContainer:
     ):
         assert len(docs) == len(data)
 
-        offsets = []
-        for doc, cell_id in zip(docs, cells):
-            # Write-Ahead-Log (WAL)
-            self.doc_store(cell_id).insert([doc])
+        if self.n_cells == 1:
+            self.doc_store(0).insert(docs)
+            offsets = self.cell_table(0).insert(docs)
 
-            # update cell_table and meta_table
-            offset = self.cell_table(cell_id).insert([doc])[0]
-            self._meta_table.add_address(doc.id, cell_id, offset)
-            offsets.append(offset)
+            # if we had _meta_table.add_adress(doc_ids, cell_ids, offsets)
+            # we could probably speedup this part as
+            for doc, cell_id, offset in zip(docs, cells, offsets):
+                self._meta_table.add_address(doc.id, cell_id, offset)
+
+        else:
+            for doc, cell_id in zip(docs, cells):
+                # Write-Ahead-Log (WAL)
+                self.doc_store(cell_id).insert([doc])
+
+            offsets = []
+            for doc, cell_id in zip(docs, cells):
+                # Write-Ahead-Log (WAL)
+                self.doc_store(cell_id).insert([doc])
+                # update cell_table and meta_table
+                offset = self.cell_table(cell_id).insert([doc])[0]
+                self._meta_table.add_address(doc.id, cell_id, offset)
+                offsets.append(offset)
 
         offsets = np.array(offsets, dtype=np.int64)
         self._add_vecs(data, cells, offsets)
-
         logger.debug(f'=> {len(docs)} new docs added')
+
+    def insert_single_cell(
+        self,
+        data: np.ndarray,
+        cells: np.ndarray,
+        docs: DocumentArray,
+    ):
+        pass
+
 
     def _add_vecs(self, data: np.ndarray, cells: np.ndarray, offsets: np.ndarray):
         assert data.shape[0] == cells.shape[0]
