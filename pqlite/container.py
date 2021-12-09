@@ -176,30 +176,29 @@ class CellContainer:
                 self._meta_table.add_address(doc.id, cell_id, offset)
 
         else:
-            for doc, cell_id in zip(docs, cells):
-                # Write-Ahead-Log (WAL)
-                self.doc_store(cell_id).insert([doc])
+            # The following code is equivalent to
+            #    offsets = []
+            #    for doc in cell_docs:
+            #        self.doc_store(cell_id).insert([doc])
+            #        offset = self.cell_table(cell_id).insert([doc])[0]
+            #        self._meta_table.add_address(doc.id, cell_id, offset)
+            #        offsets.append(offset)
 
             offsets = []
-            for doc, cell_id in zip(docs, cells):
-                # Write-Ahead-Log (WAL)
-                self.doc_store(cell_id).insert([doc])
-                # update cell_table and meta_table
-                offset = self.cell_table(cell_id).insert([doc])[0]
-                self._meta_table.add_address(doc.id, cell_id, offset)
-                offsets.append(offset)
+            unique_cells, unique_cell_counts = np.unique(cells, return_counts=True)
+
+            for cell_index in unique_cells:
+                # Jina should allow boolean filtering in docarray to avoid this
+                # and simply use cells == cell_index
+                indices = np.where(cells == cell_index)[0].tolist()
+                cell_docs = docs[indices]
+                cell_offsets = self.cell_table(cell_index).insert(cell_docs)
+                self.doc_store(cell_index).insert(cell_docs)
+                offsets.extend(cell_offsets)
 
         offsets = np.array(offsets, dtype=np.int64)
         self._add_vecs(data, cells, offsets)
         logger.debug(f'=> {len(docs)} new docs added')
-
-    def insert_single_cell(
-        self,
-        data: np.ndarray,
-        cells: np.ndarray,
-        docs: DocumentArray,
-    ):
-        pass
 
 
     def _add_vecs(self, data: np.ndarray, cells: np.ndarray, offsets: np.ndarray):
