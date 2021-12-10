@@ -166,7 +166,7 @@ class CellContainer:
     ):
         assert len(docs) == len(data)
 
-        unique_cells = np.unique(cells)
+        unique_cells, unique_cell_counts = np.unique(cells, return_counts=True)
 
         if len(unique_cells) == 1:
             cell_id = unique_cells[0]
@@ -178,13 +178,10 @@ class CellContainer:
 
             self.vec_index(cell_id).add_with_ids(data, offsets)
 
-            # TODO: if we had _meta_table.add_adress(doc_ids, cell_ids, offsets)
-            # we could probably speedup this part as
-            for doc, offset in zip(docs, offsets):
-                self._meta_table.add_address(doc.id, cell_id, offset)
+            self._meta_table.bulk_add_address([d.id for d in docs], cells, offsets)
 
         else:
-            for cell_id in unique_cells:
+            for cell_id, cell_count in zip(unique_cells, unique_cell_counts):
                 # TODO: Jina should allow boolean filtering in docarray to avoid this
                 # and simply use cells == cell_index
                 indices = np.where(cells == cell_id)[0]
@@ -199,8 +196,9 @@ class CellContainer:
 
                 self.vec_index(cell_id).add_with_ids(cell_data, cell_offsets)
 
-                for doc, offset in zip(cell_docs, cell_offsets):
-                    self._meta_table.add_address(doc.id, cell_id, offset)
+                self._meta_table.bulk_add_address(
+                    [d.id for d in cell_docs], [cell_id] * cell_count, cell_offsets
+                )
 
         logger.debug(f'=> {len(docs)} new docs added')
 

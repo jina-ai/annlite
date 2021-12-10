@@ -48,7 +48,9 @@ def test_schema(dummy_cell_table):
 
 def test_query(table_with_data):
     result = list(
-        table_with_data.query([('category', '=', 'fruit'), ('price', '<', 3)])
+        table_with_data.query(
+            where_clause='(category = ?) AND (price < ?)', where_params=('fruit', 3)
+        )
     )
 
     assert len(result) == 2
