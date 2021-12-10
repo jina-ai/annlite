@@ -145,7 +145,6 @@ class CellContainer:
             )
 
             topk_dists.append(dists)
-
             match_docs = DocumentArray()
             for dist, doc_id, cell_id in zip(dists, doc_ids, cells):
                 doc = Document(id=doc_id)
@@ -157,6 +156,28 @@ class CellContainer:
             topk_docs.append(match_docs)
 
         return topk_dists, topk_docs
+
+    def _search_cells(
+        self,
+        query: np.ndarray,
+        cells: np.ndarray,
+        where_clause: str = '',
+        where_params: Tuple = (),
+        limit: int = 10,
+    ):
+        topk_dists, topk_ids = [], []
+        for x, cell_idx in zip(query, cells):
+            dists, ids, cells = self.ivf_search(
+                x,
+                cells=cell_idx,
+                where_clause=where_clause,
+                where_params=where_params,
+                limit=limit,
+            )
+            topk_dists.append(dists)
+            topk_ids.append(ids)
+
+        return topk_dists, [np.array(ids, dtype=int) for ids in topk_ids]
 
     def insert(
         self,

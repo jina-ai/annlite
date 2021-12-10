@@ -211,15 +211,45 @@ class PQLite(CellContainer):
         :param limit: the number of results to get for each query document in search
         :param include_metadata: whether to return document metadata in response.
         """
-        query = docs.embeddings
-        n_data, _ = self._sanity_check(query)
+        query_np = docs.embeddings
 
+        match_dists, match_docs = self._search_documents(query_np,
+                                                         filter,
+                                                         limit,
+                                                         include_metadata)
+
+        for doc, matches in zip(docs, match_docs):
+            doc.matches = matches
+
+    def _search_documents(self,
+                query_np,
+                filter: Dict = {},
+                limit: int = 10,
+                include_metadata: bool = True):
+
+        cells = self._cell_selection(query_np, limit)
+        where_clause, where_params = Filter(filter).parse_where_clause()
+
+        match_dists, match_docs = self.search_cells(
+                query=query_np,
+                cells=cells,
+                where_clause=where_clause,
+                where_params=where_params,
+                limit=limit,
+                include_metadata=include_metadata,
+        )
+        return match_dists, match_docs
+
+
+    def _cell_selection(self,
+                        query_np,
+                        limit):
+
+        n_data, _ = self._sanity_check(query_np)
         assert 0 < limit <= 1024
 
         if self.vq_codec:
-            vq_codebook = self.vq_codec.codebook
-            # find n_probe closest cells
-            dists = cdist(query, vq_codebook, metric=self.metric.name.lower())
+            dists = cdist(query_np, self.vq_codec.codebook, metric=self.metric.name.lower())
             dists, cells = top_k(dists, k=self.n_probe)
         else:
             cells = np.zeros((n_data, 1), dtype=np.int64)
@@ -238,21 +268,53 @@ class PQLite(CellContainer):
         #     n_probe_list = torch.ceil(normalized_entropy * max_n_probe).long()
         # else:
         #     n_probe_list = None
-        #
 
+        return cells
+
+    def _search(
+        self,
+        query_np: np.ndarray,
+        filter: Dict = {},
+        limit: int = 10,
+        include_metadata: bool = True,
+        **kwargs,
+    ):
+        """Search the index, and attach matches to the query Documents in `docs`
+
+        :param query_np: matrix containing query vectors as rows
+        :param filter: the filtering conditions
+        :param limit: the number of results to get for each query document in search
+        :param include_metadata: whether to return document metadata in response.
+        """
+
+        dists, docs = self._search_numpy(query_np,
+                                         filter,
+                                         limit)
+        return dists, docs
+
+
+    def _search_numpy(self,
+                      query_np,
+                      filter: Dict = {},
+                      limit: int = 10):
+        """Search approximate nearest vectors in different cells, returns distances and ids
+
+        :param query_np: matrix containing query vectors as rows
+        :param filter: the filtering conditions
+        :param limit: the number of results to get for each query document in search
+        """
+        cells = self._cell_selection(query_np, limit)
         where_clause, where_params = Filter(filter).parse_where_clause()
 
-        match_dists, match_docs = self.search_cells(
-            query=query,
-            cells=cells,
-            where_clause=where_clause,
-            where_params=where_params,
-            limit=limit,
-            include_metadata=include_metadata,
-        )
+        dists, ids = self._search_cells(
+                query=query_np,
+                cells=cells,
+                where_clause=where_clause,
+                where_params=where_params,
+                limit=limit,
+            )
+        return dists, ids
 
-        for doc, matches in zip(docs, match_docs):
-            doc.matches = matches
 
     def delete(self, docs: Union[DocumentArray, List[str]]):
         """Delete entries from the index by id
