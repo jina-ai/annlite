@@ -128,7 +128,7 @@ print(f'the result with filtering:')
 for i, q in enumerate(query):
     print(f'query [{i}]:')
     for m in q.matches:
-        print(f'\t{m.id} {m.scores["euclidean"].value} (x={m.tags["x"]})')
+        print(f'\t{m.id} {m.scores["euclidean"].value} (price={m.tags["x"]})')
 ```
 
 4. Update data

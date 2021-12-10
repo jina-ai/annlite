@@ -201,7 +201,7 @@ class PQLite(CellContainer):
         docs: DocumentArray,
         filter: Dict = {},
         limit: int = 10,
-        include_metadata: bool = False,
+        include_metadata: bool = True,
         **kwargs,
     ):
         """Search the index, and attach matches to the query Documents in `docs`
