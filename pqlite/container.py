@@ -184,7 +184,6 @@ class CellContainer:
                 self._meta_table.add_address(doc.id, cell_id, offset)
 
         else:
-            unique_cells = np.unique(cells)
             for cell_id in unique_cells:
                 # TODO: Jina should allow boolean filtering in docarray to avoid this
                 # and simply use cells == cell_index
