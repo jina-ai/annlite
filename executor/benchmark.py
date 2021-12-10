@@ -3,19 +3,33 @@ from jina import DocumentArray
 from jina.logging.profile import TimeContext
 
 n_index = [10_000, 100_000, 500_000, 1_000_000]
+n_index = [10_000]
+
 n_query = [1, 8, 64]
 D = 768
 R = 5
-B = 4096
+B = 4092
+n_cells = 1
+initial_size = int(n_index[0]/10)
 
 from executor import PQLiteIndexer
 
 times = {}
 
 for n_i in n_index:
-    idxer = PQLiteIndexer(dim=D, uses_metas={'workspace': './workspace'})
+
+    idxer = PQLiteIndexer(dim=D,
+                          uses_metas={'workspace': './workspace'},
+                          initial_size=initial_size,
+                          n_cells=n_cells)
+
+
     # build index docs
     i_embs = np.random.random([n_i, D]).astype(np.float32)
+
+    if n_cells > 1:
+        idxer._index.vq_codec.fit(i_embs)
+
     da = DocumentArray.empty(n_i)
     da.embeddings = i_embs
 

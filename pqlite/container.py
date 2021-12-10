@@ -22,7 +22,7 @@ class CellContainer:
         pq_codec: Optional[PQCodec] = None,
         n_cells: int = 1,
         initial_size: Optional[int] = None,
-        expand_step_size: Optional[int] = 1024,
+        expand_step_size: Optional[int] = 50024,
         expand_mode: ExpandMode = ExpandMode.STEP,
         columns: Optional[List[tuple]] = None,
         data_path: Path = Path('./data'),
@@ -166,20 +166,40 @@ class CellContainer:
     ):
         assert len(docs) == len(data)
 
-        offsets = []
-        for doc, cell_id in zip(docs, cells):
-            # Write-Ahead-Log (WAL)
-            self.doc_store(cell_id).insert([doc])
+        if self.n_cells == 1:
+            self.doc_store(0).insert(docs)
+            offsets = self.cell_table(0).insert(docs)
 
-            # update cell_table and meta_table
-            offset = self.cell_table(cell_id).insert([doc])[0]
-            self._meta_table.add_address(doc.id, cell_id, offset)
-            offsets.append(offset)
+            # if we had _meta_table.add_adress(doc_ids, cell_ids, offsets)
+            # we could probably speedup this part as
+            for doc, cell_id, offset in zip(docs, cells, offsets):
+                self._meta_table.add_address(doc.id, cell_id, offset)
+
+        else:
+            # The following code is equivalent to
+            #    offsets = []
+            #    for doc in cell_docs:
+            #        self.doc_store(cell_id).insert([doc])
+            #        offset = self.cell_table(cell_id).insert([doc])[0]
+            #        self._meta_table.add_address(doc.id, cell_id, offset)
+            #        offsets.append(offset)
+
+            offsets = []
+            unique_cells, unique_cell_counts = np.unique(cells, return_counts=True)
+
+            for cell_index in unique_cells:
+                # Jina should allow boolean filtering in docarray to avoid this
+                # and simply use cells == cell_index
+                indices = np.where(cells == cell_index)[0].tolist()
+                cell_docs = docs[indices]
+                cell_offsets = self.cell_table(cell_index).insert(cell_docs)
+                self.doc_store(cell_index).insert(cell_docs)
+                offsets.extend(cell_offsets)
 
         offsets = np.array(offsets, dtype=np.int64)
         self._add_vecs(data, cells, offsets)
-
         logger.debug(f'=> {len(docs)} new docs added')
+
 
     def _add_vecs(self, data: np.ndarray, cells: np.ndarray, offsets: np.ndarray):
         assert data.shape[0] == cells.shape[0]
