@@ -22,7 +22,7 @@ class CellContainer:
         pq_codec: Optional[PQCodec] = None,
         n_cells: int = 1,
         initial_size: Optional[int] = None,
-        expand_step_size: Optional[int] = 50024,
+        expand_step_size: int = 50000,
         expand_mode: ExpandMode = ExpandMode.STEP,
         columns: Optional[List[tuple]] = None,
         data_path: Path = Path('./data'),
@@ -166,40 +166,41 @@ class CellContainer:
     ):
         assert len(docs) == len(data)
 
-        if self.n_cells == 1:
-            self.doc_store(0).insert(docs)
-            offsets = self.cell_table(0).insert(docs)
+        unique_cells, unique_cell_counts = np.unique(cells, return_counts=True)
 
-            # if we had _meta_table.add_adress(doc_ids, cell_ids, offsets)
-            # we could probably speedup this part as
-            for doc, cell_id, offset in zip(docs, cells, offsets):
-                self._meta_table.add_address(doc.id, cell_id, offset)
+        if len(unique_cells) == 1:
+            cell_id = unique_cells[0]
+
+            self.doc_store(cell_id).insert(docs)
+
+            offsets = self.cell_table(cell_id).insert(docs)
+            offsets = np.array(offsets, dtype=np.int64)
+
+            self.vec_index(cell_id).add_with_ids(data, offsets)
+
+            self._meta_table.bulk_add_address([d.id for d in docs], cells, offsets)
 
         else:
-            # The following code is equivalent to
-            #    offsets = []
-            #    for doc in cell_docs:
-            #        self.doc_store(cell_id).insert([doc])
-            #        offset = self.cell_table(cell_id).insert([doc])[0]
-            #        self._meta_table.add_address(doc.id, cell_id, offset)
-            #        offsets.append(offset)
-
-            offsets = []
-            unique_cells, unique_cell_counts = np.unique(cells, return_counts=True)
-
-            for cell_index in unique_cells:
-                # Jina should allow boolean filtering in docarray to avoid this
+            for cell_id, cell_count in zip(unique_cells, unique_cell_counts):
+                # TODO: Jina should allow boolean filtering in docarray to avoid this
                 # and simply use cells == cell_index
-                indices = np.where(cells == cell_index)[0].tolist()
-                cell_docs = docs[indices]
-                cell_offsets = self.cell_table(cell_index).insert(cell_docs)
-                self.doc_store(cell_index).insert(cell_docs)
-                offsets.extend(cell_offsets)
+                indices = np.where(cells == cell_id)[0]
+                cell_docs = docs[indices.tolist()]
 
-        offsets = np.array(offsets, dtype=np.int64)
-        self._add_vecs(data, cells, offsets)
+                self.doc_store(cell_id).insert(cell_docs)
+
+                cell_offsets = self.cell_table(cell_id).insert(cell_docs)
+                cell_offsets = np.array(cell_offsets, dtype=np.int64)
+
+                cell_data = data[indices, :]
+
+                self.vec_index(cell_id).add_with_ids(cell_data, cell_offsets)
+
+                self._meta_table.bulk_add_address(
+                    [d.id for d in cell_docs], [cell_id] * cell_count, cell_offsets
+                )
+
         logger.debug(f'=> {len(docs)} new docs added')
-
 
     def _add_vecs(self, data: np.ndarray, cells: np.ndarray, offsets: np.ndarray):
         assert data.shape[0] == cells.shape[0]

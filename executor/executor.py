@@ -62,7 +62,9 @@ class PQLiteIndexer(Executor):
         )
 
     @requests(on='/index')
-    def index(self, docs: Optional[DocumentArray] = None, parameters: dict = {}, **kwargs):
+    def index(
+        self, docs: Optional[DocumentArray] = None, parameters: dict = {}, **kwargs
+    ):
         """Index new documents
 
         :param docs: the Documents to index

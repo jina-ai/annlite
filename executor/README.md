@@ -4,7 +4,7 @@
 The `PQLite` class partitions the data into cells at index time, and instantiates a "sub-indexer" in each cell.  Search is performed aggregating results retrieved from cells.
 
 This indexer is recommended to be used when an application requires **search with filters** applied on `Document` tags.
-The `filtering query language` is based on [MongoDB's query and projection operators](https://docs.mongodb.com/manual/reference/operator/query/). We currently support a subset of those selectors. 
+The `filtering query language` is based on [MongoDB's query and projection operators](https://docs.mongodb.com/manual/reference/operator/query/). We currently support a subset of those selectors.
 The tags filters can be combined with `$and` and `$or`:
 
 - `$eq` - Equal to (number, string)
@@ -25,20 +25,20 @@ More example filter expresses
 
 ```JSON
 {
-  "brand": {"$eq": "Nike"}, 
-  "category": {"$eq": "Shoes"}, 
+  "brand": {"$eq": "Nike"},
+  "category": {"$eq": "Shoes"},
   "color": {"$eq": "White"}
 }
 ```
 
-Or 
+Or
 
 ```JSON
 {
-  "$and": 
+  "$and":
     {
       "brand": {"$eq": "Nike"},
-      "category": {"$eq": "Shoes"}, 
+      "category": {"$eq": "Shoes"},
       "color": {"$eq": "White"}
     }
 }
@@ -49,9 +49,9 @@ Or
 
 ```JSON
 {
-  "$or": 
+  "$or":
     {
-      "brand": {"$eq": "Nike"}, 
+      "brand": {"$eq": "Nike"},
       "price": {"$lt": 100}
     }
 }
@@ -93,10 +93,10 @@ One can run `benchmark.py` to get a quick performance overview.
 
 |Stored data| Indexing time | Query size=1 | Query size=8 | Query size=64|
 |---|---|---|---|---|
-|10000 | 19.766 | 0.002 | 0.016 | 0.133|
-|100000 | 325.413 | 0.010 | 0.084 | 0.671|
-|500000 | 2413.311 | 0.038 | 0.303 | 2.427|
-|1000000 | 5310.749 | 0.075 | 0.579 | 4.634|
+|10000 | 1.882 | 0.002 | 0.017 | 0.133|
+|100000 | 143.641 | 0.011 | 0.085 | 0.670|
+|500000 | 1502.146 | 0.039 | 0.307 | 2.442|
+|1000000 | 3496.651 | 0.072 | 0.582 | 4.617|
 
 ## CRUD operations
 

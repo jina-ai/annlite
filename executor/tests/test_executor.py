@@ -119,7 +119,7 @@ def test_search_with_filtering(tmpdir):
             on='/search',
             inputs=docs_query,
             return_results=True,
-            parameters={'filter': {'price': {'$lt': 50.}}, 'include_metadata': True},
+            parameters={'filter': {'price': {'$lt': 50.0}}, 'include_metadata': True},
         )
         assert all([m.tags['price'] < 50 for m in query_res[0].docs[0].matches])
 
