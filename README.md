@@ -4,7 +4,7 @@
 The `PQLite` class partitions the data into cells at index time, and instantiates a "sub-indexer" in each cell.  Search is performed aggregating results retrieved from cells.
 
 This indexer is recommended to be used when an application requires **search with filters** applied on `Document` tags.
-The `filtering query language` is based on [MongoDB's query and projection operators](https://docs.mongodb.com/manual/reference/operator/query/). We currently support a subset of those selectors. 
+The `filtering query language` is based on [MongoDB's query and projection operators](https://docs.mongodb.com/manual/reference/operator/query/). We currently support a subset of those selectors.
 The tags filters can be combined with `$and` and `$or`:
 
 - `$eq` - Equal to (number, string)
@@ -25,20 +25,20 @@ More example filter expresses
 
 ```JSON
 {
-  "brand": {"$eq": "Nike"}, 
-  "category": {"$eq": "Shoes"}, 
+  "brand": {"$eq": "Nike"},
+  "category": {"$eq": "Shoes"},
   "color": {"$eq": "White"}
 }
 ```
 
-Or 
+Or
 
 ```JSON
 {
-  "$and": 
+  "$and":
     {
       "brand": {"$eq": "Nike"},
-      "category": {"$eq": "Shoes"}, 
+      "category": {"$eq": "Shoes"},
       "color": {"$eq": "White"}
     }
 }
@@ -49,9 +49,9 @@ Or
 
 ```JSON
 {
-  "$or": 
+  "$or":
     {
-      "brand": {"$eq": "Nike"}, 
+      "brand": {"$eq": "Nike"},
       "price": {"$lt": 100}
     }
 }

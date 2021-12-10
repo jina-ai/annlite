@@ -10,7 +10,7 @@ D = 768
 R = 5
 B = 4092
 n_cells = 1
-initial_size = int(n_index[0]/10)
+initial_size = int(n_index[0] / 10)
 
 from executor import PQLiteIndexer
 
@@ -18,11 +18,12 @@ times = {}
 
 for n_i in n_index:
 
-    idxer = PQLiteIndexer(dim=D,
-                          uses_metas={'workspace': './workspace'},
-                          initial_size=initial_size,
-                          n_cells=n_cells)
-
+    idxer = PQLiteIndexer(
+        dim=D,
+        uses_metas={'workspace': './workspace'},
+        initial_size=initial_size,
+        n_cells=n_cells,
+    )
 
     # build index docs
     i_embs = np.random.random([n_i, D]).astype(np.float32)
