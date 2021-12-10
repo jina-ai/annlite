@@ -1,9 +1,11 @@
-from typing import Optional, Any, Iterator, List, Tuple
-from pathlib import Path
-import sqlite3
 import datetime
-from jina import DocumentArray
+import sqlite3
+from pathlib import Path
+from typing import Optional, Any, Iterator, List, Tuple, Union
+
 import numpy as np
+
+from jina import DocumentArray
 
 sqlite3.register_adapter(np.int64, lambda x: int(x))
 sqlite3.register_adapter(np.int32, lambda x: int(x))
@@ -56,6 +58,7 @@ def _converting(value: Any) -> str:
             return 1
         else:
             return 0
+
     return str(value)
 
 
@@ -182,23 +185,33 @@ class CellTable(Table):
         :param commit: If set, commit is applied
         """
         sql_template = 'INSERT INTO {table}({columns}) VALUES ({placeholders});'
-        row_ids = []
-        cursor = self._conn.cursor()
-        for doc in docs:
-            tag_names = [c for c in doc.tags if c in self.columns]
-            column_names = ['_doc_id'] + tag_names
-            columns = ', '.join(column_names)
-            placeholders = ', '.join('?' for c in column_names)
-            sql = sql_template.format(
-                table=self.name,
-                columns=columns,
-                placeholders=placeholders,
-            )
 
-            values = tuple([doc.id] + [_converting(doc.tags[c]) for c in tag_names])
-            cursor.execute(sql, values)
-            row_id = cursor.lastrowid - 1
-            row_ids.append(row_id)
+        column_names = self.columns[1:]
+        columns = ', '.join(column_names)
+        placeholders = ', '.join('?' for c in column_names)
+        sql = sql_template.format(
+            table=self.name, columns=columns, placeholders=placeholders
+        )
+
+        values = []
+
+        for doc in docs:
+            doc_value = tuple(
+                [doc.id]
+                + [
+                    _converting(doc.tags[c]) if c in doc.tags else None
+                    for c in self.columns[2:]
+                ]
+            )
+            values.append(doc_value)
+
+        cursor = self._conn.cursor()
+        if len(docs) > 1:
+            cursor.executemany(sql, values[:-1])
+
+        cursor.execute(sql, values[-1])
+        last_row_id = cursor.lastrowid
+        row_ids = list(range(last_row_id - len(docs), last_row_id))
 
         if commit:
             self._conn.commit()
@@ -327,6 +340,24 @@ class MetaTable(Table):
                 cell_id,
                 offset,
             ),
+        )
+        if commit:
+            self._conn.commit()
+
+    def bulk_add_address(
+        self,
+        doc_ids: List[str],
+        cell_ids: Union[List[int], np.ndarray],
+        offsets: Union[List[int], np.ndarray],
+        commit: bool = True,
+    ):
+        sql = f'INSERT OR REPLACE INTO {self.name}(_doc_id, cell_id, offset) VALUES (?, ?, ?);'
+        self._conn.executemany(
+            sql,
+            [
+                (doc_id, cell_id, offset)
+                for doc_id, cell_id, offset in zip(doc_ids, cell_ids, offsets)
+            ],
         )
         if commit:
             self._conn.commit()
