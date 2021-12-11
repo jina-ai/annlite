@@ -1,10 +1,9 @@
 import datetime
 import sqlite3
 from pathlib import Path
-from typing import Optional, Any, Iterator, List, Tuple, Union
+from typing import Any, Iterator, List, Optional, Tuple, Union
 
 import numpy as np
-
 from jina import DocumentArray
 
 sqlite3.register_adapter(np.int64, lambda x: int(x))

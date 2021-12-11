@@ -1,6 +1,7 @@
 from typing import List
-import numpy as np
+
 import lmdb
+import numpy as np
 from jina import Document
 
 

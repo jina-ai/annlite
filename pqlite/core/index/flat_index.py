@@ -1,9 +1,10 @@
-from typing import Optional, List
-import numpy as np
-from loguru import logger
+from typing import List, Optional
 
+import numpy as np
 from jina.math.distance import cdist
 from jina.math.helper import top_k
+from loguru import logger
+
 from .base import BaseIndex
 
 

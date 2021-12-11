@@ -1,13 +1,14 @@
 import numpy as np
 from loguru import logger
-
 from scipy.cluster.vq import kmeans2, vq
+
 from pqlite import pq_bind
+
+from ...enums import Metric
+from .base import BaseCodec
 
 # from pqlite.pq_bind import precompute_adc_table, dist_pqcodes_to_codebooks
 
-from .base import BaseCodec
-from ...enums import Metric
 
 
 class PQCodec(BaseCodec):

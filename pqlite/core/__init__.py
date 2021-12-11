@@ -1,1 +1,1 @@
-from .codec import VQCodec, PQCodec
+from .codec import PQCodec, VQCodec
