@@ -18,10 +18,11 @@ repos:
       exclude: docs/
       args:
       - --select=D101,D102,D103
-# - repo: https://github.com/timothycrosley/isort
-#   rev: 5.8.0
-#   hooks:
-#     - id: isort
+- repo: https://github.com/timothycrosley/isort
+  rev: 5.8.0
+  hooks:
+   - id: isort
+     args: ["--profile", "black"]
 - repo: https://github.com/ambv/black
   rev: 20.8b1
   hooks:
