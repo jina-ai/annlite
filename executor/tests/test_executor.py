@@ -1,9 +1,8 @@
-from jina import Document, DocumentArray, Flow, Executor
-
-from ..executor import PQLiteIndexer
 import numpy as np
 import pytest
+from jina import Document, DocumentArray, Executor, Flow
 
+from ..executor import PQLiteIndexer
 
 N = 1000  # number of data points
 Nt = 2000

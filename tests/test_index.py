@@ -1,9 +1,11 @@
-import pytest
-import random
-import numpy as np
-from jina import Document, DocumentArray
-from pqlite import PQLite
 import operator
+import random
+
+import numpy as np
+import pytest
+from jina import Document, DocumentArray
+
+from pqlite import PQLite
 
 N = 1000  # number of data points
 Nq = 5

@@ -10,7 +10,6 @@ from .base import BaseCodec
 # from pqlite.pq_bind import precompute_adc_table, dist_pqcodes_to_codebooks
 
 
-
 class PQCodec(BaseCodec):
     """Implementation of Product Quantization (PQ) [Jegou11]_.
 

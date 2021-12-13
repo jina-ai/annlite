@@ -1,17 +1,16 @@
-import time
 import os
 import shutil
-
-from jina import Flow
-from jina import Document, DocumentArray
-from jina.math.distance import cdist
-from jina.math.helper import top_k as _top_k
-from executor.executor_pqlite import PQLiteIndexer
+import time
 
 import numpy as np
 import pandas as pd
+from jina import Document, DocumentArray, Flow
+from jina.math.distance import cdist
+from jina.math.helper import top_k as _top_k
 from sklearn.datasets import make_blobs
 from sklearn.model_selection import train_test_split
+
+from executor.executor_pqlite import PQLiteIndexer
 
 Nq = 1
 D = 128

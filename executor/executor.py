@@ -1,6 +1,8 @@
-from typing import Optional, List, Tuple
+from typing import List, Optional, Tuple
+
 from jina import Document, DocumentArray, Executor, requests
 from jina.logging.logger import JinaLogger
+
 import pqlite
 
 
