@@ -54,10 +54,11 @@ def insert_pqlite(n_examples, n_features, batch_size=100_000):
 
     total_time = 0
     for da in da_generator:
-        embeddings = da.embeddings
-        cell_ids = [0]*len(embeddings)
         t0 = time.time()
-        pqlite.insert(embeddings, cell_ids, da)
+        #embeddings = da.embeddings
+        #cell_ids = [0]*len(embeddings)
+        #pqlite.insert(embeddings, cell_ids, da)
+        pqlite.doc_store(0).insert(da)
         total_time += time.time() - t0
 
     total_time = round(total_time, 2)
