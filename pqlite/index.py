@@ -279,7 +279,7 @@ class PQLite(CellContainer):
         include_metadata: bool = True,
         **kwargs,
     ):
-        """Search the index, and attach matches to the query Documents in `docs`
+        """Search the index and return distances to the query and ids of the closest documents.
 
         :param query_np: matrix containing query vectors as rows
         :param filter: the filtering conditions
@@ -287,10 +287,10 @@ class PQLite(CellContainer):
         :param include_metadata: whether to return document metadata in response.
         """
 
-        dists, docs = self._search_numpy(query_np,
-                                         filter,
-                                         limit)
-        return dists, docs
+        dists, doc_ids = self._search_numpy(query_np,
+                                            filter,
+                                            limit)
+        return dists, doc_ids
 
 
     def _search_numpy(self,
