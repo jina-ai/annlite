@@ -4,8 +4,9 @@ from typing import Dict, List, Optional, Union
 
 import numpy as np
 from jina import DocumentArray
-from jina.math.distance import cdist
-from jina.math.helper import top_k
+from docarray.math.distance import cdist
+from docarray.math.helper import top_k
+
 from loguru import logger
 
 from .container import CellContainer
