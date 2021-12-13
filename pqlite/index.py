@@ -271,7 +271,7 @@ class PQLite(CellContainer):
 
         return cells
 
-    def _search(
+    def search_numpy(
         self,
         query_np: np.ndarray,
         filter: Dict = {},
