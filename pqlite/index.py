@@ -1,14 +1,15 @@
-from typing import Optional, List, Union, Dict
 import hashlib
 from pathlib import Path
-import numpy as np
-from loguru import logger
+from typing import Dict, List, Optional, Union
 
+import numpy as np
 from jina import DocumentArray
 from jina.math.distance import cdist
 from jina.math.helper import top_k
-from .core import VQCodec, PQCodec
+from loguru import logger
+
 from .container import CellContainer
+from .core import PQCodec, VQCodec
 from .enums import Metric
 from .filter import Filter
 

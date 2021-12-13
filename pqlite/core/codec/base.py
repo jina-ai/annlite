@@ -1,6 +1,6 @@
+import pickle
 from abc import ABC, abstractmethod
 from pathlib import Path
-import pickle
 
 
 class BaseCodec(ABC):

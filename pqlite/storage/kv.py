@@ -1,11 +1,10 @@
-import lmdb
 import shutil
-
-from typing import Union
 from pathlib import Path
 from typing import List, Union
-from jina import Document, DocumentArray
+
+import lmdb
 import numpy as np
+from jina import Document, DocumentArray
 
 LMDB_MAP_SIZE = 100 * 1024 * 1024 * 1024
 

@@ -1,17 +1,17 @@
-from typing import Optional, List, Union, Tuple
+from pathlib import Path
+from typing import List, Optional, Tuple, Union
 
 import numpy as np
+from jina import Document, DocumentArray
 from loguru import logger
-from pathlib import Path
 
-from jina import DocumentArray, Document
+from .core.codec.pq import PQCodec
+from .core.index.hnsw import HnswIndex
+from .core.index.pq_index import PQIndex
+from .enums import Metric
 from .storage.base import ExpandMode
 from .storage.kv import DocStorage
 from .storage.table import CellTable, MetaTable
-from .core.index.pq_index import PQIndex
-from .core.index.hnsw import HnswIndex
-from .enums import Metric
-from .core.codec.pq import PQCodec
 
 
 class CellContainer:

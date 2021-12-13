@@ -1,8 +1,10 @@
-from typing import Optional, List, Union
+from typing import List, Optional, Union
+
 import numpy as np
 from jina.math.helper import top_k
-from .flat_index import FlatIndex
+
 from ..codec.pq import PQCodec
+from .flat_index import FlatIndex
 
 
 class PQIndex(FlatIndex):

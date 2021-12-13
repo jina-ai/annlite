@@ -1,11 +1,13 @@
-from typing import List, Optional, Union
 import math
+from typing import List, Optional, Union
+
 import numpy as np
 from loguru import logger
 
 from pqlite.hnsw_bind import Index
-from ..base import BaseIndex
+
 from ....enums import Metric
+from ..base import BaseIndex
 
 
 class HnswIndex(BaseIndex):
