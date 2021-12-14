@@ -2,14 +2,14 @@ import time
 from datetime import date
 
 import numpy as np
-from pqlite import PQLite
-
+import pandas as pd
 from jina import Document, DocumentArray
 from jina.math.distance import cdist
 from jina.math.helper import top_k as _top_k
-import pandas as pd
 from sklearn.datasets import make_blobs
 from sklearn.model_selection import train_test_split
+
+from pqlite import PQLite
 
 
 def _precision(predicted, relevant, eval_at):

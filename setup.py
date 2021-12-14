@@ -1,14 +1,13 @@
 import os
 import sys
+from distutils.sysconfig import get_python_inc
+
 import numpy as np
 import pybind11
-
 import setuptools
-from setuptools.command.build_ext import build_ext
-from setuptools import setup, find_packages, Extension
-
 from Cython.Build import cythonize
-from distutils.sysconfig import get_python_inc
+from setuptools import Extension, find_packages, setup
+from setuptools.command.build_ext import build_ext
 
 if sys.version_info >= (3, 10, 0) or sys.version_info < (3, 7, 0):
     raise OSError(f'PQlite requires Python 3.7/3.8/3.9, but yours is {sys.version}')

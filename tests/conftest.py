@@ -1,6 +1,6 @@
+import numpy as np
 import pytest
 from jina import Document, DocumentArray
-import numpy as np
 
 
 @pytest.fixture(scope='session')
