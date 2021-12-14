@@ -1,23 +1,23 @@
 repos:
-- repo: https://github.com/terrencepreilly/darglint
-  rev: v1.5.8
-  hooks:
-  - id: darglint
-    files: pqlite/
-    exclude: docs/
-    args:
-    - --message-template={path}:{line} {msg_id} {msg}
-    - -s=sphinx
-    - -z=full
-    - -v=2
-- repo: https://github.com/pycqa/pydocstyle
-  rev: 5.1.1  # pick a git hash / tag to point to
-  hooks:
-  -   id: pydocstyle
-      files: pqlite/
-      exclude: docs/
-      args:
-      - --select=D101,D102,D103
+#- repo: https://github.com/terrencepreilly/darglint
+#  rev: v1.5.8
+#  hooks:
+#  - id: darglint
+#    files: pqlite/
+#    exclude: docs/
+#    args:
+#    - --message-template={path}:{line} {msg_id} {msg}
+#    - -s=sphinx
+#    - -z=full
+#    - -v=2
+#- repo: https://github.com/pycqa/pydocstyle
+#  rev: 5.1.1  # pick a git hash / tag to point to
+#  hooks:
+#  -   id: pydocstyle
+#      files: pqlite/
+#      exclude: docs/
+#      args:
+#      - --select=D101,D102,D103
 - repo: https://github.com/timothycrosley/isort
   rev: 5.8.0
   hooks:
