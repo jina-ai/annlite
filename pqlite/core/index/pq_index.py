@@ -1,7 +1,7 @@
 from typing import List, Optional, Union
 
 import numpy as np
-from jina.math.helper import top_k
+from docarray.math.helper import top_k
 
 from ..codec.pq import PQCodec
 from .flat_index import FlatIndex

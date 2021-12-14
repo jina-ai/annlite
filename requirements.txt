@@ -1,5 +1,6 @@
 click
 cython
+docarray
 jina
 lmdb
 loguru
