@@ -214,43 +214,43 @@ class PQLite(CellContainer):
         """
         query_np = docs.embeddings
 
-        match_dists, match_docs = self._search_documents(query_np,
-                                                         filter,
-                                                         limit,
-                                                         include_metadata)
+        match_dists, match_docs = self._search_documents(
+            query_np, filter, limit, include_metadata
+        )
 
         for doc, matches in zip(docs, match_docs):
             doc.matches = matches
 
-    def _search_documents(self,
-                query_np,
-                filter: Dict = {},
-                limit: int = 10,
-                include_metadata: bool = True):
+    def _search_documents(
+        self,
+        query_np,
+        filter: Dict = {},
+        limit: int = 10,
+        include_metadata: bool = True,
+    ):
 
         cells = self._cell_selection(query_np, limit)
         where_clause, where_params = Filter(filter).parse_where_clause()
 
         match_dists, match_docs = self.search_cells(
-                query=query_np,
-                cells=cells,
-                where_clause=where_clause,
-                where_params=where_params,
-                limit=limit,
-                include_metadata=include_metadata,
+            query=query_np,
+            cells=cells,
+            where_clause=where_clause,
+            where_params=where_params,
+            limit=limit,
+            include_metadata=include_metadata,
         )
         return match_dists, match_docs
 
-
-    def _cell_selection(self,
-                        query_np,
-                        limit):
+    def _cell_selection(self, query_np, limit):
 
         n_data, _ = self._sanity_check(query_np)
         assert 0 < limit <= 1024
 
         if self.vq_codec:
-            dists = cdist(query_np, self.vq_codec.codebook, metric=self.metric.name.lower())
+            dists = cdist(
+                query_np, self.vq_codec.codebook, metric=self.metric.name.lower()
+            )
             dists, cells = top_k(dists, k=self.n_probe)
         else:
             cells = np.zeros((n_data, 1), dtype=np.int64)
@@ -288,16 +288,10 @@ class PQLite(CellContainer):
         :param include_metadata: whether to return document metadata in response.
         """
 
-        dists, doc_ids = self._search_numpy(query_np,
-                                            filter,
-                                            limit)
+        dists, doc_ids = self._search_numpy(query_np, filter, limit)
         return dists, doc_ids
 
-
-    def _search_numpy(self,
-                      query_np,
-                      filter: Dict = {},
-                      limit: int = 10):
+    def _search_numpy(self, query_np, filter: Dict = {}, limit: int = 10):
         """Search approximate nearest vectors in different cells, returns distances and ids
 
         :param query_np: matrix containing query vectors as rows
@@ -308,14 +302,13 @@ class PQLite(CellContainer):
         where_clause, where_params = Filter(filter).parse_where_clause()
 
         dists, ids = self._search_cells(
-                query=query_np,
-                cells=cells,
-                where_clause=where_clause,
-                where_params=where_params,
-                limit=limit,
-            )
+            query=query_np,
+            cells=cells,
+            where_clause=where_clause,
+            where_params=where_params,
+            limit=limit,
+        )
         return dists, ids
-
 
     def delete(self, docs: Union[DocumentArray, List[str]]):
         """Delete entries from the index by id

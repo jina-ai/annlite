@@ -52,6 +52,7 @@ def pqlite_with_data(tmpdir):
     index.index(docs)
     return index
 
+
 @pytest.fixture
 def heterogenenous_da(tmpdir):
     prices = [10.0, 25.0, 50.0, 100.0]
@@ -155,9 +156,9 @@ def test_query_search_filter_float_type(pqlite_with_heterogeneous_tags, operator
 
 
 @pytest.mark.parametrize('operator', list(numeric_operators.keys()))
-def test_query_search_numpy_filter_float_type(pqlite_with_heterogeneous_tags,
-                                              heterogenenous_da,
-                                              operator):
+def test_query_search_numpy_filter_float_type(
+    pqlite_with_heterogeneous_tags, heterogenenous_da, operator
+):
 
     X = np.random.random((Nq, D)).astype(np.float32)
     query_np = np.array([X[i] for i in range(Nq)])
@@ -171,7 +172,9 @@ def test_query_search_numpy_filter_float_type(pqlite_with_heterogeneous_tags,
         for doc_ids_query_k in doc_ids:
             assert all(
                 [
-                    numeric_operators[operator](da[int(doc_id)].tags['price'], threshold)
+                    numeric_operators[operator](
+                        da[int(doc_id)].tags['price'], threshold
+                    )
                     for doc_id in doc_ids_query_k
                 ]
             )
@@ -197,9 +200,9 @@ def test_search_filter_str(pqlite_with_heterogeneous_tags, operator):
 
 
 @pytest.mark.parametrize('operator', list(categorical_operators.keys()))
-def test_search_numpy_filter_str(pqlite_with_heterogeneous_tags,
-                                 heterogenenous_da,
-                                 operator):
+def test_search_numpy_filter_str(
+    pqlite_with_heterogeneous_tags, heterogenenous_da, operator
+):
 
     X = np.random.random((Nq, D)).astype(np.float32)
     query_np = np.array([X[i] for i in range(Nq)])
@@ -213,8 +216,9 @@ def test_search_numpy_filter_str(pqlite_with_heterogeneous_tags,
         for doc_ids_query_k in doc_ids:
             assert all(
                 [
-                    numeric_operators[operator](da[int(doc_id)].tags['category'], category)
+                    numeric_operators[operator](
+                        da[int(doc_id)].tags['category'], category
+                    )
                     for doc_id in doc_ids_query_k
                 ]
             )
-
