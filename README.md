@@ -57,22 +57,28 @@ Or
 }
 ```
 
-
-## WARNING
-
-- `PQLite` is still in the very early stages of development. APIs can and will change (now is the time to make suggestions!). Important features are missing. Documentation is sparse.
-- `PQLite` contains code that must be compiled to be used. The build is prepared in `setup.py`. Users only need to `pip install .` from the root directory.
-
-## Quick Start
-
-### Setup
+## Installation
 
 ```bash
 $ git clone https://github.com/jina-ai/pqlite.git \
   && cd pqlite \
   && pip install -e .
 ```
-## How to use?
+
+**WARNING**: `PQLite` contains code that must be compiled to be used. The build is prepared in `setup.py`. Users only need to `pip install .` from the root directory.
+
+## Getting Started
+
+For an in-depth overview of the features of PQLite
+you can follow along with one of the examples below:
+
+
+| Name  | Link  |
+|---|---|
+| E-commerce product image search with PQLite  | [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/jina-ai/pqlite/blob/main/notebooks/fashion_product_search.ipynb)|
+
+
+## Quick Start
 
 1. Create a new `pqlite`
 
