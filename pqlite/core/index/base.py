@@ -12,7 +12,7 @@ class BaseIndex(abc.ABC):
         self,
         dim: int,
         dtype: Union[np.dtype, str] = np.float32,
-        metric: Metric = Metric.EUCLIDEAN,
+        metric: Metric = Metric.COSINE,
         initial_size: Optional[int] = None,
         expand_step_size: int = 10240,
         expand_mode: ExpandMode = ExpandMode.STEP,

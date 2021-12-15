@@ -16,7 +16,7 @@ class PQLiteIndexer(Executor):
     def __init__(
         self,
         dim: int = 0,
-        metric: str = 'euclidean',
+        metric: str = 'cosine',
         limit: int = 10,
         include_metadata: bool = False,
         index_traversal_paths: str = 'r',
