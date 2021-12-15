@@ -65,7 +65,7 @@ $ git clone https://github.com/jina-ai/pqlite.git \
   && pip install -e .
 ```
 
-**WARNING**: `PQLite` contains code that must be compiled to be used. The build is prepared in `setup.py`. Users only need to `pip install .` from the root directory.
+**WARNING**: `PQLite` contains code that must be compiled to be used. The build is prepared in `setup.py`. Users only need to `pip install -e .` from the root directory.
 
 ## Getting Started
 
