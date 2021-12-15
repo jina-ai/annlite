@@ -4,7 +4,7 @@ from typing import List, Union
 
 import lmdb
 import numpy as np
-from jina import Document, DocumentArray
+from docarray import Document, DocumentArray
 
 LMDB_MAP_SIZE = 100 * 1024 * 1024 * 1024
 
@@ -41,9 +41,7 @@ class DocStorage:
             for doc in docs:
                 # enforce using float32 as dtype of embeddings
                 doc.embedding = doc.embedding.astype(np.float32)
-                success = txn.put(
-                    doc.id.encode(), doc.SerializeToString(), overwrite=True
-                )
+                success = txn.put(doc.id.encode(), bytes(doc), overwrite=True)
                 if not success:
                     txn.abort()
                     raise ValueError(
@@ -54,7 +52,7 @@ class DocStorage:
         with self._env.begin(write=True) as txn:
             for doc in docs:
                 doc.embedding = doc.embedding.astype(np.float32)
-                old_value = txn.replace(doc.id.encode(), doc.SerializeToString())
+                old_value = txn.replace(doc.id.encode(), bytes(doc))
                 if not old_value:
                     txn.abort()
                     raise ValueError(f'The Doc ({doc.id}) does not exist in database!')

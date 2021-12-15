@@ -4,7 +4,7 @@ from pathlib import Path
 from typing import Any, Iterator, List, Optional, Tuple, Union
 
 import numpy as np
-from jina import DocumentArray
+from docarray import DocumentArray
 
 sqlite3.register_adapter(np.int64, lambda x: int(x))
 sqlite3.register_adapter(np.int32, lambda x: int(x))

@@ -3,7 +3,7 @@ import shutil
 import time
 
 import numpy as np
-from jina import Document, DocumentArray, DocumentArrayMemmap
+from docarray import Document, DocumentArray, DocumentArrayMemmap
 from sklearn.datasets import make_blobs
 
 from pqlite import PQLite
