@@ -39,6 +39,8 @@ class PQLiteIndexer(Executor):
         super().__init__(*args, **kwargs)
         self.logger = JinaLogger(self.__class__.__name__)
 
+        assert dim > 0, 'Please specify the dimension of the vectors to index!'
+
         self.metric = metric
         self.limit = limit
         self.include_metadata = include_metadata
