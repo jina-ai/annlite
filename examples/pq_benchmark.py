@@ -3,9 +3,9 @@ from datetime import date
 
 import numpy as np
 import pandas as pd
-from jina import Document, DocumentArray
-from jina.math.distance import cdist
-from jina.math.helper import top_k as _top_k
+from docarray import Document, DocumentArray
+from docarray.math.distance import cdist
+from docarray.math.helper import top_k as _top_k
 from sklearn.datasets import make_blobs
 from sklearn.model_selection import train_test_split
 

@@ -1,8 +1,8 @@
 from pathlib import Path
-from typing import List, Optional, Tuple, Union
+from typing import List, Optional, Tuple
 
 import numpy as np
-from jina import Document, DocumentArray
+from docarray import Document, DocumentArray
 from loguru import logger
 
 from .core.codec.pq import PQCodec
@@ -26,6 +26,7 @@ class CellContainer:
         expand_mode: ExpandMode = ExpandMode.STEP,
         columns: Optional[List[tuple]] = None,
         data_path: Path = Path('./data'),
+        **kwargs,
     ):
         self.dim = dim
         self.metric = metric
@@ -41,6 +42,7 @@ class CellContainer:
                     initial_size=initial_size,
                     expand_step_size=expand_step_size,
                     expand_mode=expand_mode,
+                    **kwargs,
                 )
                 for _ in range(n_cells)
             ]
@@ -52,6 +54,7 @@ class CellContainer:
                     initial_size=initial_size,
                     expand_step_size=expand_step_size,
                     expand_mode=expand_mode,
+                    **kwargs,
                 )
                 for _ in range(n_cells)
             ]

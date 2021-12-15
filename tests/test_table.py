@@ -1,5 +1,5 @@
 import pytest
-from jina import Document, DocumentArray
+from docarray import Document, DocumentArray
 
 from pqlite.storage.table import CellTable, MetaTable
 

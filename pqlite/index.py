@@ -3,10 +3,9 @@ from pathlib import Path
 from typing import Dict, List, Optional, Union
 
 import numpy as np
-from jina import DocumentArray
+from docarray import DocumentArray
 from docarray.math.distance import cdist
 from docarray.math.helper import top_k
-
 from loguru import logger
 
 from .container import CellContainer
@@ -112,6 +111,7 @@ class PQLite(CellContainer):
             expand_step_size=expand_step_size,
             columns=columns,
             data_path=data_path,
+            **kwargs,
         )
 
         if self.total_docs > 0:

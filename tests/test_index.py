@@ -3,7 +3,7 @@ import random
 
 import numpy as np
 import pytest
-from jina import Document, DocumentArray
+from docarray import Document, DocumentArray
 
 from pqlite import PQLite
 
