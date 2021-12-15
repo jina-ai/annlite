@@ -1,4 +1,4 @@
-name: PQLite CI
+name: CI
 
 on: [pull_request]
 
