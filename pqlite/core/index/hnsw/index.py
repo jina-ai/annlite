@@ -17,8 +17,8 @@ class HnswIndex(BaseIndex):
         dtype: np.dtype = np.float32,
         metric: Metric = Metric.EUCLIDEAN,
         ef_construction: int = 200,
-        ef_search: int = 100,
-        max_connection: int = 80,
+        ef_search: int = 50,
+        max_connection: int = 16,
         **kwargs,
     ):
         """
