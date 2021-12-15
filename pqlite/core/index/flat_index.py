@@ -3,7 +3,6 @@ from typing import List, Optional
 import numpy as np
 from docarray.math.distance import cdist
 from docarray.math.helper import top_k
-
 from loguru import logger
 
 from .base import BaseIndex
