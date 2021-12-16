@@ -57,7 +57,28 @@ Or
 }
 ```
 
-## Basic Usage
+## Performance
+
+One can run `benchmark.py` to get a quick performance overview.
+
+|Stored data| Indexing time | Query size=1 | Query size=8 | Query size=64|
+|---|---|---|---|---|
+|10000 | 2.970 | 0.002 | 0.013 | 0.100|
+|100000 | 76.474 | 0.011 | 0.078 | 0.649|
+|500000 | 467.936 | 0.046 | 0.356 | 2.823|
+|1000000 | 1025.506 | 0.091 | 0.695 | 5.778|
+
+## Getting Started
+
+For an in-depth overview of the features of PQLite
+you can follow along with one of the examples below:
+
+
+| Name  | Link  |
+|---|---|
+| E-commerce product image search with PQLite  | [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/jina-ai/pqlite/blob/main/notebooks/fashion_product_search.ipynb)|
+
+## Quick Start
 
 `PQLiteIndexer` stores  `Document` objects at the  `workspace` directory, specified under the [`metas`](https://docs.jina.ai/fundamentals/executor/executor-built-in-features/#meta-attributes) attribute.
 
@@ -69,13 +90,14 @@ If documents have a tag `'price'`  that stores floating point values this indexe
 columns = [('price', 'float')]
 
 f = Flow().add(
-    uses='jinahub://PQLiteIndexer',
+    uses='jinahub://PQLiteIndexer/latest',
     uses_with={
       'dim': 256,
       'columns': columns,
-      'metric': 'euclidean'
+      'metric': 'cosine'
     },
-    uses_metas={'workspace': '/my/tmp_folder'}
+    uses_metas={'workspace': '/my/tmp_folder'},
+    install_requirements=True
 )
 
 search_filter = {"price": {"$lte": 50}}
@@ -86,17 +108,6 @@ with f:
                        return_results=True,
                        parameters={'filter': search_filter})
 ```
-
-## Performance
-
-One can run `benchmark.py` to get a quick performance overview.
-
-|Stored data| Indexing time | Query size=1 | Query size=8 | Query size=64|
-|---|---|---|---|---|
-|10000 | 2.970 | 0.002 | 0.013 | 0.100|
-|100000 | 76.474 | 0.011 | 0.078 | 0.649|
-|500000 | 467.936 | 0.046 | 0.356 | 2.823|
-|1000000 | 1025.506 | 0.091 | 0.695 | 5.778|
 
 ## CRUD operations
 
