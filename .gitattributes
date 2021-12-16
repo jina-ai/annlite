@@ -1,3 +1,5 @@
 notebooks/* linguist-vendored
 include/* linguist-vendored
 bindings/* linguist-vendored
+*.h linguist-detectable=false
+*.cpp linguist-detectable=false
