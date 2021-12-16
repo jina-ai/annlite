@@ -1,1 +1,3 @@
 notebooks/* linguist-vendored
+include/* linguist-vendored
+bindings/* linguist-vendored
