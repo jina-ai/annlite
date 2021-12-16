@@ -1,3 +1,4 @@
+import tempfile
 import time
 from datetime import date
 
@@ -77,45 +78,53 @@ results = []
 
 for n_cells in [1, 8, 16, 32, 64, 128]:
 
-    pq = PQLite(dim=D, n_cells=n_cells, max_connection=16, ef_search=50)
+    with tempfile.TemporaryDirectory() as tmpdirname:
 
-    t0 = time.time()
-    pq.train(Xtr[:20480])
-    train_time = abs(time.time() - t0)
+        pq = PQLite(
+            dim=D,
+            n_cells=n_cells,
+            max_connection=16,
+            ef_search=50,
+            data_path=tmpdirname,
+        )
 
-    t0 = time.time()
-    pq.index(DocumentArray(get_documents(len(Xtr), embeddings=Xtr)))
-    index_time = abs(t0 - time.time())
+        t0 = time.time()
+        pq.train(Xtr[:20480])
+        train_time = abs(time.time() - t0)
 
-    dists = cdist(Xte, Xtr, metric='euclidean')
-    true_dists, true_ids = _top_k(dists, top_k, descending=False)
+        t0 = time.time()
+        pq.index(DocumentArray(get_documents(len(Xtr), embeddings=Xtr)))
+        index_time = abs(t0 - time.time())
 
-    t0 = time.time()
-    docs = DocumentArray(get_documents(len(Xte), embeddings=Xte))
-    pq.search(docs, limit=top_k)
+        dists = cdist(Xte, Xtr, metric='euclidean')
+        true_dists, true_ids = _top_k(dists, top_k, descending=False)
 
-    query_time = abs(t0 - time.time())
-    pq_ids = []
-    for doc in docs:
-        pq_ids.append([m.id for m in doc.matches])
+        t0 = time.time()
+        docs = DocumentArray(get_documents(len(Xte), embeddings=Xte))
+        pq.search(docs, limit=top_k)
 
-    recall, precision = evaluate(pq_ids, true_ids, top_k)
+        query_time = abs(t0 - time.time())
+        pq_ids = []
+        for doc in docs:
+            pq_ids.append([m.id for m in doc.matches])
 
-    results_dict = {
-        'precision': precision,
-        'recall': recall,
-        'train_time': train_time,
-        'index_time': index_time,
-        'query_time': query_time,
-        'query_qps': len(Xte) / query_time,
-        'index_qps': len(Xtr) / index_time,
-        'indexer_hyperparams': {'n_cells': n_cells},
-    }
-    print(results_dict)
+        recall, precision = evaluate(pq_ids, true_ids, top_k)
 
-    results.append(results_dict)
-    pq.clear()
-    pq.close()
+        results_dict = {
+            'precision': precision,
+            'recall': recall,
+            'train_time': train_time,
+            'index_time': index_time,
+            'query_time': query_time,
+            'query_qps': len(Xte) / query_time,
+            'index_qps': len(Xtr) / index_time,
+            'indexer_hyperparams': {'n_cells': n_cells},
+        }
+        print(results_dict)
+
+        results.append(results_dict)
+        pq.clear()
+        pq.close()
 
 today = date.today()
 results_df = pd.DataFrame(results)

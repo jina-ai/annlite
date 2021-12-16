@@ -16,8 +16,11 @@ class PQLiteIndexer(Executor):
     def __init__(
         self,
         dim: int = 0,
-        metric: str = 'euclidean',
+        metric: str = 'cosine',
         limit: int = 10,
+        ef_construction: int = 200,
+        ef_query: int = 50,
+        max_connection: int = 16,
         include_metadata: bool = False,
         index_traversal_paths: str = 'r',
         search_traversal_paths: str = 'r',
@@ -30,6 +33,10 @@ class PQLiteIndexer(Executor):
         :param metric: Distance metric type. Can be 'euclidean', 'inner_product', or 'cosine'
         :param include_metadata: If True, return the document metadata in response
         :param limit: Number of results to get for each query document in search
+        :param ef_construction: The construction time/accuracy trade-off
+        :param ef_query: The query time accuracy/speed trade-off
+        :param max_connection: The maximum number of outgoing connections in the
+            graph (the "M" parameter)
         :param index_traversal_paths: Default traversal paths on docs
                 (used for indexing, delete and update), e.g. 'r', 'c', 'r,c'
         :param search_traversal_paths: Default traversal paths on docs
@@ -38,6 +45,8 @@ class PQLiteIndexer(Executor):
         """
         super().__init__(*args, **kwargs)
         self.logger = JinaLogger(self.__class__.__name__)
+
+        assert dim > 0, 'Please specify the dimension of the vectors to index!'
 
         self.metric = metric
         self.limit = limit
@@ -59,6 +68,9 @@ class PQLiteIndexer(Executor):
             dim=dim,
             metric=metric,
             columns=columns,
+            ef_construction=ef_construction,
+            ef_query=ef_query,
+            max_connection=max_connection,
             data_path=self.workspace or './workspace',
             **kwargs,
         )

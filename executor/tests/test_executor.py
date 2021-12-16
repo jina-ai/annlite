@@ -94,8 +94,8 @@ def test_search(tmpdir):
 
         for i in range(len(query_res[0].docs[0].matches) - 1):
             assert (
-                query_res[0].docs[0].matches[i].scores['euclidean'].value
-                <= query_res[0].docs[0].matches[i + 1].scores['euclidean'].value
+                query_res[0].docs[0].matches[i].scores['cosine'].value
+                <= query_res[0].docs[0].matches[i + 1].scores['cosine'].value
             )
 
 

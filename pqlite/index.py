@@ -45,7 +45,7 @@ class PQLite(CellContainer):
     def __init__(
         self,
         dim: int,
-        metric: Union[str, Metric] = Metric.EUCLIDEAN,
+        metric: Union[str, Metric] = Metric.COSINE,
         n_cells: int = 1,
         n_subvectors: Optional[int] = None,
         n_probe: int = 16,

@@ -18,7 +18,7 @@ class CellContainer:
     def __init__(
         self,
         dim: int,
-        metric: Metric = Metric.EUCLIDEAN,
+        metric: Metric = Metric.COSINE,
         pq_codec: Optional[PQCodec] = None,
         n_cells: int = 1,
         initial_size: Optional[int] = None,
