@@ -21,7 +21,7 @@ class PQLiteIndexer(Executor):
         ef_construction: int = 200,
         ef_query: int = 50,
         max_connection: int = 16,
-        include_metadata: bool = False,
+        include_metadata: bool = True,
         index_traversal_paths: str = 'r',
         search_traversal_paths: str = 'r',
         columns: Optional[List[Tuple[str, str]]] = None,
