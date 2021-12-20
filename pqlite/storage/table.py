@@ -6,6 +6,8 @@ from typing import Any, Iterator, List, Optional, Tuple, Union
 import numpy as np
 from docarray import DocumentArray
 
+from ..profile import line_profile
+
 sqlite3.register_adapter(np.int64, lambda x: int(x))
 sqlite3.register_adapter(np.int32, lambda x: int(x))
 
@@ -153,7 +155,7 @@ class CellTable(Table):
 
     def create_index(self, column: str, commit: bool = True):
         sql_statement = f'''CREATE INDEX idx_{column}_
-                            ON {self.name} ({column})'''
+                            ON {self.name}(_deleted, {column})'''
         self._conn.execute(sql_statement)
 
         if commit:
@@ -167,10 +169,15 @@ class CellTable(Table):
         if len(self._columns) > 0:
             sql += ', ' + ', '.join(self._columns)
         sql += ')'
-
         self._conn.execute(sql)
+
+        sql_statement = f'''CREATE INDEX idx__delete_
+                                ON {self.name}(_deleted)'''
+        self._conn.execute(sql_statement)
+
         for name in self._indexed_keys:
             self.create_index(name, commit=False)
+        # self.create_index('_deleted', commit=False)
         self._conn.commit()
 
     def insert(
@@ -193,7 +200,7 @@ class CellTable(Table):
         )
 
         values = []
-
+        docs_size = 0
         for doc in docs:
             doc_value = tuple(
                 [doc.id]
@@ -203,9 +210,10 @@ class CellTable(Table):
                 ]
             )
             values.append(doc_value)
+            docs_size += 1
 
         cursor = self._conn.cursor()
-        if len(docs) > 1:
+        if docs_size > 1:
             cursor.executemany(sql, values[:-1])
 
         cursor.execute(sql, values[-1])
@@ -214,20 +222,22 @@ class CellTable(Table):
 
         if commit:
             self._conn.commit()
+
         return row_ids
 
+    @line_profile
     def query(
         self,
         where_clause: str = '',
         where_params: Tuple = (),
-    ) -> Iterator[dict]:
+    ) -> List[int]:
         """Query the records which matches the given conditions
 
         :param where_clause: where clause for query
         :param where_params: where parameters for query
-        :return: iterator to yield matched doc
+        :return: offsets list of matched docs
         """
-        sql = 'SELECT _id, _doc_id from {table} WHERE {where} ORDER BY _id ASC;'
+        sql = 'SELECT _id from {table} WHERE {where} ORDER BY _id ASC;'
 
         where_conds = ['_deleted = ?']
         if where_clause:
@@ -237,9 +247,26 @@ class CellTable(Table):
 
         params = (0,) + tuple([_converting(p) for p in where_params])
 
-        cursor = self._conn.execute(sql, params)
-        for row in cursor:
-            yield {'_id': row[0] - 1, '_doc_id': row[1]}
+        # # EXPLAIN SQL query
+        # for row in self._conn.execute('EXPLAIN QUERY PLAN ' + sql, params):
+        #     print(row)
+
+        # Use `row_factor`
+        # https://docs.python.org/3.6/library/sqlite3.html#sqlite3.Connection.row_factory
+        def _offset_factory(_, record):
+            return record[0] - 1
+
+        self._conn.row_factory = _offset_factory
+
+        cursor = self._conn.cursor()
+        offsets = cursor.execute(sql, params).fetchall()
+        # reset row factor
+        self._conn.row_factory = None
+        return offsets
+        # return [row[0]-1 for row in cursor.execute(sql, params)]
+
+        # for row in rows:
+        #     yield {'_id': row[0] - 1, '_doc_id': row[1]}
 
     def delete(self, doc_ids: List[str]):
         """Delete the docs
@@ -251,7 +278,7 @@ class CellTable(Table):
         self._conn.commit()
 
     def get_docid_by_offset(self, offset: int):
-        sql = f'SELECT _doc_id from {self.name} WHERE _deleted = 0 and _id = ?;'
+        sql = f'SELECT _doc_id from {self.name} WHERE _id = ? and _deleted = 0 LIMIT 1;'
         result = self._conn.execute(sql, (offset + 1,)).fetchone()
         if result:
             return result[0]
@@ -294,7 +321,7 @@ class CellTable(Table):
 
     def deleted_count(self):
         """Return the total number of record what is marked as soft-deleted."""
-        sql = f'SELECT count(*) from {self.name} WHERE _deleted = 1'
+        sql = f'SELECT count(_id) from {self.name} WHERE _deleted = 1 LIMIT 1'
         return self._conn.execute(sql).fetchone()[0]
 
     @property

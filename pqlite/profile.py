@@ -1,17 +1,20 @@
-import builtins
 import cProfile
 import pstats
 import random
 from functools import wraps
 
-try:
-    from line_profiler import LineProfiler
-
-    line_profile = LineProfiler()
-except ImportError:
-    line_profile = builtins.profile
-
 random.seed(20)
+
+try:
+    import builtins
+
+    line_profile = builtins.profile
+except AttributeError:
+    # No line profiler, provide a pass-through version
+    def profile(func):
+        return func
+
+    line_profile = profile
 
 
 def time_profile(

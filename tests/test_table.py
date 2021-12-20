@@ -48,14 +48,12 @@ def test_schema(dummy_cell_table):
 
 
 def test_query(table_with_data):
-    result = list(
-        table_with_data.query(
-            where_clause='(category = ?) AND (price < ?)', where_params=('fruit', 3)
-        )
+    result = table_with_data.query(
+        where_clause='(category = ?) AND (price < ?)', where_params=('fruit', 3)
     )
 
     assert len(result) == 2
-    assert result[0]['_doc_id'] == '0'
+    assert result[0] == 0
 
 
 def test_get_docid_by_offset(table_with_data):

@@ -90,11 +90,9 @@ class CellContainer:
 
             indices = None
             if where_clause or (cell_table.deleted_count() > 0):
-                indices = []
-                for doc in cell_table.query(
+                indices = cell_table.query(
                     where_clause=where_clause, where_params=where_params
-                ):
-                    indices.append(doc['_id'])
+                )
 
                 if len(indices) == 0:
                     continue
