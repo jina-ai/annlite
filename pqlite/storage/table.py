@@ -1,12 +1,10 @@
 import datetime
 import sqlite3
 from pathlib import Path
-from typing import Any, Iterator, List, Optional, Tuple, Union
+from typing import Any, List, Optional, Tuple, Union
 
 import numpy as np
 from docarray import DocumentArray
-
-from ..profile import line_profile
 
 sqlite3.register_adapter(np.int64, lambda x: int(x))
 sqlite3.register_adapter(np.int32, lambda x: int(x))
@@ -177,7 +175,6 @@ class CellTable(Table):
 
         for name in self._indexed_keys:
             self.create_index(name, commit=False)
-        # self.create_index('_deleted', commit=False)
         self._conn.commit()
 
     def insert(
@@ -225,7 +222,6 @@ class CellTable(Table):
 
         return row_ids
 
-    @line_profile
     def query(
         self,
         where_clause: str = '',
@@ -260,13 +256,8 @@ class CellTable(Table):
 
         cursor = self._conn.cursor()
         offsets = cursor.execute(sql, params).fetchall()
-        # reset row factor
         self._conn.row_factory = None
         return offsets
-        # return [row[0]-1 for row in cursor.execute(sql, params)]
-
-        # for row in rows:
-        #     yield {'_id': row[0] - 1, '_doc_id': row[1]}
 
     def delete(self, doc_ids: List[str]):
         """Delete the docs
