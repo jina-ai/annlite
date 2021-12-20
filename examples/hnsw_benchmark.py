@@ -82,6 +82,7 @@ for n_cells in [1, 8, 16, 32, 64, 128]:
 
         pq = PQLite(
             dim=D,
+            metric='euclidean',
             n_cells=n_cells,
             max_connection=16,
             ef_search=50,

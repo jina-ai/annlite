@@ -32,4 +32,4 @@ class BaseCodec(ABC):
         return self._is_trained
 
     def _check_trained(self):
-        assert self.is_trained is True, 'Codec is untrained'
+        assert self.is_trained is True, f'{self.__class__.__name__} requires training'
