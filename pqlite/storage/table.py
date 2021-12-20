@@ -304,20 +304,26 @@ class CellTable(Table):
 
     def count(self, where_clause: str = '', where_params: Tuple = ()):
         """Return the total number of records which match with the given conditions.
-
         :param where_clause: where clause for query
         :param where_params: where parameters for query
         :return: the total number of matched records
         """
-        sql = 'SELECT count(*) from {table} WHERE {where};'
-        where_conds = ['_deleted = ?']
-        if where_clause:
-            where_conds.append(where_clause)
-        where = ' and '.join(where_conds)
-        sql = sql.format(table=self.name, where=where)
-        params = (0,) + tuple([_converting(p) for p in where_params])
 
-        return self._conn.execute(sql, params).fetchone()[0]
+        if where_clause:
+            sql = 'SELECT count(_id) from {table} WHERE {where} LIMIT 1;'
+            where = f'_deleted = ? and {where_clause}'
+            sql = sql.format(table=self.name, where=where)
+
+            params = (0,) + tuple([_converting(p) for p in where_params])
+
+            # # EXPLAIN SQL query
+            # for row in self._conn.execute('EXPLAIN QUERY PLAN ' + sql, params):
+            #     print(row)
+
+            return self._conn.execute(sql, params).fetchone()[0]
+        else:
+            sql = f'SELECT MAX(_id) from {self.name} LIMIT 1;'
+            return self._conn.execute(sql).fetchone()[0] - self.deleted_count()
 
     def deleted_count(self):
         """Return the total number of record what is marked as soft-deleted."""
