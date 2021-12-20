@@ -147,6 +147,7 @@ def test_query_search_filter_float_type(pqlite_with_heterogeneous_tags, operator
             query_da, filter={'price': {operator: threshold}}, include_metadata=True
         )
         for query in query_da:
+            assert len(query.matches) > 0
             assert all(
                 [
                     numeric_operators[operator](m.tags['price'], threshold)
@@ -170,6 +171,7 @@ def test_query_search_numpy_filter_float_type(
             query_np, filter={'price': {operator: threshold}}, include_metadata=True
         )
         for doc_ids_query_k in doc_ids:
+            assert len(doc_ids)
             assert all(
                 [
                     numeric_operators[operator](
@@ -191,6 +193,7 @@ def test_search_filter_str(pqlite_with_heterogeneous_tags, operator):
             query_da, filter={'category': {operator: category}}, include_metadata=True
         )
         for query in query_da:
+            assert len(query.matches) > 0
             assert all(
                 [
                     numeric_operators[operator](m.tags['category'], category)
@@ -214,6 +217,7 @@ def test_search_numpy_filter_str(
             query_np, filter={'category': {operator: category}}, include_metadata=True
         )
         for doc_ids_query_k in doc_ids:
+            assert len(doc_ids)
             assert all(
                 [
                     numeric_operators[operator](
@@ -238,6 +242,7 @@ def test_search_numpy_membership_filter(
         include_metadata=True,
     )
     for doc_ids_query_k in doc_ids:
+        assert len(doc_ids)
         assert all(
             [
                 da[int(doc_id)].tags['category'] in ['comics', 'audiobook']
@@ -251,6 +256,7 @@ def test_search_numpy_membership_filter(
         include_metadata=True,
     )
     for doc_ids_query_k in doc_ids:
+        assert len(doc_ids)
         assert all(
             [
                 da[int(doc_id)].tags['category'] not in ['comics', 'audiobook']
