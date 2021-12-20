@@ -1,7 +1,7 @@
 import datetime
 import sqlite3
 from pathlib import Path
-from typing import Any, Iterator, List, Optional, Tuple, Union
+from typing import Any, List, Optional, Tuple, Union
 
 import numpy as np
 from docarray import DocumentArray
@@ -153,7 +153,7 @@ class CellTable(Table):
 
     def create_index(self, column: str, commit: bool = True):
         sql_statement = f'''CREATE INDEX idx_{column}_
-                            ON {self.name} ({column})'''
+                            ON {self.name}(_deleted, {column})'''
         self._conn.execute(sql_statement)
 
         if commit:
@@ -167,8 +167,12 @@ class CellTable(Table):
         if len(self._columns) > 0:
             sql += ', ' + ', '.join(self._columns)
         sql += ')'
-
         self._conn.execute(sql)
+
+        sql_statement = f'''CREATE INDEX idx__delete_
+                                ON {self.name}(_deleted)'''
+        self._conn.execute(sql_statement)
+
         for name in self._indexed_keys:
             self.create_index(name, commit=False)
         self._conn.commit()
@@ -193,7 +197,7 @@ class CellTable(Table):
         )
 
         values = []
-
+        docs_size = 0
         for doc in docs:
             doc_value = tuple(
                 [doc.id]
@@ -203,9 +207,10 @@ class CellTable(Table):
                 ]
             )
             values.append(doc_value)
+            docs_size += 1
 
         cursor = self._conn.cursor()
-        if len(docs) > 1:
+        if docs_size > 1:
             cursor.executemany(sql, values[:-1])
 
         cursor.execute(sql, values[-1])
@@ -214,20 +219,21 @@ class CellTable(Table):
 
         if commit:
             self._conn.commit()
+
         return row_ids
 
     def query(
         self,
         where_clause: str = '',
         where_params: Tuple = (),
-    ) -> Iterator[dict]:
+    ) -> List[int]:
         """Query the records which matches the given conditions
 
         :param where_clause: where clause for query
         :param where_params: where parameters for query
-        :return: iterator to yield matched doc
+        :return: offsets list of matched docs
         """
-        sql = 'SELECT _id, _doc_id from {table} WHERE {where} ORDER BY _id ASC;'
+        sql = 'SELECT _id from {table} WHERE {where} ORDER BY _id ASC;'
 
         where_conds = ['_deleted = ?']
         if where_clause:
@@ -237,13 +243,21 @@ class CellTable(Table):
 
         params = (0,) + tuple([_converting(p) for p in where_params])
 
-        cursor = self._conn.execute(sql, params)
-        keys = [d[0] for d in cursor.description]
+        # # EXPLAIN SQL query
+        # for row in self._conn.execute('EXPLAIN QUERY PLAN ' + sql, params):
+        #     print(row)
 
-        for row in cursor:
-            row = list(row)
-            row[0] -= 1
-            yield dict(zip(keys, row))
+        # Use `row_factor`
+        # https://docs.python.org/3.6/library/sqlite3.html#sqlite3.Connection.row_factory
+        def _offset_factory(_, record):
+            return record[0] - 1
+
+        self._conn.row_factory = _offset_factory
+
+        cursor = self._conn.cursor()
+        offsets = cursor.execute(sql, params).fetchall()
+        self._conn.row_factory = None
+        return offsets if offsets else []
 
     def delete(self, doc_ids: List[str]):
         """Delete the docs
@@ -255,7 +269,7 @@ class CellTable(Table):
         self._conn.commit()
 
     def get_docid_by_offset(self, offset: int):
-        sql = f'SELECT _doc_id from {self.name} WHERE _deleted = 0 and _id = ?;'
+        sql = f'SELECT _doc_id from {self.name} WHERE _id = ? and _deleted = 0 LIMIT 1;'
         result = self._conn.execute(sql, (offset + 1,)).fetchone()
         if result:
             return result[0]
@@ -281,24 +295,33 @@ class CellTable(Table):
 
     def count(self, where_clause: str = '', where_params: Tuple = ()):
         """Return the total number of records which match with the given conditions.
-
         :param where_clause: where clause for query
         :param where_params: where parameters for query
         :return: the total number of matched records
         """
-        sql = 'SELECT count(*) from {table} WHERE {where};'
-        where_conds = ['_deleted = ?']
-        if where_clause:
-            where_conds.append(where_clause)
-        where = ' and '.join(where_conds)
-        sql = sql.format(table=self.name, where=where)
-        params = (0,) + tuple([_converting(p) for p in where_params])
 
-        return self._conn.execute(sql, params).fetchone()[0]
+        if where_clause:
+            sql = 'SELECT count(_id) from {table} WHERE {where} LIMIT 1;'
+            where = f'_deleted = ? and {where_clause}'
+            sql = sql.format(table=self.name, where=where)
+
+            params = (0,) + tuple([_converting(p) for p in where_params])
+
+            # # EXPLAIN SQL query
+            # for row in self._conn.execute('EXPLAIN QUERY PLAN ' + sql, params):
+            #     print(row)
+
+            return self._conn.execute(sql, params).fetchone()[0]
+        else:
+            sql = f'SELECT MAX(_id) from {self.name} LIMIT 1;'
+            result = self._conn.execute(sql).fetchone()
+            if result[0]:
+                return result[0] - self.deleted_count()
+            return 0
 
     def deleted_count(self):
         """Return the total number of record what is marked as soft-deleted."""
-        sql = f'SELECT count(*) from {self.name} WHERE _deleted = 1'
+        sql = f'SELECT count(_id) from {self.name} WHERE _deleted = 1 LIMIT 1'
         return self._conn.execute(sql).fetchone()[0]
 
     @property
@@ -313,7 +336,7 @@ class MetaTable(Table):
         data_path: Optional[Path] = None,
         in_memory: bool = False,
     ):
-        super(MetaTable, self).__init__(name, data_path=data_path, in_memory=in_memory)
+        super().__init__(name, data_path=data_path, in_memory=in_memory)
         self.create_table()
 
     def create_table(self):
