@@ -257,7 +257,7 @@ class CellTable(Table):
         cursor = self._conn.cursor()
         offsets = cursor.execute(sql, params).fetchall()
         self._conn.row_factory = None
-        return offsets
+        return offsets if offsets else []
 
     def delete(self, doc_ids: List[str]):
         """Delete the docs
@@ -314,7 +314,10 @@ class CellTable(Table):
             return self._conn.execute(sql, params).fetchone()[0]
         else:
             sql = f'SELECT MAX(_id) from {self.name} LIMIT 1;'
-            return self._conn.execute(sql).fetchone()[0] - self.deleted_count()
+            result = self._conn.execute(sql).fetchone()
+            if result[0]:
+                return result[0] - self.deleted_count()
+            return 0
 
     def deleted_count(self):
         """Return the total number of record what is marked as soft-deleted."""
@@ -333,7 +336,7 @@ class MetaTable(Table):
         data_path: Optional[Path] = None,
         in_memory: bool = False,
     ):
-        super(MetaTable, self).__init__(name, data_path=data_path, in_memory=in_memory)
+        super().__init__(name, data_path=data_path, in_memory=in_memory)
         self.create_table()
 
     def create_table(self):

@@ -78,7 +78,9 @@ results = []
 for n_cells in [8, 16, 32, 64, 128]:
     for n_subvectors in [32, 64, 128]:
 
-        pq = PQLite(dim=D, n_cells=n_cells, n_subvectors=n_subvectors)
+        pq = PQLite(
+            dim=D, metric='euclidean', n_cells=n_cells, n_subvectors=n_subvectors
+        )
 
         t0 = time.time()
         pq.train(Xtr[:20480])
