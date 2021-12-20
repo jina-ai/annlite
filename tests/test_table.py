@@ -80,16 +80,32 @@ def test_delete(table_with_data):
 
 
 def test_count(table_with_data):
-    count = table_with_data.count([('category', '=', 'fruit'), ('price', '>', 5)])
+    count = table_with_data.count(
+        where_clause='(category = ?) AND (price > ?)', where_params=('fruit', 5)
+    )
     assert count == 0
 
     count = table_with_data.count(
-        [('category', '=', 'fruit'), ('price', '>', 1), ('price', '<', 1.5)]
+        where_clause='(category = ?) AND (price > ?) and (price < ?)',
+        where_params=('fruit', 1, 1.5),
     )
     assert count == 1
 
-    count = table_with_data.count([('category', '=', 'fruit'), ('price', '<', 3)])
+    count = table_with_data.count(
+        where_clause='(category = ?) AND (price < ?)', where_params=('fruit', 3)
+    )
     assert count == 2
+
+    count = table_with_data.count(
+        where_clause='(category IN (?, ?)) AND (price < ?)',
+        where_params=('fruit', 'animal', 3),
+    )
+    assert count == 2
+
+    count = table_with_data.count(
+        where_clause='(category IN (?)) AND (price < ?)', where_params=('fruit', 1)
+    )
+    assert count == 0
 
 
 def test_create_meta_table(tmpdir):

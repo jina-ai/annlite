@@ -279,20 +279,21 @@ class CellTable(Table):
         sql = f'SELECT count(*) from {self.name} WHERE _deleted = 0 and _doc_id = ?;'
         return self._conn.execute(sql, (doc_id,)).fetchone()[0] > 0
 
-    def count(self, conditions: List[tuple] = []):
+    def count(self, where_clause: str = '', where_params: Tuple = ()):
         """Return the total number of records which match with the given conditions.
 
-        :param conditions: the conditions in the format of tuple `(name: str, op: str, value: any)`
+        :param where_clause: where clause for query
+        :param where_params: where parameters for query
         :return: the total number of matched records
         """
         sql = 'SELECT count(*) from {table} WHERE {where};'
         where_conds = ['_deleted = ?']
-        for cond in conditions:
-            cond = f'{cond[0]} {cond[1]} ?'
-            where_conds.append(cond)
-        where = 'and '.join(where_conds)
+        if where_clause:
+            where_conds.append(where_clause)
+        where = ' and '.join(where_conds)
         sql = sql.format(table=self.name, where=where)
-        params = tuple([0] + [_converting(cond[2]) for cond in conditions])
+        params = (0,) + tuple([_converting(p) for p in where_params])
+
         return self._conn.execute(sql, params).fetchone()[0]
 
     def deleted_count(self):
