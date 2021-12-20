@@ -222,3 +222,40 @@ def test_search_numpy_filter_str(
                     for doc_id in doc_ids_query_k
                 ]
             )
+
+
+def test_search_numpy_membership_filter(
+    pqlite_with_heterogeneous_tags, heterogenenous_da
+):
+
+    X = np.random.random((Nq, D)).astype(np.float32)
+    query_np = np.array([X[i] for i in range(Nq)])
+    da = heterogenenous_da
+
+    dists, doc_ids = pqlite_with_heterogeneous_tags.search_numpy(
+        query_np,
+        filter={'category': {'$in': ['comics', 'audiobook']}},
+        include_metadata=True,
+    )
+    for doc_ids_query_k in doc_ids:
+        assert len(doc_ids)
+        assert all(
+            [
+                da[int(doc_id)].tags['category'] in ['comics', 'audiobook']
+                for doc_id in doc_ids_query_k
+            ]
+        )
+
+    dists, doc_ids = pqlite_with_heterogeneous_tags.search_numpy(
+        query_np,
+        filter={'category': {'$nin': ['comics', 'audiobook']}},
+        include_metadata=True,
+    )
+    for doc_ids_query_k in doc_ids:
+        assert len(doc_ids)
+        assert all(
+            [
+                da[int(doc_id)].tags['category'] not in ['comics', 'audiobook']
+                for doc_id in doc_ids_query_k
+            ]
+        )

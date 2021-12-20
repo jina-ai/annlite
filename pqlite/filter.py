@@ -11,6 +11,8 @@ COMPARISON_OPERATORS = {
     '$neq': '!=',
 }
 
+MEMBERSHIP_OPERATORS = {'$in': 'IN', '$nin': 'NOT IN'}
+
 
 def _sql_parsing(data, default_logic: str = 'AND'):
     """
@@ -33,15 +35,23 @@ def _sql_parsing(data, default_logic: str = 'AND'):
                     where_clause += f' {LOGICAL_OPERATORS[key]} {clause}'
                 parameters.extend(params)
             elif key.startswith('$'):
-                raise ValueError(f'The operator {key} is not supported now')
+                raise ValueError(
+                    f'The operator {key} is not supported yet, please double check the given filters!'
+                )
             else:
                 op, val = list(value.items())[0]
-                parameters.append(val)
-                if i == 0:
+                if i > 0:
+                    where_clause += f' {default_logic} '
+
+                if op in COMPARISON_OPERATORS:
+                    parameters.append(val)
                     where_clause += f'({key} {COMPARISON_OPERATORS[op]} ?)'
+                elif op in MEMBERSHIP_OPERATORS:
+                    parameters.extend(val)
+                    where_clause += f'({key} {MEMBERSHIP_OPERATORS[op]}({", ".join(["?"]*len(val))}))'
                 else:
-                    where_clause += (
-                        f' {default_logic} ({key} {COMPARISON_OPERATORS[op]} ?)'
+                    raise ValueError(
+                        f'The operator {op} is not supported yet, please double check the given filters!'
                     )
 
     elif isinstance(data, str):

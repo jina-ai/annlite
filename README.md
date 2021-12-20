@@ -13,6 +13,8 @@ The tags filters can be combined with `$and` and `$or`:
 - `$gte` - Greater than or equal to (number)
 - `$lt` - Less than (number)
 - `$lte` - Less than or equal to (number)
+- `$in` - Included in an array
+- `$nin` - Not included in an array
 
 For example, we want to search for a product with a price no more than `50$`.
 ```python
