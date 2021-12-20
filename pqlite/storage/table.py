@@ -238,12 +238,8 @@ class CellTable(Table):
         params = (0,) + tuple([_converting(p) for p in where_params])
 
         cursor = self._conn.execute(sql, params)
-        keys = [d[0] for d in cursor.description]
-
         for row in cursor:
-            row = list(row)
-            row[0] -= 1
-            yield dict(zip(keys, row))
+            yield {'_id': row[0] - 1, '_doc_id': row[1]}
 
     def delete(self, doc_ids: List[str]):
         """Delete the docs

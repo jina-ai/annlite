@@ -9,6 +9,7 @@ from .core.codec.pq import PQCodec
 from .core.index.hnsw import HnswIndex
 from .core.index.pq_index import PQIndex
 from .enums import Metric
+from .profile import line_profile
 from .storage.base import ExpandMode
 from .storage.kv import DocStorage
 from .storage.table import CellTable, MetaTable
@@ -67,6 +68,7 @@ class CellContainer:
 
         self._meta_table = MetaTable('metas', data_path=data_path, in_memory=True)
 
+    @line_profile
     def ivf_search(
         self,
         x: np.ndarray,
