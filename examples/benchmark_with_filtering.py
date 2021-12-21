@@ -86,16 +86,17 @@ for n_i in n_index:
                 query_times.append(np.mean(t_qs[1:]))
 
             print(f'\n\nprob={prob}, current_probs={current_probs}, n_i={n_i}\n\n')
-            results_ni.append([n_i, prob, t_i.duration] + query_times)
+            results_ni.append([n_i, int(100*prob), t_i.duration] + query_times)
 
     results.append(results_ni)
 
 
-title = '| Stored data |% same filter| Indexing time | Query size=1 | Query size=8 | Query size=64|'
+title = '| Stored data |% same filter| Indexing time | Query size=1  | Query size=8 | Query size=64|'
 print(title)
 print('|-----' * 6 + '|')
 for block in results:
     sorted_elements_in_block = np.argsort([b[1] for b in block])
     for pos in sorted_elements_in_block:
         res = block[pos]
-        print(''.join([f'| {x:.3f} ' for x in res] + ['|']))
+        print(''.join( [f'| {x} ' for x in res[0:2]] + [f'| {x:.3f} ' for x in res[2:]] + ['|'])     )
+
