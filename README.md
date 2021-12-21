@@ -1,7 +1,6 @@
 # PQLite
 
 `PQLite` is an  **Approximate Nearest Neighbor Search** (ANNS) library integrated with the Jina ecosystem.
-The `PQLite` class partitions the data into cells at index time, and instantiates a "sub-indexer" in each cell.  Search is performed aggregating results retrieved from cells.
 
 This indexer is recommended to be used when an application requires **search with filters** applied on `Document` tags.
 The `filtering query language` is based on [MongoDB's query and projection operators](https://docs.mongodb.com/manual/reference/operator/query/). We currently support a subset of those selectors.
@@ -174,8 +173,7 @@ One can run `executor/benchmark.py` to get a quick performance overview.
 |500000 | 467.936 | 0.046 | 0.356 | 2.823|
 |1000000 | 1025.506 | 0.091 | 0.695 | 5.778|
 
-Results with filtering can be retrieved from `examples/benchmark_with_filtering.py`.
-Which should produce a table such as the following:
+Results with filtering can be generated from `examples/benchmark_with_filtering.py`. This script should produce a table similar to:
 
 | Stored data |% same filter| Indexing time | Query size=1 | Query size=8 | Query size=64|
 |-----|-----|-----|-----|-----|-----|
@@ -209,6 +207,17 @@ Note that:
 - query times presented are represented in seconds.
 - `% same filter`  indicates the amount of data that verifies a filter in the database.
     - For example, if `% same filter = 10` and `Stored data = 1_000_000` then it means `100_000` example verify the filter.
+
+
+
+## Implemented Algorithms
+
+
+
+Currently PQLite supports:
+
+- HNSW Algorithm (default choice)
+- PQ-linear-scan (requires training)
 
 
 
