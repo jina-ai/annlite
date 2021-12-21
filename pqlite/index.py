@@ -156,6 +156,8 @@ class PQLite(CellContainer):
         if auto_save:
             self.dump_model()
 
+    def 
+
     def index(self, docs: DocumentArray, **kwargs):
         """Index new documents
 
