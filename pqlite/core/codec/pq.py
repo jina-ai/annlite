@@ -1,11 +1,11 @@
 import numpy as np
-from loguru import logger
-from scipy.cluster.vq import kmeans2, vq
+from scipy.cluster.vq import vq
 
 from pqlite import pq_bind
 
 from ...enums import Metric
 from .base import BaseCodec
+from sklearn.cluster import KMeans, MiniBatchKMeans
 
 # from pqlite.pq_bind import precompute_adc_table, dist_pqcodes_to_codebooks
 
@@ -57,10 +57,15 @@ class PQCodec(BaseCodec):
         #    metric == Metric.EUCLIDEAN
         #), f'The distance metric `{metric.name}` is not supported yet!'
         self.metric = metric
-
         self._codebooks = None
+        self.kmeans = []
 
     def fit(self, x: 'np.ndarray', iter: int = 100):
+        """Train the K-Means for each cartesian product
+
+        :param x: Training vectors with shape=(N, D)
+        :param iter: Number of iterations in Kmeans
+        """
         assert x.dtype == np.float32
         assert x.ndim == 2
 
@@ -69,12 +74,41 @@ class PQCodec(BaseCodec):
             (self.n_subvectors, self.n_clusters, self.d_subvector), dtype=np.float32
         )
         for m in range(self.n_subvectors):
-            sub_vecs = x[:, m * self.d_subvector : (m + 1) * self.d_subvector]
-            self._codebooks[m], _ = kmeans2(
-                sub_vecs, self.n_clusters, iter=iter, minit='points'
-            )
+            self.kmeans.append(KMeans(n_clusters=self.n_clusters, max_iter=iter))
+            self.kmeans[m].fit(x[:, m * self.d_subvector : (m + 1) * self.d_subvector])
+            self._codebooks[m] = self.kmeans[m].cluster_centers_
 
         self._is_trained = True
+
+
+    def partial_fit(self, x: 'np.ndarray'):
+        """Given a batch of training vectors, update the internal MiniBatchKMeans.
+        This method is specially designed to be used when data does not fit in memory.
+
+        :param x: Training vectors with shape=(N, D)
+        """
+        assert x.ndim == 2
+        if len(self.kmeans) > 0:
+            for m in range(self.n_subvectors):
+                self.kmeans[m].partial_fit(x[:, m * self.d_subvector: (m + 1) * self.d_subvector])
+        else:
+            for m in range(self.n_subvectors):
+                self.kmeans.append(MiniBatchKMeans(n_clusters=self.n_clusters))
+
+    def build_codebook(self):
+        """Constructs sub-codebooks from the current parameters of the models in `self.kmeans`
+           This step is not necessary if full KMeans is trained used calling `.fit`.
+        """
+
+        self._codebooks = np.zeros(
+            (self.n_subvectors, self.n_clusters, self.d_subvector), dtype=np.float32
+        )
+
+        for m in range(self.n_subvectors):
+            self._codebooks[m] = self.kmeans[m].cluster_centers_
+
+        self._is_trained = True
+
 
     def encode(self, x: 'np.ndarray'):
         """Encode input vectors into PQ-codes.

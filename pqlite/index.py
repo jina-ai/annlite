@@ -37,6 +37,7 @@ class PQLite(CellContainer):
     :param data_path: location of directory to store the database.
     :param create: if False, do not create the directory path if it is missing.
     :param read_only: if True, the index is not writable.
+    :param logger_flag: if True, a logger will capture messages during indexing/training
 
     .. note::
         Remember that the shape of any tensor that contains data points has to be `[n_data, dim]`.
@@ -55,6 +56,7 @@ class PQLite(CellContainer):
         data_path: Union[Path, str] = Path('./data'),
         create: bool = True,
         read_only: bool = False,
+        logger_flag: bool = True,
         *args,
         **kwargs,
     ):
@@ -74,6 +76,7 @@ class PQLite(CellContainer):
         self._use_smart_probing = True
 
         self.read_only = read_only
+        self.logger = logger_flag
 
         data_path = Path(data_path)
         if create:
@@ -82,22 +85,27 @@ class PQLite(CellContainer):
 
         self.vq_codec = None
         if self._vq_codec_path.exists() and n_cells > 1:
-            logger.info(
-                f'Load trained VQ codec (K={self.n_cells}) from {self.model_path}'
-            )
+
+            if self.logger:
+                logger.info(
+                    f'Load trained VQ codec (K={self.n_cells}) from {self.model_path}'
+                )
             self.vq_codec = VQCodec.load(self._vq_codec_path)
         elif n_cells > 1:
-            logger.info(f'Initialize VQ codec (K={self.n_cells})')
+            if self.logger:
+                logger.info(f'Initialize VQ codec (K={self.n_cells})')
             self.vq_codec = VQCodec(self.n_cells, metric=self.metric)
 
         self.pq_codec = None
         if self._pq_codec_path.exists() and n_subvectors:
-            logger.info(
-                f'Load trained PQ codec (n_subvectors={self.n_subvectors}) from {self.model_path}'
-            )
+            if self.logger:
+                logger.info(
+                    f'Load trained PQ codec (n_subvectors={self.n_subvectors}) from {self.model_path}'
+                )
             self.pq_codec = PQCodec.load(self._pq_codec_path)
         elif n_subvectors:
-            logger.info(f'Initialize PQ codec (n_subvectors={self.n_subvectors})')
+            if self.logger:
+                logger.info(f'Initialize PQ codec (n_subvectors={self.n_subvectors})')
             self.pq_codec = PQCodec(
                 dim, n_subvectors=n_subvectors, n_clusters=256, metric=self.metric
             )
@@ -134,29 +142,65 @@ class PQLite(CellContainer):
         n_data, _ = self._sanity_check(x)
 
         if self.is_trained and not force_retrain:
-            logger.warning(
-                'The pqlite has been trained or is not trainable. Please use ``force_retrain=True`` to retrain.'
-            )
+            if self.logger:
+                logger.warning(
+                    'The pqlite has been trained or is not trainable. Please use ``force_retrain=True`` to retrain.'
+                )
             return
 
         if self.vq_codec:
-            logger.info(
-                f'Start training VQ codec (K={self.n_cells}) with {n_data} data...'
-            )
+            if self.logger:
+                logger.info(
+                    f'Start training VQ codec (K={self.n_cells}) with {n_data} data...'
+                )
             self.vq_codec.fit(x)
 
         if self.pq_codec:
-            logger.info(
-                f'Start training PQ codec (n_subvectors={self.n_subvectors}) with {n_data} data...'
-            )
+            if self.logger:
+                logger.info(
+                    f'Start training PQ codec (n_subvectors={self.n_subvectors}) with {n_data} data...'
+                )
             self.pq_codec.fit(x)
 
-        logger.info(f'The pqlite is successfully trained!')
+        if self.logger:
+           logger.info(f'The pqlite is successfully trained!')
 
         if auto_save:
             self.dump_model()
 
-    def 
+
+
+    def partial_train(self, x: np.ndarray, auto_save: bool = True, force_retrain: bool = False):
+        """Train vector quantizers and product quantizers with a minibatch of  data.
+
+        :param x: the ndarray data for training.
+        :param auto_save: if False, will not dump the trained model to ``model_path``.
+        :param force_retrain: if True, enforce to retrain the model, and overwrite the model if ``auto_save=True``.
+
+        """
+        n_data, _ = self._sanity_check(x)
+
+        if self.vq_codec:
+            if self.logger:
+                logger.info(
+                    f'Partial training VQ codec (K={self.n_cells}) with {n_data} data...'
+                )
+            self.vq_codec.partial_fit(x)
+
+        if self.pq_codec:
+            if self.logger:
+                logger.info(
+                    f'Partial training PQ codec (n_subvectors={self.n_subvectors}) with {n_data} data...'
+                )
+            self.pq_codec.partial_fit(x)
+
+
+    def build_codebook(self):
+        """Constructs a codebooks for the vq_codec and pq_codec.
+           This step is not necessary if full KMeans is trained used calling `.fit`.
+        """
+        self.vq_codec.build_codebook()
+        self.pq_codec.build_codebook()
 
     def index(self, docs: DocumentArray, **kwargs):
         """Index new documents
@@ -165,7 +209,8 @@ class PQLite(CellContainer):
         """
 
         if self.read_only:
-            logger.warning('The pqlite is readonly, cannot add documents')
+            if self.logger:
+                logger.warning('The pqlite is readonly, cannot add documents')
             return
 
         x = docs.embeddings
@@ -186,7 +231,8 @@ class PQLite(CellContainer):
         :param docs: the documents to update
         """
         if self.read_only:
-            logger.warning('The pqlite is readonly, cannot update documents')
+            if self.logger:
+                logger.warning('The pqlite is readonly, cannot update documents')
             return
 
         x = docs.embeddings
@@ -324,7 +370,8 @@ class PQLite(CellContainer):
     def clear(self):
         """Clear the whole database"""
         for cell_id in range(self.n_cells):
-            logger.info(f'Clear the index of cell-{cell_id}')
+            if self.logger:
+                logger.info(f'Clear the index of cell-{cell_id}')
             self.vec_index(cell_id).reset()
             self.cell_table(cell_id).clear()
             self.doc_store(cell_id).clear()
@@ -353,7 +400,8 @@ class PQLite(CellContainer):
         self.model_path.mkdir(exist_ok=True)
 
     def dump_model(self):
-        logger.info(f'Save the trained parameters to {self.model_path}')
+        if self.logger:
+            logger.info(f'Save the trained parameters to {self.model_path}')
         self.create_model_dir()
         if self.vq_codec:
             self.vq_codec.dump(self._vq_codec_path)
@@ -363,7 +411,8 @@ class PQLite(CellContainer):
     def _rebuild_index(self):
         for cell_id in range(self.n_cells):
             cell_size = self.doc_store(cell_id).size
-            logger.info(f'Rebuild the index of cell-{cell_id} ({cell_size} docs)...')
+            if self.logger:
+                logger.info(f'Rebuild the index of cell-{cell_id} ({cell_size} docs)...')
             self.vec_index(cell_id).reset(capacity=cell_size)
             for docs in self.documents_generator(cell_id, batch_size=10240):
                 x = docs.embeddings

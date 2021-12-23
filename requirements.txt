@@ -4,4 +4,4 @@ docarray
 lmdb
 loguru
 numpy
-scipy
+scikit-learn
