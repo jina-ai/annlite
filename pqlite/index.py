@@ -12,6 +12,7 @@ from .container import CellContainer
 from .core import PQCodec, VQCodec
 from .enums import Metric
 from .filter import Filter
+from .helper import setup_logging
 
 
 class PQLite(CellContainer):
@@ -55,9 +56,12 @@ class PQLite(CellContainer):
         data_path: Union[Path, str] = Path('./data'),
         create: bool = True,
         read_only: bool = False,
+        verbose: bool = False,
         *args,
         **kwargs,
     ):
+        setup_logging(verbose)
+
         if n_subvectors:
             assert (
                 dim % n_subvectors == 0
