@@ -1,6 +1,9 @@
 import pickle
 from abc import ABC, abstractmethod
-from pathlib import Path
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from pathlib import Path
 
 
 class BaseCodec(ABC):
@@ -20,11 +23,11 @@ class BaseCodec(ABC):
     def decode(self):
         pass
 
-    def dump(self, target_path: Path):
+    def dump(self, target_path: 'Path'):
         pickle.dump(self, target_path.open('wb'), protocol=4)
 
     @staticmethod
-    def load(from_path: Path):
+    def load(from_path: 'Path'):
         return pickle.load(from_path.open('rb'))
 
     @property

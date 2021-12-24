@@ -1,18 +1,19 @@
 import hashlib
 from pathlib import Path
-from typing import Dict, List, Optional, Union
+from typing import TYPE_CHECKING, Dict, List, Optional, Union
 
 import numpy as np
-from docarray import DocumentArray
-from docarray.math.distance import cdist
-from docarray.math.helper import top_k
 from loguru import logger
+
+if TYPE_CHECKING:
+    from docarray import DocumentArray
 
 from .container import CellContainer
 from .core import PQCodec, VQCodec
 from .enums import Metric
 from .filter import Filter
 from .helper import setup_logging
+from .math import cdist, top_k
 
 
 class PQLite(CellContainer):
@@ -22,7 +23,7 @@ class PQLite(CellContainer):
 
         .. highlight:: python
         .. code-block:: python
-            pqlite = PQLite(dim=256, metric=pqlite.Metric.EUCLIDEAN)
+            pqlite = PQLite(dim=256, metric='cosine')
 
     :param dim: dimensionality of input vectors. there are 2 constraints on dim:
             (1) it needs to be divisible by n_subvectors; (2) it needs to be a multiple of 4.*
@@ -36,8 +37,9 @@ class PQLite(CellContainer):
             if any cell has reached its capacity, that cell will be automatically expanded.
             If you need to add vectors frequently, a larger value for init_size is recommended.
     :param data_path: location of directory to store the database.
-    :param create: if False, do not create the directory path if it is missing.
+    :param create_if_missing: if False, do not create the directory path if it is missing.
     :param read_only: if True, the index is not writable.
+    :param verbose: if True, will print the debug logging info.
 
     .. note::
         Remember that the shape of any tensor that contains data points has to be `[n_data, dim]`.
@@ -46,7 +48,7 @@ class PQLite(CellContainer):
     def __init__(
         self,
         dim: int,
-        metric: Union[str, Metric] = Metric.COSINE,
+        metric: Union[str, Metric] = 'cosine',
         n_cells: int = 1,
         n_subvectors: Optional[int] = None,
         n_probe: int = 16,
@@ -54,7 +56,7 @@ class PQLite(CellContainer):
         expand_step_size: int = 10240,
         columns: Optional[List[tuple]] = None,
         data_path: Union[Path, str] = Path('./data'),
-        create: bool = True,
+        create_if_missing: bool = True,
         read_only: bool = False,
         verbose: bool = False,
         *args,
@@ -81,7 +83,7 @@ class PQLite(CellContainer):
         self.read_only = read_only
 
         data_path = Path(data_path)
-        if create:
+        if create_if_missing:
             data_path.mkdir(parents=True, exist_ok=True)
         self.data_path = data_path
 
@@ -120,13 +122,15 @@ class PQLite(CellContainer):
         if self.total_docs > 0:
             self._rebuild_index()
 
-    def _sanity_check(self, x: np.ndarray):
+    def _sanity_check(self, x: 'np.ndarray'):
         assert len(x.shape) == 2
         assert x.shape[1] == self.dim
 
         return x.shape
 
-    def train(self, x: np.ndarray, auto_save: bool = True, force_retrain: bool = False):
+    def train(
+        self, x: 'np.ndarray', auto_save: bool = True, force_retrain: bool = False
+    ):
         """Train pqlite with training data.
 
         :param x: the ndarray data for training.
@@ -214,7 +218,7 @@ class PQLite(CellContainer):
         )
         return super(PQLite, self).insert(x, assigned_cells, docs)
 
-    def update(self, docs: DocumentArray, **kwargs):
+    def update(self, docs: 'DocumentArray', **kwargs):
         """Update existing documents
 
         :param docs: the documents to update
@@ -236,7 +240,7 @@ class PQLite(CellContainer):
 
     def search(
         self,
-        docs: DocumentArray,
+        docs: 'DocumentArray',
         filter: Dict = {},
         limit: int = 10,
         include_metadata: bool = True,
@@ -260,7 +264,7 @@ class PQLite(CellContainer):
 
     def _search_documents(
         self,
-        query_np,
+        query_np: 'np.ndarray',
         filter: Dict = {},
         limit: int = 10,
         include_metadata: bool = True,
@@ -284,7 +288,6 @@ class PQLite(CellContainer):
     def _cell_selection(self, query_np, limit):
 
         n_data, _ = self._sanity_check(query_np)
-        assert 0 < limit <= 1024
 
         if self.vq_codec:
             dists = cdist(
@@ -312,10 +315,9 @@ class PQLite(CellContainer):
 
     def search_numpy(
         self,
-        query_np: np.ndarray,
+        query_np: 'np.ndarray',
         filter: Dict = {},
         limit: int = 10,
-        include_metadata: bool = True,
         **kwargs,
     ):
         """Search the index and return distances to the query and ids of the closest documents.
@@ -323,13 +325,12 @@ class PQLite(CellContainer):
         :param query_np: matrix containing query vectors as rows
         :param filter: the filtering conditions
         :param limit: the number of results to get for each query document in search
-        :param include_metadata: whether to return document metadata in response.
         """
 
         dists, doc_ids = self._search_numpy(query_np, filter, limit)
         return dists, doc_ids
 
-    def _search_numpy(self, query_np, filter: Dict = {}, limit: int = 10):
+    def _search_numpy(self, query_np: 'np.ndarray', filter: Dict = {}, limit: int = 10):
         """Search approximate nearest vectors in different cells, returns distances and ids
 
         :param query_np: matrix containing query vectors as rows
@@ -348,18 +349,17 @@ class PQLite(CellContainer):
         )
         return dists, ids
 
-    def delete(self, docs: Union[DocumentArray, List[str]]):
+    def delete(self, docs: Union['DocumentArray', List[str]]):
         """Delete entries from the index by id
 
         :param docs: the documents to delete
         """
-        doc_ids = docs.get_attributes('id') if isinstance(docs, DocumentArray) else docs
-        super().delete(doc_ids)
+        super().delete(docs if isinstance(docs, list) else docs.get_attributes('id'))
 
     def clear(self):
         """Clear the whole database"""
         for cell_id in range(self.n_cells):
-            logger.info(f'Clear the index of cell-{cell_id}')
+            logger.debug(f'Clear the index of cell-{cell_id}')
             self.vec_index(cell_id).reset()
             self.cell_table(cell_id).clear()
             self.doc_store(cell_id).clear()
@@ -369,12 +369,12 @@ class PQLite(CellContainer):
         for cell_id in range(self.n_cells):
             self.doc_store(cell_id).close()
 
-    def encode(self, x: np.ndarray):
+    def encode(self, x: 'np.ndarray'):
         n_data, _ = self._sanity_check(x)
         y = self.pq_codec.encode(x)
         return y
 
-    def decode(self, x):
+    def decode(self, x: 'np.ndarray'):
         assert len(x.shape) == 2
         assert x.shape[1] == self.n_subvectors
         return self.pq_codec.decode(x)
