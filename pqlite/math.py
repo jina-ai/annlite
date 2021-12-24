@@ -1,7 +1,6 @@
-from typing import TYPE_CHECKING, Tuple
+from typing import Tuple
 
-if TYPE_CHECKING:
-    import numpy as np
+import numpy as np
 
 
 def cosine(x_mat: 'np.ndarray', y_mat: 'np.ndarray', eps: float = 1e-7) -> 'np.ndarray':
