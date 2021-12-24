@@ -55,6 +55,7 @@ class VQCodec(BaseCodec):
         else:
             self.kmeans = MiniBatchKMeans(n_clusters=self.n_clusters,
                                           max_iter=self.iter)
+            self.kmeans.partial_fit(x)
 
     def build_codebook(self):
         """Constructs a codebook from the current MiniBatchKmeans

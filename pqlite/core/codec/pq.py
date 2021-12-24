@@ -28,6 +28,8 @@ class PQCodec(BaseCodec):
     :param n_clusters: The number of codewords for each subspace
             (typically 256, so that each sub-vector is quantized
             into 256 bits pqlite.utils.asymmetric_distance= 1 byte = uint8)
+    :param n_init: Number of times K-Means is trained with different centroid seeds. Best result of
+                   the `n_init` consecutive runs is selected.
     """
 
     def __init__(
@@ -36,6 +38,7 @@ class PQCodec(BaseCodec):
         n_subvectors: int = 8,
         n_clusters: int = 256,
         metric: Metric = Metric.EUCLIDEAN,
+        n_init: int = 4
     ):
         super(PQCodec, self).__init__(require_train=True)
         self.dim = dim
@@ -59,6 +62,7 @@ class PQCodec(BaseCodec):
         self.metric = metric
         self._codebooks = None
         self.kmeans = []
+        self.n_init = n_init
 
     def fit(self, x: 'np.ndarray', iter: int = 100):
         """Train the K-Means for each cartesian product
@@ -74,7 +78,8 @@ class PQCodec(BaseCodec):
             (self.n_subvectors, self.n_clusters, self.d_subvector), dtype=np.float32
         )
         for m in range(self.n_subvectors):
-            self.kmeans.append(KMeans(n_clusters=self.n_clusters, max_iter=iter))
+            kmeans = KMeans(n_clusters=self.n_clusters, max_iter=iter, n_init=self.n_init)
+            self.kmeans.append(kmeans)
             self.kmeans[m].fit(x[:, m * self.d_subvector : (m + 1) * self.d_subvector])
             self._codebooks[m] = self.kmeans[m].cluster_centers_
 
@@ -94,6 +99,10 @@ class PQCodec(BaseCodec):
         else:
             for m in range(self.n_subvectors):
                 self.kmeans.append(MiniBatchKMeans(n_clusters=self.n_clusters))
+
+            for m in range(self.n_subvectors):
+                self.kmeans[m].partial_fit(x[:, m * self.d_subvector: (m + 1) * self.d_subvector])
+
 
     def build_codebook(self):
         """Constructs sub-codebooks from the current parameters of the models in `self.kmeans`
