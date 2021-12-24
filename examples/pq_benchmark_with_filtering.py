@@ -42,7 +42,8 @@ for n_i in n_index:
 
         da = docs_with_tags(n_i, D, current_probs, categories)
 
-        indexer.train(da.embeddings)
+        da_embeddings = da.embeddings
+        indexer.train(da_embeddings)
 
         with TimeContext(f'indexing {n_i} docs') as t_i:
             for i, _batch in enumerate(da.batch(batch_size=B)):
@@ -50,6 +51,8 @@ for n_i in n_index:
 
         for cat,prob in zip(categories, current_probs):
             f = {'category': {'$eq': cat}}
+            indices_cat = np.array([t['category'] for t in da.get_attributes('tags')]) == cat
+            da_embeddings_cat = da_embeddings[indices_cat,:]
 
             query_times = []
             for n_q in n_query:
@@ -67,7 +70,7 @@ for n_i in n_index:
 
                 if n_q == 1:
                     #### evaluate ####
-                    dists = cdist(q_embs, da.embeddings, metric='euclidean')
+                    dists = cdist(q_embs, da_embeddings_cat, metric='euclidean')
                     true_dists, true_ids = _top_k(dists, top_k, descending=False)
                     ids = []
                     for doc in qa:
