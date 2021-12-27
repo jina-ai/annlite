@@ -8,12 +8,11 @@ from pqlite import PQLite
 
 from utils import clean_workspace, docs_with_tags, evaluate
 
-n_index = [10_000, 20_000]
-
+n_index = [10_000, 100_000, 500_000, 1_000_000]
 n_query = [1, 8, 64]
 D = 768
 R = 5
-B = 5000
+B = 100_000
 n_cells = 1
 probs = [[0.20, 0.30, 0.50],
          [0.05, 0.15, 0.80]]
@@ -35,24 +34,31 @@ for n_i in n_index:
         indexer = PQLite(
             dim=D,
             initial_size=n_i,
+            n_subvectors=n_subvectors,
             n_cells=n_cells,
             metas={'workspace': './workspace'},
             columns=columns
         )
 
         da = docs_with_tags(n_i, D, current_probs, categories)
-
         da_embeddings = da.embeddings
-        indexer.train(da_embeddings)
 
         with TimeContext(f'indexing {n_i} docs') as t_i:
+            n_train_quantizer = min(n_i,  20_000)
+            row_ids = np.random.choice(range(n_i),n_train_quantizer, replace=False)
+            indexer.partial_train(da_embeddings[row_ids, :])
+
+            indexer.build_codebook()
             for i, _batch in enumerate(da.batch(batch_size=B)):
                 indexer.index(_batch)
 
-        for cat,prob in zip(categories, current_probs):
+        for cat, prob in zip(categories, current_probs):
             f = {'category': {'$eq': cat}}
+
             indices_cat = np.array([t['category'] for t in da.get_attributes('tags')]) == cat
-            da_embeddings_cat = da_embeddings[indices_cat,:]
+            ids_indices_cat = np.array([d.id for d in da if d.tags['category'] == cat], dtype='int')
+
+            da_embeddings_cat = da_embeddings[indices_cat, :]
 
             query_times = []
             for n_q in n_query:
@@ -68,25 +74,28 @@ for n_i in n_index:
 
                 query_times.append(np.mean(t_qs[1:]))
 
-                if n_q == 1:
-                    #### evaluate ####
+                if n_q == 8:
                     dists = cdist(q_embs, da_embeddings_cat, metric='euclidean')
-                    true_dists, true_ids = _top_k(dists, top_k, descending=False)
+                    true_dists, true_local_ids = _top_k(dists, top_k, descending=False)
+
+                    # Note:x
+                    #   `true_ids` are not really positions within the original data
+                    #   but positions within the subset `da_embeddings_cat`
+                    #   We need to go from these positions to the original positions
+                    true_ids = ids_indices_cat[true_local_ids]
                     ids = []
                     for doc in qa:
                         ids.append([m.id for m in doc.matches])
 
                     recall, precision = evaluate(ids, true_ids, top_k)
-                    #### evaluate ####
 
-            print(f'\n\nprob={prob}, current_probs={current_probs}, n_i={n_i}\n\n')
-            results_ni.append([n_i, prob, t_i.duration] + query_times + [precision, recall])
+            print(f'\n\nprob={prob}, current_probs={current_probs}, n_i={n_i}, recall={recall}\n\n')
+            results_ni.append([n_i, prob, t_i.duration] + query_times + [recall])
 
     results.append(results_ni)
 
 
-title = '| Stored data |% same filter| Indexing time | Query size=1 | Query size=8 | Query size=64|' \
-       ' Precision| Recall |  '
+title = '| Stored data |% same filter| Indexing time | Query size=1 | Query size=8 | Query size=64| Recall |'
 print(title)
 print('|-----' * 6 + '|')
 for block in results:
