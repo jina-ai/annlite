@@ -265,7 +265,6 @@ class PQLite(CellContainer):
         cells = self._cell_selection(query_np, limit)
         where_clause, where_params = Filter(filter).parse_where_clause()
 
-        """
         match_dists, match_docs = self.search_cells(
             query=query_np,
             cells=cells,
@@ -275,15 +274,7 @@ class PQLite(CellContainer):
             include_metadata=include_metadata,
         )
         return match_dists, match_docs
-        """
 
-        dists, ids = self._search_cells(
-            query=query_np,
-            cells=cells,
-            where_clause=where_clause,
-            where_params=where_params,
-            limit=limit,
-        )
         return dists, ids
 
     def _cell_selection(self, query_np, limit):
