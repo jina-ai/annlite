@@ -4,8 +4,6 @@ import time
 
 import numpy as np
 import pandas as pd
-from docarray.math.distance import cdist
-from docarray.math.helper import top_k as _top_k
 from jina import Document, DocumentArray, Flow
 from sklearn.datasets import make_blobs
 from sklearn.model_selection import train_test_split

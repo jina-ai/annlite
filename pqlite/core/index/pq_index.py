@@ -1,8 +1,8 @@
-from typing import List, Optional, Union
+from typing import List, Optional
 
 import numpy as np
-from docarray.math.helper import top_k
 
+from ...math import top_k
 from ..codec.pq import PQCodec
 from .flat_index import FlatIndex
 

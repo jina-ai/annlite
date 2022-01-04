@@ -1,7 +1,8 @@
 import abc
-from typing import List, Optional
+from typing import TYPE_CHECKING, List, Optional
 
-import numpy as np
+if TYPE_CHECKING:
+    import numpy as np
 
 from ..enums import ExpandMode
 
@@ -39,8 +40,8 @@ class Storage(abc.ABC):
     @abc.abstractmethod
     def add(
         self,
-        data: np.ndarray,
-        cells: np.ndarray,
+        data: 'np.ndarray',
+        cells: 'np.ndarray',
         ids: List[str],
         doc_tags: Optional[List[dict]] = None,
     ):
@@ -53,8 +54,8 @@ class Storage(abc.ABC):
     @abc.abstractmethod
     def update(
         self,
-        data: np.ndarray,
-        cells: np.ndarray,
+        data: 'np.ndarray',
+        cells: 'np.ndarray',
         ids: List[str],
         doc_tags: Optional[List[dict]] = None,
     ):

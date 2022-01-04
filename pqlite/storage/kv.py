@@ -36,7 +36,7 @@ class DocStorage:
             lock=True,
         )
 
-    def insert(self, docs: DocumentArray):
+    def insert(self, docs: 'DocumentArray'):
         with self._env.begin(write=True) as txn:
             for doc in docs:
                 # enforce using float32 as dtype of embeddings
@@ -48,7 +48,7 @@ class DocStorage:
                         f'The Doc ({doc.id}) has already been added into database!'
                     )
 
-    def update(self, docs: DocumentArray):
+    def update(self, docs: 'DocumentArray'):
         with self._env.begin(write=True) as txn:
             for doc in docs:
                 doc.embedding = doc.embedding.astype(np.float32)
