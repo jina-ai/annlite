@@ -89,7 +89,9 @@ class PQLite(CellContainer):
 
         self.vq_codec = None
         if self._vq_codec_path.exists() and n_cells > 1:
-            logger.info(f'Load trained VQ codec (K={self.n_cells}) from {self.model_path}')
+            logger.info(
+                f'Load trained VQ codec (K={self.n_cells}) from {self.model_path}'
+            )
             self.vq_codec = VQCodec.load(self._vq_codec_path)
         elif n_cells > 1:
             logger.info(f'Initialize VQ codec (K={self.n_cells})')
@@ -98,8 +100,8 @@ class PQLite(CellContainer):
         self.pq_codec = None
         if self._pq_codec_path.exists() and n_subvectors:
             logger.info(
-                    f'Load trained PQ codec (n_subvectors={self.n_subvectors}) from {self.model_path}'
-                )
+                f'Load trained PQ codec (n_subvectors={self.n_subvectors}) from {self.model_path}'
+            )
             self.pq_codec = PQCodec.load(self._pq_codec_path)
         elif n_subvectors:
             logger.info(f'Initialize PQ codec (n_subvectors={self.n_subvectors})')
@@ -142,20 +144,20 @@ class PQLite(CellContainer):
 
         if self.is_trained and not force_retrain:
             logger.warning(
-                    'The pqlite has been trained or is not trainable. Please use ``force_retrain=True`` to retrain.'
-                )
+                'The pqlite has been trained or is not trainable. Please use ``force_retrain=True`` to retrain.'
+            )
             return
 
         if self.vq_codec:
             logger.info(
-                    f'Start training VQ codec (K={self.n_cells}) with {n_data} data...'
-                )
+                f'Start training VQ codec (K={self.n_cells}) with {n_data} data...'
+            )
             self.vq_codec.fit(x)
 
         if self.pq_codec:
             logger.info(
-                    f'Start training PQ codec (n_subvectors={self.n_subvectors}) with {n_data} data...'
-                )
+                f'Start training PQ codec (n_subvectors={self.n_subvectors}) with {n_data} data...'
+            )
             self.pq_codec.fit(x)
 
         logger.info(f'The pqlite is successfully trained!')
@@ -163,9 +165,9 @@ class PQLite(CellContainer):
         if auto_save:
             self.dump_model()
 
-
-
-    def partial_train(self, x: np.ndarray, auto_save: bool = True, force_retrain: bool = False):
+    def partial_train(
+        self, x: np.ndarray, auto_save: bool = True, force_retrain: bool = False
+    ):
         """Train vector quantizers and product quantizers with a minibatch of  data.
 
         :param x: the ndarray data for training.
@@ -177,27 +179,26 @@ class PQLite(CellContainer):
 
         if self.vq_codec:
             logger.info(
-                    f'Partial training VQ codec (K={self.n_cells}) with {n_data} data...'
-                )
+                f'Partial training VQ codec (K={self.n_cells}) with {n_data} data...'
+            )
             self.vq_codec.partial_fit(x)
 
         if self.pq_codec:
             logger.info(
-                    f'Partial training PQ codec (n_subvectors={self.n_subvectors}) with {n_data} data...'
-                )
+                f'Partial training PQ codec (n_subvectors={self.n_subvectors}) with {n_data} data...'
+            )
             self.pq_codec.partial_fit(x)
-
 
     def build_codebook(self):
         """Constructs a codebooks for the vq_codec and pq_codec.
-           This step is not necessary if full KMeans is trained used calling `.fit`.
+        This step is not necessary if full KMeans is trained used calling `.fit`.
         """
         if self.vq_codec:
             self.vq_codec.build_codebook()
         if self.pq_codec:
             self.pq_codec.build_codebook()
 
-    def index(self, docs: DocumentArray, **kwargs):
+    def index(self, docs: 'DocumentArray', **kwargs):
         """Index new documents
 
         :param docs: the documents to index

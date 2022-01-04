@@ -6,10 +6,11 @@ import pandas as pd
 from docarray import Document, DocumentArray
 from sklearn.datasets import make_blobs
 from sklearn.model_selection import train_test_split
+from utils import evaluate
 
 from pqlite import PQLite
-from .utils import evaluate
-
+from pqlite.math import cdist
+from pqlite.math import top_k as _top_k
 
 # N = 100_000 # number of data points
 Nt = 100_020
