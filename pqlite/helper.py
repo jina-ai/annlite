@@ -1,5 +1,25 @@
+import sys
+
 import lmdb
 import numpy as np
+from loguru import logger
+
+
+def setup_logging(debug: bool):
+    """
+    Setup the log formatter for PQLite
+    """
+
+    log_level = 'INFO'
+    if debug:
+        log_level = 'DEBUG'
+
+    logger.remove()
+    logger.add(
+        sys.stdout,
+        colorize=True,
+        level=log_level,
+    )
 
 
 def str2dtype(dtype_str: str):

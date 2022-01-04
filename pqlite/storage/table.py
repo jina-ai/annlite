@@ -1,10 +1,12 @@
 import datetime
 import sqlite3
 from pathlib import Path
-from typing import Any, List, Optional, Tuple, Union
+from typing import TYPE_CHECKING, Any, List, Optional, Tuple, Union
 
 import numpy as np
-from docarray import DocumentArray
+
+if TYPE_CHECKING:
+    from docarray import DocumentArray
 
 sqlite3.register_adapter(np.int64, lambda x: int(x))
 sqlite3.register_adapter(np.int32, lambda x: int(x))
@@ -179,7 +181,7 @@ class CellTable(Table):
 
     def insert(
         self,
-        docs: DocumentArray,
+        docs: 'DocumentArray',
         commit: bool = True,
     ) -> List[int]:
         """Add a single record into the table.

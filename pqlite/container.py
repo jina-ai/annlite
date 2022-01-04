@@ -1,11 +1,13 @@
 from pathlib import Path
-from typing import List, Optional, Tuple
+from typing import TYPE_CHECKING, List, Optional, Tuple
 
 import numpy as np
 from docarray import Document, DocumentArray
 from loguru import logger
 
-from .core.codec.pq import PQCodec
+if TYPE_CHECKING:
+    from .core.codec.pq import PQCodec
+
 from .core.index.hnsw import HnswIndex
 from .core.index.pq_index import PQIndex
 from .enums import Metric
@@ -19,7 +21,7 @@ class CellContainer:
         self,
         dim: int,
         metric: Metric = Metric.COSINE,
-        pq_codec: Optional[PQCodec] = None,
+        pq_codec: Optional['PQCodec'] = None,
         n_cells: int = 1,
         initial_size: Optional[int] = None,
         expand_step_size: int = 50000,
@@ -69,8 +71,8 @@ class CellContainer:
 
     def ivf_search(
         self,
-        x: np.ndarray,
-        cells: np.ndarray,
+        x: 'np.ndarray',
+        cells: 'np.ndarray',
         where_clause: str = '',
         where_params: Tuple = (),
         limit: int = 10,
@@ -127,8 +129,8 @@ class CellContainer:
 
     def search_cells(
         self,
-        query: np.ndarray,
-        cells: np.ndarray,
+        query: 'np.ndarray',
+        cells: 'np.ndarray',
         where_clause: str = '',
         where_params: Tuple = (),
         limit: int = 10,
@@ -160,8 +162,8 @@ class CellContainer:
 
     def _search_cells(
         self,
-        query: np.ndarray,
-        cells: np.ndarray,
+        query: 'np.ndarray',
+        cells: 'np.ndarray',
         where_clause: str = '',
         where_params: Tuple = (),
         limit: int = 10,
@@ -182,9 +184,9 @@ class CellContainer:
 
     def insert(
         self,
-        data: np.ndarray,
-        cells: np.ndarray,
-        docs: DocumentArray,
+        data: 'np.ndarray',
+        cells: 'np.ndarray',
+        docs: 'DocumentArray',
     ):
         assert len(docs) == len(data)
 
@@ -222,9 +224,9 @@ class CellContainer:
                     [d.id for d in cell_docs], [cell_id] * cell_count, cell_offsets
                 )
 
-        logger.debug(f'=> {len(docs)} new docs added')
+        logger.debug(f'{len(docs)} new docs added')
 
-    def _add_vecs(self, data: np.ndarray, cells: np.ndarray, offsets: np.ndarray):
+    def _add_vecs(self, data: 'np.ndarray', cells: 'np.ndarray', offsets: 'np.ndarray'):
         assert data.shape[0] == cells.shape[0]
         assert data.shape[1] == self.dim
 
@@ -239,9 +241,9 @@ class CellContainer:
 
     def update(
         self,
-        data: np.ndarray,
-        cells: np.ndarray,
-        docs: DocumentArray,
+        data: 'np.ndarray',
+        cells: 'np.ndarray',
+        docs: 'DocumentArray',
     ):
         new_data = []
         new_cells = []
@@ -277,7 +279,7 @@ class CellContainer:
 
             self.insert(new_data, new_cells, new_docs)
 
-        logger.debug(f'=> {len(docs)} items updated')
+        logger.debug(f'{len(docs)} items updated')
 
     def delete(self, ids: List[str]):
         for doc_id in ids:
@@ -286,7 +288,7 @@ class CellContainer:
                 self.cell_table(cell_id).delete_by_offset(offset)
                 self.doc_store(cell_id).delete([doc_id])
 
-        logger.debug(f'=> {len(ids)} items deleted')
+        logger.debug(f'{len(ids)} items deleted')
 
     def documents_generator(self, cell_id: int, batch_size: int = 256):
         for docs in self.doc_store(cell_id).batched_iterator(batch_size=batch_size):

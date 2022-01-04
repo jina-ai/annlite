@@ -46,7 +46,7 @@ class HnswIndex(BaseIndex):
         )
         self._index.set_ef(self.ef_search)
 
-    def add_with_ids(self, x: np.ndarray, ids: List[int]):
+    def add_with_ids(self, x: 'np.ndarray', ids: List[int]):
         max_id = max(ids) + 1
         if max_id > self.capacity:
             expand_steps = math.ceil(max_id / self.expand_step_size)
@@ -55,7 +55,10 @@ class HnswIndex(BaseIndex):
         self._index.add_items(x, ids=ids)
 
     def search(
-        self, query: np.ndarray, limit: int = 10, indices: Optional[np.ndarray] = None
+        self,
+        query: 'np.ndarray',
+        limit: int = 10,
+        indices: Optional['np.ndarray'] = None,
     ):
         _dim = query.shape[-1]
         assert (
@@ -83,7 +86,7 @@ class HnswIndex(BaseIndex):
             f'the deletion operation is not allowed for {self.__class__.__name__}!'
         )
 
-    def update_with_ids(self, x: np.ndarray, ids: List[int], **kwargs):
+    def update_with_ids(self, x: 'np.ndarray', ids: List[int], **kwargs):
         raise RuntimeError(
             f'the update operation is not allowed for {self.__class__.__name__}!'
         )
