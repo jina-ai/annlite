@@ -1,1 +1,1 @@
-https://github.com/jina-ai/pqlite/archive/refs/tags/v0.1.4.zip
+pqlite @ git+https://github.com/jina-ai/pqlite.git@v0.1.4#egg=pqlite
