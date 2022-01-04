@@ -1,1 +1,1 @@
-pqlite==0.1.3
+pqlite @ git+https://github.com/jina-ai/pqlite.git@v0.1.4#egg=pqlite
