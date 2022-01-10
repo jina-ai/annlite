@@ -1,8 +1,7 @@
-# distutils: language = c++
-
 import numpy as np
-
 cimport cython
+from cython.parallel import prange, parallel
+
 from libc.stdint cimport (
     int8_t,
     int16_t,
@@ -13,7 +12,6 @@ from libc.stdint cimport (
     uint32_t,
     uint64_t,
 )
-from libcpp.vector cimport vector
 
 ctypedef fused any_int:
     uint8_t
@@ -27,8 +25,11 @@ ctypedef fused any_int:
 
 @cython.boundscheck(False)
 @cython.wraparound(False)
-cdef inline dist_pqcode_to_codebook(long M,const float[:,:] adtable, any_int[:] pq_code):
-    """Compute the distance between each codevector and the pq_code of a query.
+cdef inline dist_pqcode_to_codebook(long M,
+                                    const float[:,:] adtable,
+                                    any_int[:] pq_code):
+    """
+    Compute the distance between each codevector and the pq_code of a query.
 
     :param M: Number of sub-vectors in the original feature space.
     :param adtable: 2D Memoryview[float] containing precomputed Asymmetric Distances.
@@ -49,7 +50,8 @@ cdef inline dist_pqcode_to_codebook(long M,const float[:,:] adtable, any_int[:] 
 
 @cython.boundscheck(False)
 @cython.wraparound(False)
-cpdef dist_pqcodes_to_codebooks(const float[:,:] adtable, any_int[:,:] pq_codes):
+cpdef dist_pqcodes_to_codebooks(const float[:,:] adtable,
+                                any_int[:,:] pq_codes):
     """
     Compute the distance between each row in pq_codes and each codevector using a adtable.
 
@@ -72,12 +74,42 @@ cpdef dist_pqcodes_to_codebooks(const float[:,:] adtable, any_int[:,:] pq_codes)
         int m
         int N = pq_codes.shape[0]
         int M = pq_codes.shape[1]
-        vector[float] dists
+        float[:] dists = np.zeros(N, dtype=np.float32)
 
     for n in range(N):
-        dists.push_back(dist_pqcode_to_codebook(M, adtable, pq_codes[n,:]))
+        #dists.push_back(dist_pqcode_to_codebook(M, adtable, pq_codes[n,:]))
+        dists[n] = dist_pqcode_to_codebook(M, adtable, pq_codes[n,:])
 
     return dists
+
+
+@cython.boundscheck(False)
+@cython.wraparound(False)
+cdef dist_pqcodes_to_codebooks_parfor(const long N,
+                                      const long M,
+                                      const float[:,:] dtable,
+                                      any_int[:,:] pq_codes,
+                                      float[:] dists):
+    cdef int m, n
+
+    with nogil:
+        for n in prange(N, schedule='dynamic'):
+            for m in range(M):
+                dists[n] += dtable[m, pq_codes[n, m]]
+
+
+@cython.boundscheck(False)
+@cython.wraparound(False)
+cpdef dist_pqcodes_to_codebooks_parallel(const float[:,:] dtable,
+                                         any_int[:,:] pq_codes):
+    cdef:
+        int N = pq_codes.shape[0]
+        int M = pq_codes.shape[1]
+        float[:] dists = np.zeros(N, dtype=np.float32)
+
+    dist_pqcodes_to_codebooks_parfor(N, M, dtable, pq_codes, dists)
+
+    return np.array(dists)
 
 
 @cython.boundscheck(False)
