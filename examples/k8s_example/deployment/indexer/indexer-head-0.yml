@@ -1,0 +1,137 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: connection-pool
+  namespace: pqlite-namespace
+rules:
+- apiGroups:
+  - ''
+  resources:
+  - pods
+  - services
+  verbs:
+  - list
+  - watch
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: connection-pool-binding
+  namespace: pqlite-namespace
+roleRef:
+  apiGroup: ''
+  kind: Role
+  name: connection-pool
+subjects:
+- apiGroup: ''
+  kind: ServiceAccount
+  name: default
+---
+apiVersion: v1
+data:
+  JINA_LOG_LEVEL: DEBUG
+  pythonunbuffered: '1'
+  worker_class: uvicorn.workers.UvicornH11Worker
+kind: ConfigMap
+metadata:
+  name: indexer-head-0-configmap
+  namespace: pqlite-namespace
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app: indexer-head-0
+  name: indexer-head-0
+  namespace: pqlite-namespace
+spec:
+  ports:
+  - name: port-expose
+    port: 8080
+    protocol: TCP
+    targetPort: 8080
+  - name: port-in
+    port: 8081
+    protocol: TCP
+    targetPort: 8081
+  selector:
+    app: indexer-head-0
+  type: ClusterIP
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: indexer-head-0
+  namespace: pqlite-namespace
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: indexer-head-0
+  strategy:
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+    type: RollingUpdate
+  template:
+    metadata:
+      labels:
+        app: indexer-head-0
+        jina_pod_name: indexer
+        ns: pqlite-namespace
+        pea_type: HEAD
+        shard_id: ''
+    spec:
+      containers:
+      - args:
+        - executor
+        - --name
+        - indexer/head-0
+        - --workspace
+        - /Users/fengwang/Jina/workspace/pqlite/examples/k8s_example
+        - --identity
+        - 2c5a73a889eb4a1cafe048f8cf4ac04f
+        - --workspace-id
+        - 0ece5f58518e4f18ba488d5794a6a2cd
+        - --k8s-namespace
+        - pqlite-namespace
+        - --uses
+        - config.yml
+        - --port-in
+        - '8081'
+        - --num-part
+        - '1'
+        - --upload-files
+        - --runtime-cls
+        - HeadRuntime
+        - --pea-role
+        - HEAD
+        - --noblock-on-start
+        - --shards
+        - '3'
+        - --uses-metas
+        - '{}'
+        - --native
+        command:
+        - jina
+        env:
+        - name: POD_UID
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.uid
+        - name: JINA_POD_NAME
+          value: indexer
+        envFrom:
+        - configMapRef:
+            name: indexer-head-0-configmap
+        image: jina:k8s-py38-perf
+        imagePullPolicy: IfNotPresent
+        name: executor
+        ports:
+        - containerPort: 8080
+        - containerPort: 8081
+        readinessProbe:
+          initialDelaySeconds: 5
+          periodSeconds: 10
+          tcpSocket:
+            port: 8081
