@@ -89,7 +89,7 @@ class Table:
             self._conn_name = data_path / f'{name}.db'
         self._name = name
 
-        self._conn = sqlite3.connect(self._conn_name)
+        self._conn = sqlite3.connect(self._conn_name, check_same_thread=False)
 
     def commit(self):
         self._conn.commit()
