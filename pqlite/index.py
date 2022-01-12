@@ -284,8 +284,6 @@ class PQLite(CellContainer):
         )
         return match_dists, match_docs
 
-        return dists, ids
-
     def _cell_selection(self, query_np, limit):
 
         n_data, _ = self._sanity_check(query_np)
