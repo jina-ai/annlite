@@ -1192,6 +1192,34 @@ namespace hnswlib {
         };
 
         std::priority_queue<std::pair<dist_t, labeltype >>
+        searchSubset(const void *query_data, const void *subset_data, size_t k, size_t n) const {
+            std::priority_queue<std::pair<dist_t, labeltype >> result;
+            if (cur_element_count == 0) return result;
+
+            labeltype *candidate_id = (labeltype *) subset_data;
+
+            for (size_t i = 0; i < std::min(n, k); i++) {
+                dist_t dist = fstdistfunc_(query_data, getDataByLabel(*candidate_id), dist_func_param_);
+                result.push(std::pair<dist_t, labeltype>(dist, *candidate_id));
+                candidate_id++;
+            }
+
+            dist_t lastdist = result.top().first;
+
+            for (size_t i = k; i < n; i++) {
+                dist_t dist = fstdistfunc_(query_data, getDataByLabel(*candidate_id), dist_func_param_);
+                if (dist <= lastdist) {
+                    result.push(std::pair<dist_t, labeltype>(d, *candidate_id));
+                    if (result.size() > k)
+                        result.pop();
+                    lastdist = result.top().first;
+                }
+                candidate_id++;
+            }
+            return result;
+        };
+
+        std::priority_queue<std::pair<dist_t, labeltype >>
         searchKnn(const void *query_data, size_t k) const {
             std::priority_queue<std::pair<dist_t, labeltype >> result;
             if (cur_element_count == 0) return result;
