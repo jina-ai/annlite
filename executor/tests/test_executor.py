@@ -51,8 +51,8 @@ def test_index(tmpdir):
         uses_metas=metas,
     )
     with f:
-        result = f.post(on='/index', inputs=docs, return_results=True)
-        assert sum([len(r.docs) for r in result]) == N
+        docs = f.post(on='/index', inputs=docs, return_results=True)
+        assert len(docs) == N
 
 
 def test_update(tmpdir):
@@ -68,12 +68,12 @@ def test_update(tmpdir):
     )
     with f:
         f.post(on='/index', inputs=docs)
-        update_res = f.post(on='/update', inputs=docs_update, return_results=True)
-        assert sum([len(r.docs) for r in update_res]) == Nu
+        updated_docs = f.post(on='/update', inputs=docs_update, return_results=True)
+        assert len(updated_docs) == Nu
 
-        res = f.post(on='/status', return_results=True)
-        assert int(res[0].docs[0].tags['total_docs']) == N
-        assert int(res[0].docs[0].tags['index_size']) == N
+        status = f.post(on='/status', return_results=True)[0]
+        assert int(status.tags['total_docs']) == N
+        assert int(status.tags['index_size']) == N
 
 
 def test_search(tmpdir):
@@ -89,13 +89,13 @@ def test_search(tmpdir):
     )
     with f:
         f.post(on='/index', inputs=docs)
-        query_res = f.post(on='/search', inputs=docs_query, return_results=True)
-        assert sum([len(r.docs) for r in query_res]) == Nq
+        result = f.post(on='/search', inputs=docs_query, return_results=True)
+        assert len(result) == Nq
 
-        for i in range(len(query_res[0].docs[0].matches) - 1):
+        for i in range(len(result[0].matches) - 1):
             assert (
-                query_res[0].docs[0].matches[i].scores['cosine'].value
-                <= query_res[0].docs[0].matches[i + 1].scores['cosine'].value
+                result[0].matches[i].scores['cosine'].value
+                <= result[0].matches[i + 1].scores['cosine'].value
             )
 
 
@@ -114,13 +114,13 @@ def test_search_with_filtering(tmpdir):
 
     with f:
         f.post(on='/index', inputs=docs)
-        query_res = f.post(
+        result = f.post(
             on='/search',
             inputs=docs_query,
             return_results=True,
             parameters={'filter': {'price': {'$lt': 50.0}}, 'include_metadata': True},
         )
-        assert all([m.tags['price'] < 50 for m in query_res[0].docs[0].matches])
+        assert all([m.tags['price'] < 50 for m in result[0].matches])
 
 
 def test_delete(tmpdir):
@@ -135,17 +135,17 @@ def test_delete(tmpdir):
     )
     with f:
         f.post(on='/index', inputs=docs)
-        res = f.post(on='/status', return_results=True)
-        assert int(res[0].docs[0].tags['total_docs']) == N
-        assert int(res[0].docs[0].tags['index_size']) == N
+        status = f.post(on='/status', return_results=True)[0]
+        assert int(status.tags['total_docs']) == N
+        assert int(status.tags['index_size']) == N
 
         f.post(on='/delete', inputs=docs[:5])
-        res = f.post(on='/status', return_results=True)
-        assert int(res[0].docs[0].tags['total_docs']) == N - 5
-        assert int(res[0].docs[0].tags['index_size']) == N - 5
+        status = f.post(on='/status', return_results=True)[0]
+        assert int(status.tags['total_docs']) == N - 5
+        assert int(status.tags['index_size']) == N - 5
 
         docs_query = gen_docs(Nq)
-        query_res = f.post(on='/search', inputs=docs_query, return_results=True)
+        result = f.post(on='/search', inputs=docs_query, return_results=True)
 
 
 def test_status(tmpdir):
@@ -160,9 +160,9 @@ def test_status(tmpdir):
     )
     with f:
         f.post(on='/index', inputs=docs)
-        res = f.post(on='/status', return_results=True)
-        assert int(res[0].docs[0].tags['total_docs']) == N
-        assert int(res[0].docs[0].tags['index_size']) == N
+        status = f.post(on='/status', return_results=True)[0]
+        assert int(status.tags['total_docs']) == N
+        assert int(status.tags['index_size']) == N
 
 
 def test_clear(tmpdir):
@@ -178,6 +178,6 @@ def test_clear(tmpdir):
     with f:
         f.post(on='/index', inputs=docs)
         f.post(on='/clear', return_results=True)
-        res = f.post(on='/status', return_results=True)
-        assert int(res[0].docs[0].tags['total_docs']) == 0
-        assert int(res[0].docs[0].tags['index_size']) == 0
+        status = f.post(on='/status', return_results=True)[0]
+        assert int(status.tags['total_docs']) == 0
+        assert int(status.tags['index_size']) == 0
