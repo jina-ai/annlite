@@ -1,6 +1,6 @@
 click
 cython
-jina==2.6.3
+jina@git+https://github.com/jina-ai/jina.git@master
 lmdb
 loguru
 numpy
