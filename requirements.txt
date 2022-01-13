@@ -1,6 +1,6 @@
 click
 cython
-docarray
+jina==2.6.3
 lmdb
 loguru
 numpy
