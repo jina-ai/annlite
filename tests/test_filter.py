@@ -78,6 +78,22 @@ def test_cases():
     )
     assert parameters == (0, 54, 1, 2007, 2010)
 
+    express = {
+        '$and': {
+            '$or': [{'price': {'$gte': 0}}, {'price': {'$lte': 54}}],
+            'rating': {'$gte': 1},
+            'year': {'$gte': 2007, '$lte': 2010},
+        }
+    }
+    f = Filter(express)
+
+    where_clause, parameters = f.parse_where_clause()
+    assert (
+        where_clause
+        == '((price >= ?) OR (price <= ?)) AND (rating >= ?) AND (year >= ?) AND (year <= ?)'
+    )
+    assert parameters == (0, 54, 1, 2007, 2010)
+
 
 def test_error_filter():
     f = Filter({'$may': {'brand': {'$lt': 1}, 'price': {'$gte': 50}}})

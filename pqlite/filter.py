@@ -44,8 +44,6 @@ def _sql_parsing(data, default_logic: str = 'AND'):
 
                 items = list(value.items())
 
-                # print(f'==> items ({key}): {value}')
-
                 if len(items) > 1:
                     clause_list, params_list = [], []
 
@@ -62,7 +60,7 @@ def _sql_parsing(data, default_logic: str = 'AND'):
                         clause, params = _sql_parsing(
                             val, default_logic=LOGICAL_OPERATORS[op]
                         )
-                        where_clause += f'({clause})'
+                        where_clause += clause
                         parameters.extend(params)
                     elif op in COMPARISON_OPERATORS:
                         parameters.append(val)
@@ -80,7 +78,7 @@ def _sql_parsing(data, default_logic: str = 'AND'):
             _clause, _params = _sql_parsing(d)
             clause_list.append(_clause)
             params_list.extend(_params)
-        where_clause += f' {default_logic} '.join(clause_list)
+        where_clause += '(' + f' {default_logic} '.join(clause_list) + ')'
         parameters.extend(params_list)
 
     elif isinstance(data, str):

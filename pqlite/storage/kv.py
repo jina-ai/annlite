@@ -71,7 +71,7 @@ class DocStorage:
             for doc_id in doc_ids:
                 buffer = txn.get(doc_id.encode())
                 if buffer:
-                    doc = Document.from_bytes(buffer)
+                    doc = Document(buffer)
                     docs.append(doc)
         return docs
 
@@ -101,7 +101,7 @@ class DocStorage:
             iterator = cursor.iternext(keys=False, values=True)
 
             for value in iterator:
-                doc = Document.from_bytes(value)
+                doc = Document(value)
                 docs.append(doc)
                 count += 1
                 if count == batch_size:
