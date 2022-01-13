@@ -1,5 +1,6 @@
 import datetime
 import sqlite3
+import threading
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, List, Optional, Tuple, Union
 
@@ -89,7 +90,8 @@ class Table:
             self._conn_name = data_path / f'{name}.db'
         self._name = name
 
-        self._conn = sqlite3.connect(self._conn_name)
+        self._conn = sqlite3.connect(self._conn_name, check_same_thread=False)
+        self._conn_lock = threading.Lock()
 
     def commit(self):
         self._conn.commit()
@@ -211,16 +213,17 @@ class CellTable(Table):
             values.append(doc_value)
             docs_size += 1
 
-        cursor = self._conn.cursor()
-        if docs_size > 1:
-            cursor.executemany(sql, values[:-1])
+        with self._conn_lock:
+            cursor = self._conn.cursor()
+            if docs_size > 1:
+                cursor.executemany(sql, values[:-1])
 
-        cursor.execute(sql, values[-1])
-        last_row_id = cursor.lastrowid
-        row_ids = list(range(last_row_id - len(docs), last_row_id))
+            cursor.execute(sql, values[-1])
+            last_row_id = cursor.lastrowid
+            row_ids = list(range(last_row_id - len(docs), last_row_id))
 
-        if commit:
-            self._conn.commit()
+            if commit:
+                self._conn.commit()
 
         return row_ids
 

@@ -1,7 +1,8 @@
 click
 cython
-docarray
+jina==2.6.3
 lmdb
 loguru
 numpy
+protobuf>=3.13.0
 scikit-learn

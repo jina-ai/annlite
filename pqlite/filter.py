@@ -39,23 +39,52 @@ def _sql_parsing(data, default_logic: str = 'AND'):
                     f'The operator {key} is not supported yet, please double check the given filters!'
                 )
             else:
-                op, val = list(value.items())[0]
                 if i > 0:
                     where_clause += f' {default_logic} '
 
-                if op in COMPARISON_OPERATORS:
-                    parameters.append(val)
-                    where_clause += f'({key} {COMPARISON_OPERATORS[op]} ?)'
-                elif op in MEMBERSHIP_OPERATORS:
-                    parameters.extend(val)
-                    where_clause += f'({key} {MEMBERSHIP_OPERATORS[op]}({", ".join(["?"]*len(val))}))'
+                items = list(value.items())
+
+                if len(items) > 1:
+                    clause_list, params_list = [], []
+
+                    for op, val in items:
+                        _clause, _params = _sql_parsing({key: {op: val}})
+                        clause_list.append(_clause)
+                        params_list.extend(_params)
+
+                    where_clause += f' AND '.join(clause_list)
+                    parameters.extend(params_list)
                 else:
-                    raise ValueError(
-                        f'The operator {op} is not supported yet, please double check the given filters!'
-                    )
+                    op, val = items[0]
+                    if op in LOGICAL_OPERATORS:
+                        clause, params = _sql_parsing(
+                            val, default_logic=LOGICAL_OPERATORS[op]
+                        )
+                        where_clause += clause
+                        parameters.extend(params)
+                    elif op in COMPARISON_OPERATORS:
+                        parameters.append(val)
+                        where_clause += f'({key} {COMPARISON_OPERATORS[op]} ?)'
+                    elif op in MEMBERSHIP_OPERATORS:
+                        parameters.extend(val)
+                        where_clause += f'({key} {MEMBERSHIP_OPERATORS[op]}({", ".join(["?"]*len(val))}))'
+                    else:
+                        raise ValueError(
+                            f'The operator {op} is not supported yet, please double check the given filters!'
+                        )
+    elif isinstance(data, list):
+        clause_list, params_list = [], []
+        for d in data:
+            _clause, _params = _sql_parsing(d)
+            clause_list.append(_clause)
+            params_list.extend(_params)
+        where_clause += '(' + f' {default_logic} '.join(clause_list) + ')'
+        parameters.extend(params_list)
 
     elif isinstance(data, str):
         return data, parameters
+    else:
+        raise ValueError(f'The query express is illegal: {data}')
     return where_clause, tuple(parameters)
 
 
