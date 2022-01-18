@@ -1,0 +1,98 @@
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app: indexer-head
+  name: {{ .Release.Name }}-head
+  namespace: {{ template "pqlite-helm.namespace" . }}
+spec:
+  ports:
+  - name: port-expose
+    port: 8080
+    protocol: TCP
+    targetPort: 8080
+  - name: port-in
+    port: 8081
+    protocol: TCP
+    targetPort: 8081
+  selector:
+    app: indexer-head-0
+  type: ClusterIP
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Release.Name }}-head
+  namespace: {{ template "pqlite-helm.namespace" . }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: indexer-head
+  strategy:
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+    type: RollingUpdate
+  template:
+    metadata:
+      labels:
+        app: indexer-head
+        jina_pod_name: indexer-head
+        ns: {{ template "pqlite-helm.namespace" . }}
+        pea_type: HEAD
+        shard_id: ''
+    spec:
+      containers:
+      - args:
+        - executor
+        - --name
+        - indexer/head-0
+        - --workspace
+        - /Users/fengwang/Jina/workspace/pqlite/examples/k8s_example
+        - --identity
+        - 95e9754ccc844bf2bb8f0ccf0ff31440
+        - --workspace-id
+        - 4b03c2a471a74caf8b8acbb552c6dc60
+        - --k8s-namespace
+        - {{ template "pqlite-helm.namespace" . }}
+        - --uses
+        - config.yml
+        - --port-in
+        - '8081'
+        - --num-part
+        - '1'
+        - --upload-files
+        - --runtime-cls
+        - HeadRuntime
+        - --pea-role
+        - HEAD
+        - --noblock-on-start
+        - --shards
+        - {{ .Values.shardCount | squote }}
+        - --uses-metas
+        - '{}'
+        - --native
+        command:
+        - jina
+        env:
+        - name: POD_UID
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.uid
+        - name: JINA_POD_NAME
+          value: indexer
+        envFrom:
+        - configMapRef:
+            name: {{ .Release.Name }}-configmap
+        image: jinaai/jina:master-py38-perf
+        imagePullPolicy: IfNotPresent
+        name: executor
+        ports:
+        - containerPort: 8080
+        - containerPort: 8081
+        readinessProbe:
+          initialDelaySeconds: 5
+          periodSeconds: 10
+          tcpSocket:
+            port: 8081

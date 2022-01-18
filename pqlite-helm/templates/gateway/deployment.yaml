@@ -1,0 +1,71 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Release.Name }}-gateway
+  namespace: {{ template "pqlite-helm.namespace" . }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: gateway
+  strategy:
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+    type: RollingUpdate
+  template:
+    metadata:
+      labels:
+        app: gateway
+        jina_pod_name: gateway
+        ns: {{ template "pqlite-helm.namespace" . }}
+        pea_type: GATEWAY
+        shard_id: ''
+    spec:
+      containers:
+      - args:
+        - gateway
+        - --identity
+        - 1e8c0e189bee4416b69f476778b500bd
+        - --workspace-id
+        - b47ec381270149ccae884ac10ae5f189
+        - --k8s-namespace
+        - {{ template "pqlite-helm.namespace" . }}
+        - --polling
+        - ANY
+        - --port-in
+        - '8081'
+        - --expose-endpoints
+        - '{}'
+        - --protocol
+        - HTTP
+        - --port-expose
+        - '8080'
+        - --graph-description
+        - '{"indexer": ["end-gateway"], "start-gateway": ["indexer"]}'
+        - --pea-role
+        - GATEWAY
+        - --noblock-on-start
+        command:
+        - jina
+        env:
+        - name: POD_UID
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.uid
+        - name: JINA_POD_NAME
+          value: gateway
+        envFrom:
+        - configMapRef:
+            name: {{ .Release.Name }}-configmap
+        image: jinaai/jina:master-py38-standard
+        imagePullPolicy: IfNotPresent
+        name: executor
+        ports:
+        - containerPort: 8080
+        - containerPort: 8081
+        readinessProbe:
+          initialDelaySeconds: 5
+          periodSeconds: 10
+          tcpSocket:
+            port: 8080
