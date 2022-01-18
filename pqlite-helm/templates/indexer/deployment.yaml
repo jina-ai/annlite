@@ -99,8 +99,22 @@ spec:
           periodSeconds: 10
           tcpSocket:
             port: 8081
+        volumeMounts:
+          - name: datadir
+            mountPath: "{{ $.Values.persistence.mountPath }}"
+      volumes:
+        - name: datadir
+          {{- if and $.Values.persistence.enabled $.Values.persistence.existingClaim}}
+          persistentVolumeClaim:
+            {{- with $.Values.persistence.existingClaim }}
+            claimName: {{ tpl . $ }}
+            {{- end }}
+          {{- else }}
+          emptyDir: {}
+          {{- end }}
 {{- if lt $i (sub $replicas 1) }}
 ---
 {{- end }}
+
 {{- end }}
 {{- end }}
