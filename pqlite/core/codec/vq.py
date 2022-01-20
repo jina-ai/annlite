@@ -1,6 +1,5 @@
 import numpy as np
 from scipy.cluster.vq import vq
-from sklearn.cluster import KMeans, MiniBatchKMeans
 
 from ...enums import Metric
 from .base import BaseCodec
@@ -13,14 +12,15 @@ class VQCodec(BaseCodec):
         metric: Metric = Metric.EUCLIDEAN,
         iter: int = 100,
         n_init: int = 4,
-        *args, **kwargs
+        *args,
+        **kwargs
     ):
         super(VQCodec, self).__init__(require_train=True)
         self.n_clusters = n_clusters
 
-        #assert (
+        # assert (
         #    metric == Metric.EUCLIDEAN
-        #), f'The distance metric `{metric.name}` is not supported yet!'
+        # ), f'The distance metric `{metric.name}` is not supported yet!'
         self.metric = metric
         self._codebook = None
         self.iter = iter
@@ -34,6 +34,8 @@ class VQCodec(BaseCodec):
         :param x: Training vectors with shape=(N, D) and dtype=np.float32.
         :param iter: The number of iteration for k-means
         """
+
+        from sklearn.cluster import KMeans
 
         assert x.dtype == np.float32
         assert x.ndim == 2
@@ -53,20 +55,22 @@ class VQCodec(BaseCodec):
         if self.kmeans:
             self.kmeans.partial_fit(x)
         else:
-            self.kmeans = MiniBatchKMeans(n_clusters=self.n_clusters,
-                                          max_iter=self.iter)
+            from sklearn.cluster import MiniBatchKMeans
+
+            self.kmeans = MiniBatchKMeans(
+                n_clusters=self.n_clusters, max_iter=self.iter
+            )
             self.kmeans.partial_fit(x)
 
     def build_codebook(self):
         """Constructs a codebook from the current MiniBatchKmeans
-           This step is not necessary if full KMeans is trained used calling `.fit`.
+        This step is not necessary if full KMeans is trained used calling `.fit`.
         """
         self._codebook = self.kmeans.cluster_centers_
         self._is_trained = True
 
     def encode(self, x: 'np.ndarray'):
-        """Encodes each row of the input array `x` it's closest cluster id.
-        """
+        """Encodes each row of the input array `x` it's closest cluster id."""
         self._check_trained()
         assert x.dtype == np.float32
         assert x.ndim == 2

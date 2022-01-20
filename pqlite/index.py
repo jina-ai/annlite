@@ -6,7 +6,7 @@ import numpy as np
 from loguru import logger
 
 if TYPE_CHECKING:
-    from docarray import DocumentArray
+    from docarray import DocumentArray, Document
 
 from .container import CellContainer
 from .core import PQCodec, VQCodec
@@ -353,7 +353,8 @@ class PQLite(CellContainer):
 
         :param docs: the documents to delete
         """
-        super().delete(docs if isinstance(docs, list) else docs.get_attributes('id'))
+
+        super().delete(docs if isinstance(docs, list) else docs[:, 'id'])
 
     def clear(self):
         """Clear the whole database"""

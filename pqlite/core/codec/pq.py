@@ -5,7 +5,6 @@ from pqlite import pq_bind
 
 from ...enums import Metric
 from .base import BaseCodec
-from sklearn.cluster import KMeans, MiniBatchKMeans
 
 # from pqlite.pq_bind import precompute_adc_table, dist_pqcodes_to_codebooks
 
@@ -38,7 +37,7 @@ class PQCodec(BaseCodec):
         n_subvectors: int = 8,
         n_clusters: int = 256,
         metric: Metric = Metric.EUCLIDEAN,
-        n_init: int = 4
+        n_init: int = 4,
     ):
         super(PQCodec, self).__init__(require_train=True)
         self.dim = dim
@@ -56,9 +55,9 @@ class PQCodec(BaseCodec):
             else (np.uint16 if n_clusters <= 2 ** 16 else np.uint32)
         )
 
-        #assert (
+        # assert (
         #    metric == Metric.EUCLIDEAN
-        #), f'The distance metric `{metric.name}` is not supported yet!'
+        # ), f'The distance metric `{metric.name}` is not supported yet!'
         self.metric = metric
         self._codebooks = None
         self.kmeans = []
@@ -70,6 +69,8 @@ class PQCodec(BaseCodec):
         :param x: Training vectors with shape=(N, D)
         :param iter: Number of iterations in Kmeans
         """
+        from sklearn.cluster import KMeans
+
         assert x.dtype == np.float32
         assert x.ndim == 2
 
@@ -78,13 +79,14 @@ class PQCodec(BaseCodec):
             (self.n_subvectors, self.n_clusters, self.d_subvector), dtype=np.float32
         )
         for m in range(self.n_subvectors):
-            kmeans = KMeans(n_clusters=self.n_clusters, max_iter=iter, n_init=self.n_init)
+            kmeans = KMeans(
+                n_clusters=self.n_clusters, max_iter=iter, n_init=self.n_init
+            )
             self.kmeans.append(kmeans)
             self.kmeans[m].fit(x[:, m * self.d_subvector : (m + 1) * self.d_subvector])
             self._codebooks[m] = self.kmeans[m].cluster_centers_
 
         self._is_trained = True
-
 
     def partial_fit(self, x: 'np.ndarray'):
         """Given a batch of training vectors, update the internal MiniBatchKMeans.
@@ -95,18 +97,23 @@ class PQCodec(BaseCodec):
         assert x.ndim == 2
         if len(self.kmeans) > 0:
             for m in range(self.n_subvectors):
-                self.kmeans[m].partial_fit(x[:, m * self.d_subvector: (m + 1) * self.d_subvector])
+                self.kmeans[m].partial_fit(
+                    x[:, m * self.d_subvector : (m + 1) * self.d_subvector]
+                )
         else:
+            from sklearn.cluster import MiniBatchKMeans
+
             for m in range(self.n_subvectors):
                 self.kmeans.append(MiniBatchKMeans(n_clusters=self.n_clusters))
 
             for m in range(self.n_subvectors):
-                self.kmeans[m].partial_fit(x[:, m * self.d_subvector: (m + 1) * self.d_subvector])
-
+                self.kmeans[m].partial_fit(
+                    x[:, m * self.d_subvector : (m + 1) * self.d_subvector]
+                )
 
     def build_codebook(self):
         """Constructs sub-codebooks from the current parameters of the models in `self.kmeans`
-           This step is not necessary if full KMeans is trained used calling `.fit`.
+        This step is not necessary if full KMeans is trained used calling `.fit`.
         """
 
         self._codebooks = np.zeros(
@@ -117,7 +124,6 @@ class PQCodec(BaseCodec):
             self._codebooks[m] = self.kmeans[m].cluster_centers_
 
         self._is_trained = True
-
 
     def encode(self, x: 'np.ndarray'):
         """Encode input vectors into PQ-codes.
