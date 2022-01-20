@@ -167,7 +167,7 @@ class PQLiteIndexer(Executor):
             return
 
         limit = int(parameters.get('limit', self.limit))
-        search_filter = parameters.get('filter', None)
+        search_filter = parameters.get('filter', {})
         include_metadata = bool(
             parameters.get('include_metadata', self.include_metadata)
         )

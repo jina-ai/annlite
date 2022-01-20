@@ -41,7 +41,9 @@ class DocStorage:
             for doc in docs:
                 # enforce using float32 as dtype of embeddings
                 doc.embedding = doc.embedding.astype(np.float32)
-                success = txn.put(doc.id.encode(), doc.to_bytes(), overwrite=True)
+                success = txn.put(
+                    doc.id.encode(), doc.to_bytes(protocol='protobuf'), overwrite=True
+                )
                 if not success:
                     txn.abort()
                     raise ValueError(
@@ -52,7 +54,9 @@ class DocStorage:
         with self._env.begin(write=True) as txn:
             for doc in docs:
                 doc.embedding = doc.embedding.astype(np.float32)
-                old_value = txn.replace(doc.id.encode(), doc.to_bytes())
+                old_value = txn.replace(
+                    doc.id.encode(), doc.to_bytes(protocol='protobuf')
+                )
                 if not old_value:
                     txn.abort()
                     raise ValueError(f'The Doc ({doc.id}) does not exist in database!')
@@ -71,7 +75,7 @@ class DocStorage:
             for doc_id in doc_ids:
                 buffer = txn.get(doc_id.encode())
                 if buffer:
-                    doc = Document(buffer)
+                    doc = Document.from_bytes(buffer, protocol='protobuf')
                     docs.append(doc)
         return docs
 
@@ -101,7 +105,7 @@ class DocStorage:
             iterator = cursor.iternext(keys=False, values=True)
 
             for value in iterator:
-                doc = Document(value)
+                doc = Document.from_bytes(value, protocol='protobuf')
                 docs.append(doc)
                 count += 1
                 if count == batch_size:

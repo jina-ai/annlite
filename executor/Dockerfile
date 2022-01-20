@@ -1,4 +1,4 @@
-FROM jinaai/jina:2-py37-perf
+FROM jinaai/jina:master-py37-perf
 
 RUN apt-get update && apt-get install --no-install-recommends -y gcc g++ git \
     && rm -rf /var/lib/apt/lists/*
