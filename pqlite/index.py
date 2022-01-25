@@ -448,7 +448,7 @@ class PQLite(CellContainer):
             'index_size': self.index_size,
             'n_cells': self.n_cells,
             'dim': self.dim,
-            'metric': self.metric,
+            'metric': self.metric.name,
             'is_trained': self.is_trained,
         }
 

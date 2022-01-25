@@ -2,22 +2,32 @@
 {{- $replicas := .Values.shardCount | int }}
 {{- range $i, $e := until $replicas }}
 apiVersion: v1
+data:
+  JINA_LOG_LEVEL: INFO
+  pythonunbuffered: '1'
+  worker_class: uvicorn.workers.UvicornH11Worker
+kind: ConfigMap
+metadata:
+  name: indexer-{{ $i }}-configmap
+  namespace: {{ template "pqlite-helm.namespace" $ }}
+---
+apiVersion: v1
 kind: Service
 metadata:
   labels:
     app: indexer-{{ $i }}
-  name: {{ $.Release.Name }}-indexer-{{ $i }}
+  name: indexer-{{ $i }}
   namespace: {{ template "pqlite-helm.namespace" $ }}
 spec:
   ports:
-    - name: port-expose
-      port: 8080
-      protocol: TCP
-      targetPort: 8080
-    - name: port-in
-      port: 8081
-      protocol: TCP
-      targetPort: 8081
+  - name: port-expose
+    port: 8080
+    protocol: TCP
+    targetPort: 8080
+  - name: port-in
+    port: 8081
+    protocol: TCP
+    targetPort: 8081
   selector:
     app: indexer-{{ $i }}
   type: ClusterIP
@@ -25,7 +35,7 @@ spec:
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: {{ $.Release.Name }}-indexer-{{ $i }}
+  name: indexer-{{ $i }}
   namespace: {{ template "pqlite-helm.namespace" $ }}
 spec:
   replicas: 1
@@ -53,10 +63,6 @@ spec:
         - indexer-{{ $i }}
         - --workspace
         - /Users/fengwang/Jina/workspace/pqlite/examples/k8s_example
-        - --identity
-        - 95e9754ccc844bf2bb8f0ccf0ff31440
-        - --workspace-id
-        - 4b03c2a471a74caf8b8acbb552c6dc60
         - --k8s-namespace
         - {{ template "pqlite-helm.namespace" $ }}
         - --uses
@@ -87,9 +93,9 @@ spec:
           value: indexer
         envFrom:
         - configMapRef:
-            name: {{ $.Release.Name }}-configmap
-        image: jinahub/pn1qofsj:61e634636aa78bb24e2a0761
-        imagePullPolicy: IfNotPresent
+            name: indexer-{{ $i }}-configmap
+        image: {{ $.Values.image.repository }}:{{ $.Values.image.tag }}
+        imagePullPolicy: {{ $.Values.image.pullPolicy }}
         name: executor
         ports:
         - containerPort: 8080

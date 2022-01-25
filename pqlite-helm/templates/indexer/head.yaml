@@ -1,9 +1,19 @@
 apiVersion: v1
+data:
+  JINA_LOG_LEVEL: INFO
+  pythonunbuffered: '1'
+  worker_class: uvicorn.workers.UvicornH11Worker
+kind: ConfigMap
+metadata:
+  name: indexer-head-0-configmap
+  namespace: {{ template "pqlite-helm.namespace" . }}
+---
+apiVersion: v1
 kind: Service
 metadata:
   labels:
-    app: indexer-head
-  name: {{ .Release.Name }}-head
+    app: indexer-head-0
+  name: indexer-head-0
   namespace: {{ template "pqlite-helm.namespace" . }}
 spec:
   ports:
@@ -22,13 +32,13 @@ spec:
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: {{ .Release.Name }}-head
+  name: indexer-head-0
   namespace: {{ template "pqlite-helm.namespace" . }}
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: indexer-head
+      app: indexer-head-0
   strategy:
     rollingUpdate:
       maxSurge: 1
@@ -37,8 +47,8 @@ spec:
   template:
     metadata:
       labels:
-        app: indexer-head
-        jina_pod_name: indexer-head
+        app: indexer-head-0
+        jina_pod_name: indexer
         ns: {{ template "pqlite-helm.namespace" . }}
         pea_type: HEAD
         shard_id: ''
@@ -50,10 +60,8 @@ spec:
         - indexer/head-0
         - --workspace
         - /Users/fengwang/Jina/workspace/pqlite/examples/k8s_example
-        - --identity
-        - 95e9754ccc844bf2bb8f0ccf0ff31440
         - --workspace-id
-        - 4b03c2a471a74caf8b8acbb552c6dc60
+        - 34224b4c78ee4eab9d49b6e0646542a8
         - --k8s-namespace
         - {{ template "pqlite-helm.namespace" . }}
         - --uses
@@ -84,7 +92,7 @@ spec:
           value: indexer
         envFrom:
         - configMapRef:
-            name: {{ .Release.Name }}-configmap
+            name: indexer-head-0-configmap
         image: jinaai/jina:master-py38-perf
         imagePullPolicy: IfNotPresent
         name: executor

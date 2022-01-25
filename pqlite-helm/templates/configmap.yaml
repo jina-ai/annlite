@@ -1,9 +1,0 @@
-apiVersion: v1
-data:
-  JINA_LOG_LEVEL: INFO
-  pythonunbuffered: '1'
-  worker_class: uvicorn.workers.UvicornH11Worker
-kind: ConfigMap
-metadata:
-  name: {{ .Release.Name }}-configmap
-  namespace: {{ template "pqlite-helm.namespace" . }}

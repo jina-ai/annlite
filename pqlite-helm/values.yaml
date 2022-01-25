@@ -32,8 +32,8 @@ dimension: 512
 
 image:
   registry: docker.io
-  repository: jinaai/pqlite-indexer
-  tag: 0.1.7
+  repository: numb3r3/pqlite-executor
+  tag: latest
 
   ## Specify a imagePullPolicy
   ## ref: https://kubernetes.io/docs/user-guide/images/#pre-pulling-images
@@ -46,7 +46,7 @@ image:
   ## pullSecrets:
   ##   - myRegistryKeySecretName
   ##
-  pullSecrets: [ ]
+  pullSecrets: []
   ## Set to true if you would like to see extra information on logs
   ##
   debug: false
@@ -108,16 +108,16 @@ persistence:
     ## A label query over volumes to consider for binding (e.g. when using local volumes)
     ## See https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.20/#labelselector-v1-meta for more details
     ##
-    selector: { }
+    selector: {}
 
     ## Sometime cloud providers use additional requests attributes to provision custom storage instance
     ## See https://cloud.ibm.com/docs/containers?topic=containers-file_storage#file_dynamic_statefulset
     ##
-    requests: { }
+    requests: {}
 
     ## Add dataSource to the VolumeClaimTemplate
     ##
-    dataSource: { }
+    dataSource: {}
 
 
 serviceAccount:

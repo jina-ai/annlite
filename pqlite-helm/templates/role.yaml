@@ -25,4 +25,5 @@ roleRef:
 subjects:
 - apiGroup: ''
   kind: ServiceAccount
-  name: default
+  name: {{ template "pqlite-helm.namespace" . }}
+---
