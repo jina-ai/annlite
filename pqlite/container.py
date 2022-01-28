@@ -27,6 +27,7 @@ class CellContainer:
         expand_step_size: int = 50000,
         expand_mode: ExpandMode = ExpandMode.STEP,
         columns: Optional[List[tuple]] = None,
+        serialize_protocol: str = 'protobuf',
         data_path: Path = Path('./data'),
         **kwargs,
     ):
@@ -61,7 +62,10 @@ class CellContainer:
                 for _ in range(n_cells)
             ]
 
-        self._doc_stores = [DocStorage(data_path / f'cell_{_}') for _ in range(n_cells)]
+        self._doc_stores = [
+            DocStorage(data_path / f'cell_{_}', serialize_protocol=serialize_protocol)
+            for _ in range(n_cells)
+        ]
 
         self._cell_tables = [
             CellTable(f'table_{c}', columns=columns) for c in range(n_cells)
@@ -289,6 +293,14 @@ class CellContainer:
                 self.doc_store(cell_id).delete([doc_id])
 
         logger.debug(f'{len(ids)} items deleted')
+
+    def get_doc_by_id(self, doc_id: str):
+        cell_id = 0
+        if self.n_cells > 1:
+            cell_id, _ = self._meta_table.get_address(doc_id)
+
+        da = self.doc_store(cell_id).get([doc_id])
+        return da[0] if len(da) > 0 else None
 
     def documents_generator(self, cell_id: int, batch_size: int = 256):
         for docs in self.doc_store(cell_id).batched_iterator(batch_size=batch_size):

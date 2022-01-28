@@ -12,9 +12,10 @@ LMDB_MAP_SIZE = 100 * 1024 * 1024 * 1024
 class DocStorage:
     """The backend storage engine of Documents"""
 
-    def __init__(self, path: Union[str, Path]):
+    def __init__(self, path: Union[str, Path], serialize_protocol: str = 'protobuf'):
         self._path = path
         self._env = self._open(path)
+        self._serialize_protocol = serialize_protocol
 
     def _open(self, db_path: str):
         return lmdb.Environment(
@@ -42,7 +43,9 @@ class DocStorage:
                 # enforce using float32 as dtype of embeddings
                 doc.embedding = doc.embedding.astype(np.float32)
                 success = txn.put(
-                    doc.id.encode(), doc.to_bytes(protocol='protobuf'), overwrite=True
+                    doc.id.encode(),
+                    doc.to_bytes(protocol=self._serialize_protocol),
+                    overwrite=True,
                 )
                 if not success:
                     txn.abort()
@@ -55,7 +58,7 @@ class DocStorage:
             for doc in docs:
                 doc.embedding = doc.embedding.astype(np.float32)
                 old_value = txn.replace(
-                    doc.id.encode(), doc.to_bytes(protocol='protobuf')
+                    doc.id.encode(), doc.to_bytes(protocol=self._serialize_protocol)
                 )
                 if not old_value:
                     txn.abort()
@@ -75,7 +78,7 @@ class DocStorage:
             for doc_id in doc_ids:
                 buffer = txn.get(doc_id.encode())
                 if buffer:
-                    doc = Document.from_bytes(buffer, protocol='protobuf')
+                    doc = Document.from_bytes(buffer, protocol=self._serialize_protocol)
                     docs.append(doc)
         return docs
 
@@ -105,7 +108,7 @@ class DocStorage:
             iterator = cursor.iternext(keys=False, values=True)
 
             for value in iterator:
-                doc = Document.from_bytes(value, protocol='protobuf')
+                doc = Document.from_bytes(value, protocol=self._serialize_protocol)
                 docs.append(doc)
                 count += 1
                 if count == batch_size:

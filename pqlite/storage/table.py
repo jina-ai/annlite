@@ -81,17 +81,29 @@ class Table:
     def __init__(
         self,
         name: str,
-        data_path: Optional[Path] = None,
+        data_path: Optional[Union[Path, str]] = None,
         in_memory: bool = True,
     ):
         if in_memory:
             self._conn_name = ':memory:'
         else:
+            if isinstance(data_path, str):
+                data_path = Path(data_path)
             self._conn_name = data_path / f'{name}.db'
         self._name = name
 
         self._conn = sqlite3.connect(self._conn_name, check_same_thread=False)
         self._conn_lock = threading.Lock()
+
+    def execute(self, sql: str, commit: bool = True):
+        self._conn.execute(sql)
+        if commit:
+            self.commit()
+
+    def execute_many(self, sql: str, parameters: List[Tuple], commit: bool = True):
+        self._conn.executemany(sql, parameters)
+        if commit:
+            self.commit()
 
     def commit(self):
         self._conn.commit()
@@ -352,6 +364,12 @@ class MetaTable(Table):
 
         self._conn.execute(sql)
         self._conn.commit()
+
+    def get_doc_id(self, offset: int, cell_id: int):
+        sql = f'SELECT _doc_id from {self.name} WHERE offset = ? AND cell_id = ?;'
+        cursor = self._conn.execute(sql, (offset, cell_id))
+        row = cursor.fetchone()
+        return row[0] if row else None
 
     def get_address(self, doc_id: str):
         sql = f'SELECT cell_id, offset from {self.name} WHERE _doc_id = ?;'

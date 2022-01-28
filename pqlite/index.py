@@ -3,10 +3,11 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Dict, List, Optional, Union
 
 import numpy as np
+from docarray.math.ndarray import to_numpy_array
 from loguru import logger
 
 if TYPE_CHECKING:
-    from docarray import DocumentArray, Document
+    from docarray import DocumentArray
 
 from .container import CellContainer
 from .core import PQCodec, VQCodec
@@ -208,7 +209,7 @@ class PQLite(CellContainer):
             logger.warning('The pqlite is readonly, cannot add documents')
             return
 
-        x = docs.embeddings
+        x = to_numpy_array(docs.embeddings)
 
         n_data, _ = self._sanity_check(x)
 
@@ -228,7 +229,7 @@ class PQLite(CellContainer):
             logger.warning('The pqlite is readonly, cannot update documents')
             return
 
-        x = docs.embeddings
+        x = to_numpy_array(docs.embeddings)
         n_data, _ = self._sanity_check(x)
 
         assigned_cells = (
@@ -254,7 +255,7 @@ class PQLite(CellContainer):
         :param limit: the number of results to get for each query document in search
         :param include_metadata: whether to return document metadata in response.
         """
-        query_np = docs.embeddings
+        query_np = to_numpy_array(docs.embeddings)
 
         match_dists, match_docs = self._search_documents(
             query_np, filter, limit, include_metadata
@@ -398,7 +399,7 @@ class PQLite(CellContainer):
     def _rebuild_index(self):
         for cell_id in range(self.n_cells):
             cell_size = self.doc_store(cell_id).size
-            logger.info(f'Rebuild the index of cell-{cell_id} ({cell_size} docs)...')
+            logger.debug(f'Rebuild the index of cell-{cell_id} ({cell_size} docs)...')
             self.vec_index(cell_id).reset(capacity=cell_size)
             for docs in self.documents_generator(cell_id, batch_size=10240):
                 x = docs.embeddings
