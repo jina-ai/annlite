@@ -365,12 +365,6 @@ class MetaTable(Table):
         self._conn.execute(sql)
         self._conn.commit()
 
-    def get_doc_id(self, offset: int, cell_id: int):
-        sql = f'SELECT _doc_id from {self.name} WHERE offset = ? AND cell_id = ?;'
-        cursor = self._conn.execute(sql, (offset, cell_id))
-        row = cursor.fetchone()
-        return row[0] if row else None
-
     def get_address(self, doc_id: str):
         sql = f'SELECT cell_id, offset from {self.name} WHERE _doc_id = ?;'
         cursor = self._conn.execute(sql, (doc_id,))
