@@ -44,7 +44,9 @@ def _sql_parsing(data, default_logic: str = 'AND'):
 
                 items = list(value.items())
 
-                if len(items) > 1:
+                if len(items) == 0:
+                    raise ValueError(f'The query express is illegal: {data}')
+                elif len(items) > 1:
                     clause_list, params_list = [], []
 
                     for op, val in items:
@@ -95,4 +97,4 @@ class Filter(object):
         self.tree_data = tree_data
 
     def parse_where_clause(self):
-        return _sql_parsing(self.tree_data)
+        return _sql_parsing(self.tree_data or {})

@@ -1,6 +1,6 @@
 click
 cython
-jina==2.6.3
+jina<=2.6.4
 lmdb
 loguru
 numpy
