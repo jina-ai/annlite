@@ -1,4 +1,4 @@
-from typing import List, Optional, Tuple
+from typing import Dict, List, Optional, Tuple
 
 from jina import Document, DocumentArray, Executor, requests
 from jina.logging.logger import JinaLogger
@@ -25,6 +25,7 @@ class PQLiteIndexer(Executor):
         index_traversal_paths: str = 'r',
         search_traversal_paths: str = 'r',
         columns: Optional[List[Tuple[str, str]]] = None,
+        serialize_config: Optional[Dict] = None,
         *args,
         **kwargs,
     ):
@@ -42,6 +43,7 @@ class PQLiteIndexer(Executor):
         :param search_traversal_paths: Default traversal paths on docs
         (used for search), e.g. 'r', 'c', 'r,c'
         :param columns: List of tuples of the form (column_name, str_type). Here str_type must be a string that can be parsed as a valid Python type.
+        :param serialize_config: The configurations used for serializing documents, e.g., {'protocol': 'pickle'}
         """
         super().__init__(*args, **kwargs)
         self.logger = JinaLogger(self.__class__.__name__)
@@ -72,6 +74,7 @@ class PQLiteIndexer(Executor):
             ef_query=ef_query,
             max_connection=max_connection,
             data_path=self.workspace or './workspace',
+            serialize_config=serialize_config or {},
             **kwargs,
         )
 
