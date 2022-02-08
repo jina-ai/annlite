@@ -1,3 +1,5 @@
+import pytest
+
 from pqlite.storage.kv import DocStorage
 
 
@@ -46,3 +48,18 @@ def test_batched_iterator(tmpdir, docs):
     storage.insert(docs)
     for docs in storage.batched_iterator(batch_size=3):
         assert len(docs) == 3
+
+
+@pytest.mark.parametrize('protocol', ['pickle', 'protobuf'])
+def test_searalize(protocol, tmpdir, docs):
+    storage = DocStorage(
+        tmpdir + 'test_doc_store', serialize_config={'protocol': protocol}
+    )
+    storage.insert(docs)
+
+    doc = storage.get('doc1')[0]
+    assert doc.id == 'doc1'
+    assert (doc.embedding == [1, 0, 0, 0]).all()
+
+    docs = storage.get('doc7')
+    assert len(docs) == 0

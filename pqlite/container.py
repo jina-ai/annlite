@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import TYPE_CHECKING, List, Optional, Tuple
+from typing import TYPE_CHECKING, Dict, List, Optional, Tuple
 
 import numpy as np
 from docarray import Document, DocumentArray
@@ -27,7 +27,7 @@ class CellContainer:
         expand_step_size: int = 50000,
         expand_mode: ExpandMode = ExpandMode.STEP,
         columns: Optional[List[tuple]] = None,
-        serialize_protocol: str = 'protobuf',
+        serialize_config: Optional[Dict] = None,
         data_path: Path = Path('./data'),
         **kwargs,
     ):
@@ -63,7 +63,7 @@ class CellContainer:
             ]
 
         self._doc_stores = [
-            DocStorage(data_path / f'cell_{_}', serialize_protocol=serialize_protocol)
+            DocStorage(data_path / f'cell_{_}', serialize_config=serialize_config or {})
             for _ in range(n_cells)
         ]
 
