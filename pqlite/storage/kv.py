@@ -3,7 +3,6 @@ from pathlib import Path
 from typing import Dict, List, Union
 
 import lmdb
-import numpy as np
 from docarray import Document, DocumentArray
 
 LMDB_MAP_SIZE = 100 * 1024 * 1024 * 1024
