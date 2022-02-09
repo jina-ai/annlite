@@ -16,7 +16,7 @@ class DocStorage:
         self._env = self._open(path)
         self._serialize_config = serialize_config
 
-    def _open(self, db_path: str):
+    def _open(self, db_path: Union[str, Path]):
         return lmdb.Environment(
             str(self._path),
             map_size=LMDB_MAP_SIZE,
