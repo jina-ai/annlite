@@ -3,7 +3,6 @@ from pathlib import Path
 from typing import Dict, List, Union
 
 import lmdb
-import numpy as np
 from docarray import Document, DocumentArray
 
 LMDB_MAP_SIZE = 100 * 1024 * 1024 * 1024
@@ -17,7 +16,7 @@ class DocStorage:
         self._env = self._open(path)
         self._serialize_config = serialize_config
 
-    def _open(self, db_path: str):
+    def _open(self, db_path: Union[str, Path]):
         return lmdb.Environment(
             str(self._path),
             map_size=LMDB_MAP_SIZE,
@@ -40,8 +39,6 @@ class DocStorage:
     def insert(self, docs: 'DocumentArray'):
         with self._env.begin(write=True) as txn:
             for doc in docs:
-                # enforce using float32 as dtype of embeddings
-                doc.embedding = doc.embedding.astype(np.float32)
                 success = txn.put(
                     doc.id.encode(),
                     doc.to_bytes(**self._serialize_config),
@@ -56,7 +53,6 @@ class DocStorage:
     def update(self, docs: 'DocumentArray'):
         with self._env.begin(write=True) as txn:
             for doc in docs:
-                doc.embedding = doc.embedding.astype(np.float32)
                 old_value = txn.replace(
                     doc.id.encode(), doc.to_bytes(**self._serialize_config)
                 )
