@@ -9,4 +9,4 @@ f = Flow(port_expose=8080, protocol='http').add(
     shards=3,
     polling={'/index': 'ANY', '/search': 'ALL', '*': 'ANY'},
 )
-f.to_k8s_yaml('./deployment')
+f.to_k8s_yaml('./deployment', k8s_namespace='showtell')
