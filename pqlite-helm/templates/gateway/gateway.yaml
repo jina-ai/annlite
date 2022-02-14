@@ -65,7 +65,7 @@ spec:
         - --expose-endpoints
         - '{}'
         - --protocol
-        - HTTP
+        - GRPC
         - --port-expose
         - '8080'
         - --graph-description
