@@ -1,17 +1,15 @@
 import numpy as np
 from jina import Client, DocumentArray, Flow
 
-# from match_merger import MatchMerger
-
 PROTOCOL = 'grpc'
+EXTERNAL_HEAD_PORT_IN = 4567
 
 f = Flow(protocol=PROTOCOL).add(
     name='indexer',
-    uses='docker://numb3r3/pqlite-executor:latest',
-    uses_with={'dim': 512},
-    shards=3,
-    # polling={'/index': 'ANY', '/search': 'ALL', '*': 'ANY'},
-)  # .add(name='match_merger', uses=MatchMerger)
+    external=True,
+    host='localhost',
+    port_in=EXTERNAL_HEAD_PORT_IN,
+)
 
 with f:
     client = Client(
@@ -40,7 +38,7 @@ with f:
     result = client.post('/search', inputs=docs[:5], return_results=True)[0]
     # print(len(result))
 
-    print(result.docs.summary())
+    # print(result.docs.summary())
     for r in result.docs:
         print(f'#matches: {len(r.matches)}')
         for k, match in enumerate(r.matches):
@@ -48,26 +46,3 @@ with f:
         break
 
     # status = client.post('/status', return_results=True)[0]
-    # print(status.docs[0].to_dict())
-    # f.block()
-
-
-# client = Client(
-#     host='localhost',
-#     port='4567',
-#     protocol='grpc',
-# )
-#
-# N = 5
-# docs = DocumentArray.empty(N)
-# docs.embeddings = np.random.random((N, 512)).astype(np.float32)
-#
-# result = client.post('/index', inputs=docs, return_results=True)[0]
-# print(result.docs.summary())
-#
-# result = client.post('/search', inputs=docs, return_results=True)[0]
-# print(result.docs.summary())
-#
-#
-# status = client.post('/status', return_results=True)
-# print(status.docs[0].to_dict())
