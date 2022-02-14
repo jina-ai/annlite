@@ -30,6 +30,8 @@ shardCount: 3
 
 dimension: 512
 
+metric: cosine
+
 image:
   registry: docker.io
   repository: numb3r3/pqlite-executor
