@@ -26,4 +26,3 @@ subjects:
 - apiGroup: ''
   kind: ServiceAccount
   name: {{ template "pqlite-helm.namespace" . }}
----

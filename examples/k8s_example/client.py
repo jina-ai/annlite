@@ -38,7 +38,7 @@ docs.embeddings = np.random.random((5, 512)).astype(np.float32)
 
 result = client.post('/index', inputs=docs, return_results=True)
 print(result)
-
-
-status = client.post('/status', return_results=True)
-print(status.docs[0].to_dict())
+#
+#
+# status = client.post('/status', return_results=True)
+# print(status.docs[0].to_dict())

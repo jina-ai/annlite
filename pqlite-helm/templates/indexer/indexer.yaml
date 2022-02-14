@@ -67,8 +67,6 @@ spec:
         - config.yml
         - --port-in
         - '8081'
-        - --shard-id
-          - {{ $i | squote }}
         - --shards
         - {{ $shards | squote }}
         - --uses-metas
