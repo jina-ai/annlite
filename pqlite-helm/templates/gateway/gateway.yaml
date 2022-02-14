@@ -85,7 +85,7 @@ spec:
         - configMapRef:
             name: gateway-configmap
         image: jinaai/jina:master-py38-standard
-        imagePullPolicy: IfNotPresent
+        imagePullPolicy: Always
         name: executor
         ports:
         - containerPort: 8080

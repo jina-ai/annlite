@@ -72,7 +72,7 @@ spec:
         - --shards
         - {{ $shards | squote }}
         - --uses-metas
-        - '{}'
+        - '{"workspace": {{ $.Values.persistence.mountPath | quote }}}'
         - --uses-with
         - '{"dim": {{ $.Values.dimension }}}'
         - --native
