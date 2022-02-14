@@ -1,6 +1,6 @@
 {{- if .Values.shardCount }}
-{{- $replicas := .Values.shardCount | int }}
-{{- range $i, $e := until $replicas }}
+{{- $shards := .Values.shardCount | int }}
+{{- range $i, $e := until $shards }}
 apiVersion: v1
 data:
   JINA_LOG_LEVEL: INFO
@@ -51,9 +51,9 @@ spec:
     metadata:
       labels:
         app: indexer-{{ $i }}
-        jina_pod_name: indexer
+        jina_deployment_name: indexer
         ns: {{ template "pqlite-helm.namespace" $ }}
-        pea_type: WORKER
+        pod_type: WORKER
         shard_id: {{ $i | squote }}
     spec:
       containers:
@@ -61,24 +61,18 @@ spec:
         - executor
         - --name
         - indexer-{{ $i }}
-        - --workspace
-        - /Users/fengwang/Jina/workspace/pqlite/examples/k8s_example
         - --k8s-namespace
         - {{ template "pqlite-helm.namespace" $ }}
         - --uses
         - config.yml
         - --port-in
         - '8081'
-        - --num-part
-        - '1'
-        - --upload-files
         - --shard-id
-        - {{ $i | squote }}
-        - --noblock-on-start
+          - {{ $i | squote }}
         - --shards
-        - {{ $replicas | squote }}
+        - {{ $shards | squote }}
         - --uses-metas
-        - '{"pea_id": {{ $i }}}'
+        - '{}'
         - --uses-with
         - '{"dim": {{ $.Values.dimension }}}'
         - --native
@@ -89,7 +83,7 @@ spec:
           valueFrom:
             fieldRef:
               fieldPath: metadata.uid
-        - name: JINA_POD_NAME
+        - name: JINA_DEPLOYMENT_NAME
           value: indexer
         envFrom:
         - configMapRef:
@@ -118,7 +112,7 @@ spec:
           {{- else }}
           emptyDir: {}
           {{- end }}
-{{- if lt $i (sub $replicas 1) }}
+{{- if lt $i (sub $shards 1) }}
 ---
 {{- end }}
 

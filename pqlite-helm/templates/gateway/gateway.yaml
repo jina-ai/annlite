@@ -48,16 +48,14 @@ spec:
     metadata:
       labels:
         app: gateway
-        jina_pod_name: gateway
+        jina_deployment_name: gateway
         ns: {{ template "pqlite-helm.namespace" . }}
-        pea_type: GATEWAY
+        pod_type: GATEWAY
         shard_id: ''
     spec:
       containers:
       - args:
         - gateway
-        - --workspace-id
-        - 34181a2a7b64422abd6f09d06a2489da
         - --k8s-namespace
         - {{ template "pqlite-helm.namespace" . }}
         - --polling
@@ -72,9 +70,8 @@ spec:
         - '8080'
         - --graph-description
         - '{"indexer": ["end-gateway"], "start-gateway": ["indexer"]}'
-        - --pea-role
+        - --pod-role
         - GATEWAY
-        - --noblock-on-start
         command:
         - jina
         env:
@@ -82,7 +79,7 @@ spec:
           valueFrom:
             fieldRef:
               fieldPath: metadata.uid
-        - name: JINA_POD_NAME
+        - name: JINA_DEPLOYMENT_NAME
           value: gateway
         envFrom:
         - configMapRef:

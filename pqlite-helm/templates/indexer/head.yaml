@@ -5,15 +5,15 @@ data:
   worker_class: uvicorn.workers.UvicornH11Worker
 kind: ConfigMap
 metadata:
-  name: indexer-head-0-configmap
+  name: indexer-head-configmap
   namespace: {{ template "pqlite-helm.namespace" . }}
 ---
 apiVersion: v1
 kind: Service
 metadata:
   labels:
-    app: indexer-head-0
-  name: indexer-head-0
+    app: indexer-head
+  name: indexer-head
   namespace: {{ template "pqlite-helm.namespace" . }}
 spec:
   ports:
@@ -26,19 +26,19 @@ spec:
     protocol: TCP
     targetPort: 8081
   selector:
-    app: indexer-head-0
+    app: indexer-head
   type: ClusterIP
 ---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: indexer-head-0
+  name: indexer-head
   namespace: {{ template "pqlite-helm.namespace" . }}
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: indexer-head-0
+      app: indexer-head
   strategy:
     rollingUpdate:
       maxSurge: 1
@@ -47,35 +47,27 @@ spec:
   template:
     metadata:
       labels:
-        app: indexer-head-0
-        jina_pod_name: indexer
+        app: indexer-head
+        jina_deployment_name: indexer
         ns: {{ template "pqlite-helm.namespace" . }}
-        pea_type: HEAD
+        pod_type: HEAD
         shard_id: ''
     spec:
       containers:
       - args:
         - executor
         - --name
-        - indexer/head-0
-        - --workspace
-        - /Users/fengwang/Jina/workspace/pqlite/examples/k8s_example
-        - --workspace-id
-        - 34224b4c78ee4eab9d49b6e0646542a8
+        - indexer/head
         - --k8s-namespace
         - {{ template "pqlite-helm.namespace" . }}
-        - --uses
-        - config.yml
+        - --polling
+        - '{"/index": "ANY", "/search": "ALL", "*": "ANY"}'
         - --port-in
         - '8081'
-        - --num-part
-        - '1'
-        - --upload-files
         - --runtime-cls
         - HeadRuntime
-        - --pea-role
+        - --pod-role
         - HEAD
-        - --noblock-on-start
         - --shards
         - {{ .Values.shardCount | squote }}
         - --uses-metas
@@ -88,11 +80,11 @@ spec:
           valueFrom:
             fieldRef:
               fieldPath: metadata.uid
-        - name: JINA_POD_NAME
+        - name: JINA_DEPLOYMENT_NAME
           value: indexer
         envFrom:
         - configMapRef:
-            name: indexer-head-0-configmap
+            name: indexer-head-configmap
         image: jinaai/jina:master-py38-perf
         imagePullPolicy: IfNotPresent
         name: executor
