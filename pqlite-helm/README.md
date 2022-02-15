@@ -87,20 +87,20 @@ Expose port `4567` to access the service via `kubectl port-forward ...`
 $ kubectl port-forward service/indexer-head 4567:8081
 ```
 
-This example shows how to use in a Jina Flow
+This example shows how to use `pqlite` as **external pod** in a Jina Flow
 
 ```python
 import numpy as np
 from jina import DocumentArray, Flow
 
 PROTOCOL = 'grpc'
-EXTERNAL_HEAD_PORT_IN = 4567
+EXTERNAL_PORT_IN = 4567
 
 f = Flow(protocol=PROTOCOL).add(
     name='indexer',
     external=True,
     host='localhost',
-    port_in=EXTERNAL_HEAD_PORT_IN,
+    port_in=EXTERNAL_PORT_IN,
 )
 
 with f:
