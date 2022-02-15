@@ -60,7 +60,7 @@ spec:
       storage: 5Gi
 ```
 
-Then apply the configuration with `kubectl`:
+Then apply the configuration with `kubectl apply`:
 
 ```bash
 $ kubectl apply -f pqlite-storage.yaml
