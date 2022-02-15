@@ -1,0 +1,46 @@
+         160131 function calls (160127 primitive calls) in 0.138 seconds
+
+   Ordered by: cumulative time
+
+   ncalls  tottime  percall  cumtime  percall filename:lineno(function)
+        1    0.017    0.017    0.138    0.138 /Users/fengwang/Jina/workspace/pqlite/pqlite/container.py:70(ivf_search)
+    80001    0.108    0.000    0.108    0.000 /Users/fengwang/Jina/workspace/pqlite/pqlite/storage/table.py:219(query)
+       12    0.005    0.000    0.005    0.000 {method 'execute' of 'sqlite3.Connection' objects}
+        1    0.000    0.000    0.004    0.004 /Users/fengwang/Jina/workspace/pqlite/pqlite/storage/table.py:284(count)
+    80015    0.003    0.000    0.003    0.000 {method 'append' of 'list' objects}
+        2    0.003    0.001    0.003    0.001 {built-in method numpy.array}
+        1    0.003    0.003    0.003    0.003 /Users/fengwang/Jina/workspace/pqlite/pqlite/core/index/hnsw/index.py:57(search)
+       10    0.000    0.000    0.000    0.000 /Users/fengwang/Jina/workspace/pqlite/pqlite/storage/table.py:259(get_docid_by_offset)
+        2    0.000    0.000    0.000    0.000 <__array_function__ internals>:2(hstack)
+      6/2    0.000    0.000    0.000    0.000 {built-in method numpy.core._multiarray_umath.implement_array_function}
+        2    0.000    0.000    0.000    0.000 /Users/fengwang/.pyenv/versions/3.8.3/lib/python3.8/site-packages/numpy/core/shape_base.py:285(hstack)
+       11    0.000    0.000    0.000    0.000 {method 'fetchone' of 'sqlite3.Cursor' objects}
+        2    0.000    0.000    0.000    0.000 <__array_function__ internals>:2(concatenate)
+        1    0.000    0.000    0.000    0.000 {built-in method builtins.print}
+        2    0.000    0.000    0.000    0.000 <__array_function__ internals>:2(atleast_1d)
+        2    0.000    0.000    0.000    0.000 {method 'format' of 'str' objects}
+        1    0.000    0.000    0.000    0.000 {method 'argsort' of 'numpy.ndarray' objects}
+        2    0.000    0.000    0.000    0.000 /Users/fengwang/.pyenv/versions/3.8.3/lib/python3.8/site-packages/numpy/core/shape_base.py:218(_vhstack_dispatcher)
+        2    0.000    0.000    0.000    0.000 /Users/fengwang/.pyenv/versions/3.8.3/lib/python3.8/site-packages/numpy/core/shape_base.py:23(atleast_1d)
+        1    0.000    0.000    0.000    0.000 /Users/fengwang/Jina/workspace/pqlite/pqlite/storage/table.py:238(<listcomp>)
+        1    0.000    0.000    0.000    0.000 {method 'reshape' of 'numpy.ndarray' objects}
+        2    0.000    0.000    0.000    0.000 /Users/fengwang/.pyenv/versions/3.8.3/lib/python3.8/site-packages/numpy/core/shape_base.py:207(_arrays_for_stack_dispatcher)
+        1    0.000    0.000    0.000    0.000 {built-in method builtins.min}
+        1    0.000    0.000    0.000    0.000 /Users/fengwang/Jina/workspace/pqlite/pqlite/storage/table.py:54(_converting)
+       11    0.000    0.000    0.000    0.000 /Users/fengwang/Jina/workspace/pqlite/pqlite/container.py:302(cell_table)
+       12    0.000    0.000    0.000    0.000 /Users/fengwang/Jina/workspace/pqlite/pqlite/storage/table.py:107(name)
+        7    0.000    0.000    0.000    0.000 {built-in method builtins.len}
+        3    0.000    0.000    0.000    0.000 {built-in method builtins.isinstance}
+        2    0.000    0.000    0.000    0.000 {built-in method builtins.hasattr}
+        1    0.000    0.000    0.000    0.000 /Users/fengwang/Jina/workspace/pqlite/pqlite/container.py:308(vec_index)
+        1    0.000    0.000    0.000    0.000 {method 'disable' of '_lsprof.Profiler' objects}
+        2    0.000    0.000    0.000    0.000 {built-in method numpy.asanyarray}
+        1    0.000    0.000    0.000    0.000 /Users/fengwang/Jina/workspace/pqlite/pqlite/storage/table.py:243(<listcomp>)
+        1    0.000    0.000    0.000    0.000 {method 'extend' of 'list' objects}
+        2    0.000    0.000    0.000    0.000 {method 'join' of 'str' objects}
+        1    0.000    0.000    0.000    0.000 {built-in method builtins.max}
+        1    0.000    0.000    0.000    0.000 /Users/fengwang/Jina/workspace/pqlite/pqlite/storage/table.py:297(<listcomp>)
+        2    0.000    0.000    0.000    0.000 /Users/fengwang/.pyenv/versions/3.8.3/lib/python3.8/site-packages/numpy/core/multiarray.py:148(concatenate)
+        2    0.000    0.000    0.000    0.000 /Users/fengwang/.pyenv/versions/3.8.3/lib/python3.8/site-packages/numpy/core/shape_base.py:19(_atleast_1d_dispatcher)
+
+
