@@ -78,6 +78,38 @@ $ helm install pqlite-test \
     ./pqlite-helm
 ```
 
+## Step 5: Use in a Jina Flow
+
+Expose port `4567` to access the service via `kubectl port-forward ...`
+
+```bash
+$ kubectl port-forward service/indexer-head 4567:8081
+```
+
+This example shows how to use in a Jina Flow
+
+```python
+import numpy as np
+from jina import DocumentArray, Flow
+
+PROTOCOL = 'grpc'
+EXTERNAL_HEAD_PORT_IN = 4567
+
+f = Flow(protocol=PROTOCOL).add(
+    name='indexer',
+    external=True,
+    host='localhost',
+    port_in=EXTERNAL_HEAD_PORT_IN,
+)
+
+with f:
+
+    docs = DocumentArray.empty(50)
+    docs.embeddings = np.random.random((50, 512)).astype(np.float32)
+
+    result = f.post('/index', inputs=docs, request_size=1, return_results=True)
+    result = f.post('/search', inputs=docs[:5], return_results=True)
+```
 
 ## Conferences
 
