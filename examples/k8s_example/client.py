@@ -10,7 +10,8 @@ f = Flow(protocol=PROTOCOL).add(
     uses='docker://numb3r3/pqlite-executor:latest',
     uses_with={'dim': 512},
     shards=3,
-    # polling={'/index': 'ANY', '/search': 'ALL', '*': 'ANY'},
+    uses_after='docker://numb3r3/pqlite-merger:latest',
+    polling={'/index': 'ANY', '/search': 'ALL', '*': 'ANY'},
 )  # .add(name='match_merger', uses=MatchMerger)
 
 with f:
@@ -49,7 +50,7 @@ with f:
 
     # status = client.post('/status', return_results=True)[0]
     # print(status.docs[0].to_dict())
-    # f.block()
+    f.block()
 
 
 # client = Client(

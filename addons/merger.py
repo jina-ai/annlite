@@ -1,6 +1,7 @@
 from typing import Optional, Tuple
 
 from jina import DocumentArray, Executor, requests
+from jina.logging.logger import JinaLogger
 
 
 class MatchMerger(Executor):
@@ -16,6 +17,8 @@ class MatchMerger(Executor):
         :param traversal_paths: traverse path on docs, e.g. '@r', '@c'
         """
         super().__init__(**kwargs)
+        self.logger = JinaLogger(self.__class__.__name__)
+
         self.metric = metric
         self.traversal_paths = traversal_paths
 
@@ -23,6 +26,7 @@ class MatchMerger(Executor):
     def merge(
         self, docs: Optional[DocumentArray] = None, parameters: dict = {}, **kwargs
     ):
+        self.logger.info(f'==> type({docs})')
         traversal_paths = (
             parameters.get('traversal_paths', self.traversal_paths) or '@r'
         )
