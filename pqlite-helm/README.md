@@ -23,7 +23,7 @@ When downloading a dependency for the first time, you should use the helm depend
 $ helm dependency update ./pqlite-helm
 ```
 
-## Step 3: Create and Apply Persistent Storage Volume
+## Step 3: (Optional) Create and Apply Persistent Storage Volume
 
 The data in your Pqlite indexer need to persist across pod restarts.
 
@@ -78,6 +78,13 @@ $ helm install pqlite-test \
     --set persistence.enabled=true \
     ./pqlite-helm
 ```
+
+**Note:**
+
+- `dimension`: required parameter to specify the dimension of the embeddings.
+- `metric`: optional parameter to specify the distance metric to use for searching.
+- `shardCount`: optional parameter to specify the number of shards.
+- `persistence.*`: optional parameter, need to specify when PVC is needed.
 
 ## Step 5: Use in a Jina Flow
 

@@ -50,7 +50,7 @@ with f:
 
     # status = client.post('/status', return_results=True)[0]
     # print(status.docs[0].to_dict())
-    f.block()
+    # f.block()
 
 
 # client = Client(

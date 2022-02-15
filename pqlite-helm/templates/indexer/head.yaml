@@ -1,3 +1,4 @@
+{{- $shards := .Values.shardCount | int }}
 apiVersion: v1
 data:
   JINA_LOG_LEVEL: INFO
@@ -69,7 +70,11 @@ spec:
         - --pod-role
         - HEAD
         - --shards
-        - {{ .Values.shardCount | squote }}
+        - {{ $shards | squote }}
+{{- if gt $shards 1 }}
+        - --uses-after-address
+        - 127.0.0.1:8083
+{{- end }}
         - --uses-metas
         - '{}'
         - --native
@@ -96,3 +101,44 @@ spec:
           periodSeconds: 10
           tcpSocket:
             port: 8081
+{{- if gt $shards 1 }}
+      - args:
+        - executor
+        - --name
+        - indexer/uses-after
+        - --k8s-namespace
+        - {{ template "pqlite-helm.namespace" . }}
+        - --uses
+        - config.yml
+        - --port-in
+        - '8083'
+        - --shards
+        - {{ $shards | squote }}
+        - --uses-metas
+        - '{}'
+        - --uses-with
+        - '{"metric": {{ $.Values.metric }}}'
+        - --native
+        command:
+        - jina
+        env:
+        - name: POD_UID
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.uid
+        - name: JINA_DEPLOYMENT_NAME
+          value: indexer
+        envFrom:
+        - configMapRef:
+            name: indexer-head-configmap
+        image: numb3r3/pqlite-merger:latest
+        imagePullPolicy: Always
+        name: uses-after
+        ports:
+        - containerPort: 8083
+        readinessProbe:
+          initialDelaySeconds: 5
+          periodSeconds: 10
+          tcpSocket:
+            port: 8083
+{{- end }}
