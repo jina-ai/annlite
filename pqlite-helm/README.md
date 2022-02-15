@@ -72,6 +72,7 @@ Install the helm chart with the `helm install` command. Add `--set` flags to the
 
 ```bash
 $ helm install pqlite-test \
+    --set dimension=256 \
     --set shardCount=3 \
     --set persistence.existingClaim=pqlite-pvc-claim \
     --set persistence.enabled=true \
