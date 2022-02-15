@@ -67,6 +67,8 @@ spec:
         - config.yml
         - --port-in
         - '8081'
+        - --shard-id
+        - {{ $i | squote }}
         - --shards
         - {{ $shards | squote }}
         - --uses-metas
@@ -101,15 +103,16 @@ spec:
           - name: datadir
             mountPath: "{{ $.Values.persistence.mountPath }}"
       volumes:
+        {{- if and $.Values.persistence.enabled $.Values.persistence.existingClaim }}
         - name: datadir
-          {{- if and $.Values.persistence.enabled $.Values.persistence.existingClaim}}
           persistentVolumeClaim:
             {{- with $.Values.persistence.existingClaim }}
             claimName: {{ tpl . $ }}
             {{- end }}
-          {{- else }}
+        {{- else }}
+        - name: datadir
           emptyDir: {}
-          {{- end }}
+        {{- end }}
 {{- if lt $i (sub $shards 1) }}
 ---
 {{- end }}

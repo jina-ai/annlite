@@ -20,7 +20,11 @@ global:
   ##   - myRegistryKeySecretName
   ##
   imagePullSecrets: []
+
+  ## @param global.storageClass Global StorageClass for Persistent Volume(s)
   storageClass: ""
+
+
   namespaceOverride: ""
 
 
@@ -62,7 +66,7 @@ fullnameOverride: ""
 ## ref: https://kubernetes.io/docs/user-guide/persistent-volumes/
 ##
 persistence:
-  enabled: true
+  enabled: false
 
   ## Provide a medium for `emptyDir` volumes.
   ## Requires persistence.enabled: false
@@ -98,7 +102,7 @@ persistence:
   ## The path the volume will be mounted at, useful when using different
   ## PQLiteIndexer images.
   ##
-  mountPath: /var/lib/pqlite_data
+  mountPath: /tmp/pqlite
 
 
   ## The subdirectory of the volume to mount to, useful in dev environments
@@ -106,20 +110,19 @@ persistence:
   ##
   subPath: ""
 
-  volumeClaimTemplates:
-    ## A label query over volumes to consider for binding (e.g. when using local volumes)
-    ## See https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.20/#labelselector-v1-meta for more details
-    ##
-    selector: {}
+  ## A label query over volumes to consider for binding (e.g. when using local volumes)
+  ## See https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.20/#labelselector-v1-meta for more details
+  ##
+  selector: {}
 
-    ## Sometime cloud providers use additional requests attributes to provision custom storage instance
-    ## See https://cloud.ibm.com/docs/containers?topic=containers-file_storage#file_dynamic_statefulset
-    ##
-    requests: {}
+  ## Sometime cloud providers use additional requests attributes to provision custom storage instance
+  ## See https://cloud.ibm.com/docs/containers?topic=containers-file_storage#file_dynamic_statefulset
+  ##
+  requests: {}
 
-    ## Add dataSource to the VolumeClaimTemplate
-    ##
-    dataSource: {}
+  ## Add dataSource to the VolumeClaimTemplate
+  ##
+  dataSource: {}
 
 
 serviceAccount:
