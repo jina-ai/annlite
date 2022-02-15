@@ -74,7 +74,7 @@ spec:
         - --uses-metas
         - '{"workspace": {{ $.Values.persistence.mountPath | quote }}}'
         - --uses-with
-        - '{"dim": {{ $.Values.dimension }}}'
+        - '{"dim": {{ $.Values.dimension }}, "metric": {{ $.Values.metric | quote }}}'
         - --native
         command:
         - jina
