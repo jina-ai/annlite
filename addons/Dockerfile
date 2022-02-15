@@ -1,6 +1,6 @@
 FROM jinaai/jina:master-py38-perf
 
-RUN echo 'debug 3'
+RUN echo 'dev 4'
 COPY . /workspace
 WORKDIR /workspace
 
