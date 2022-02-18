@@ -41,6 +41,7 @@ class PQLite(CellContainer):
     :param create_if_missing: if False, do not create the directory path if it is missing.
     :param read_only: if True, the index is not writable.
     :param verbose: if True, will print the debug logging info.
+    :param lock: if True, lock table is enabled for lmdb container.
 
     .. note::
         Remember that the shape of any tensor that contains data points has to be `[n_data, dim]`.
@@ -60,6 +61,7 @@ class PQLite(CellContainer):
         create_if_missing: bool = True,
         read_only: bool = False,
         verbose: bool = False,
+        lock: bool = True,
         *args,
         **kwargs,
     ):
@@ -119,6 +121,7 @@ class PQLite(CellContainer):
             expand_step_size=expand_step_size,
             columns=columns,
             data_path=data_path,
+            lock=lock,
             **kwargs,
         )
 
