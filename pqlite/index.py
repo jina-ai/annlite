@@ -121,7 +121,7 @@ class PQLite(CellContainer):
             expand_step_size=expand_step_size,
             columns=columns,
             data_path=data_path,
-            lock=lock
+            lock=lock,
             **kwargs,
         )
 
