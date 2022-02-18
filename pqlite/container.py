@@ -29,6 +29,7 @@ class CellContainer:
         columns: Optional[List[tuple]] = None,
         serialize_config: Optional[Dict] = None,
         data_path: Path = Path('./data'),
+        lock: bool = True,
         **kwargs,
     ):
         self.dim = dim
@@ -63,7 +64,7 @@ class CellContainer:
             ]
 
         self._doc_stores = [
-            DocStorage(data_path / f'cell_{_}', serialize_config=serialize_config or {})
+            DocStorage(data_path / f'cell_{_}', serialize_config=serialize_config or {}, lock=lock)
             for _ in range(n_cells)
         ]
 
