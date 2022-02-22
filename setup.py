@@ -9,8 +9,8 @@ from Cython.Build import cythonize
 from setuptools import Extension, find_packages, setup
 from setuptools.command.build_ext import build_ext
 
-if sys.version_info >= (3, 10, 0) or sys.version_info < (3, 7, 0):
-    raise OSError(f'PQlite requires Python 3.7/3.8/3.9, but yours is {sys.version}')
+if sys.version_info < (3, 7, 0):
+    raise OSError(f'PQlite requires Python 3.7+, but yours is {sys.version}')
 
 include_dirs = [pybind11.get_include(), np.get_include()]
 
