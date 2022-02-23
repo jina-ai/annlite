@@ -156,7 +156,16 @@ class BuildExt(build_ext):
 
 
 extras = {}
-extras['test'] = ['pytest', 'black']
+extras['test'] = [
+    'pytest',
+    'black',
+    'pytest-timeout',
+    'pytest-mock',
+    'pytest-cov',
+    'pytest-repeat',
+    'pytest-reraise',
+    'pytest-custom_exit_code',
+]
 
 # for e in ext_modules:
 #     e.cython_directives = COMPILER_DIRECTIVES
