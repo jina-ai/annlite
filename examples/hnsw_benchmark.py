@@ -8,9 +8,9 @@ from docarray import Document, DocumentArray
 from sklearn.datasets import make_blobs
 from sklearn.model_selection import train_test_split
 
-from pqlite import PQLite
-from pqlite.math import cdist
-from pqlite.math import top_k as _top_k
+from annlite import AnnLite
+from annlite.math import cdist
+from annlite.math import top_k as _top_k
 
 
 def _precision(predicted, relevant, eval_at):
@@ -80,7 +80,7 @@ for n_cells in [1, 8, 16, 32, 64, 128]:
 
     with tempfile.TemporaryDirectory() as tmpdirname:
 
-        pq = PQLite(
+        pq = AnnLite(
             dim=D,
             metric='euclidean',
             n_cells=n_cells,

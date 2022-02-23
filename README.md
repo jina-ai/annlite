@@ -1,6 +1,6 @@
-# PQLite
+# AnnLite
 
-`PQLite` is an  **Approximate Nearest Neighbor Search** (ANNS) library integrated with the Jina ecosystem.
+`AnnLite` is an  **Approximate Nearest Neighbor Search** (ANNS) library integrated with the Jina ecosystem.
 
 This indexer is recommended to be used when an application requires **search with filters** applied on `Document` tags.
 The `filtering query language` is based on [MongoDB's query and projection operators](https://docs.mongodb.com/manual/reference/operator/query/). We currently support a subset of those selectors.
@@ -62,17 +62,17 @@ Or
 
 ## Installation
 
-To install PQLite you can simply run:
+To install AnnLite you can simply run:
 
 ```bash
-pip install https://github.com/jina-ai/pqlite/archive/refs/heads/main.zip
+pip install https://github.com/jina-ai/annlite/archive/refs/heads/main.zip
 ```
 
 
 
 ## Getting Started
 
-For an in-depth overview of the features of PQLite
+For an in-depth overview of the features of AnnLite
 you can follow along with one of the examples below:
 
 
@@ -90,14 +90,14 @@ you can follow along with one of the examples below:
 import random
 import numpy as np
 from jina import Document, DocumentArray
-from pqlite import PQLite
+from annlite import AnnLite
 
-N = 10000 # number of data points
-Nq = 10 # number of query data
-D = 128 # dimentionality / number of features
+N = 10000  # number of data points
+Nq = 10  # number of query data
+D = 128  # dimentionality / number of features
 
 # the column schema: (name:str, dtype:type, create_index: bool)
-pqlite = PQLite(dim=D, columns=[('price', float)], data_path='./workspace_data')
+indexer = AnnLite(dim=D, columns=[('price', float)], data_path='./workspace_data')
 ```
 
 Note that this will create a folder `./workspace_data` where indexed data will be stored.
@@ -114,7 +114,7 @@ docs = DocumentArray(
         for i in range(N)
     ]
 )
-pqlite.index(docs)
+indexer.index(docs)
 ```
 
 3. Search with filtering
@@ -124,7 +124,7 @@ Xq = np.random.random((Nq, D)).astype(np.float32)  # a 128-dim query vector
 query = DocumentArray([Document(embedding=Xq[i]) for i in range(Nq)])
 
 # without filtering
-pqlite.search(query, limit=10)
+indexer.search(query, limit=10)
 
 print(f'the result without filtering:')
 for i, q in enumerate(query):
@@ -133,7 +133,7 @@ for i, q in enumerate(query):
         print(f'\t{m.id} ({m.scores["euclidean"].value})')
 
 # with filtering
-pqlite.search(query, filter={"price": {"$lte": 50}}, limit=10)
+indexer.search(query, filter={"price": {"$lte": 50}}, limit=10)
 print(f'the result with filtering:')
 for i, q in enumerate(query):
     print(f'query [{i}]:')
@@ -151,13 +151,13 @@ docs = DocumentArray(
         for i in range(10)
     ]
 )
-pqlite.update(docs)
+indexer.update(docs)
 ```
 
 5. Delete data
 
 ```python
-pqlite.delete(['1', '2'])
+indexer.delete(['1', '2'])
 ```
 
 
@@ -214,7 +214,7 @@ Note that:
 
 
 
-Currently PQLite supports:
+Currently `AnnLite` supports:
 
 - HNSW Algorithm (default choice)
 - PQ-linear-scan (requires training)

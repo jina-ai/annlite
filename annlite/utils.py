@@ -1,7 +1,9 @@
-import numpy as np
 import os
 import shutil
+
+import numpy as np
 from docarray import Document, DocumentArray
+
 
 def clean_workspace():
     if os.path.exists('./data'):
@@ -15,8 +17,8 @@ def docs_with_tags(N, D, probs, categories):
 
     all_docs = []
     start_current = 0
-    for k,prob in enumerate(probs):
-        n_current = int(N*prob)
+    for k, prob in enumerate(probs):
+        n_current = int(N * prob)
         X = np.random.random((n_current, D)).astype(np.float32)
 
         docs = [
@@ -67,5 +69,3 @@ def evaluate(predicts, relevants, top_k):
         precision += _precision(_predict, _relevant, top_k)
 
     return recall / len(predicts), precision / len(predicts)
-
-

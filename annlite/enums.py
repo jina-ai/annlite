@@ -2,7 +2,7 @@ from enum import IntEnum
 
 
 class BetterEnum(IntEnum):
-    """The base class of Enum used in PQLite."""
+    """The base class of Enum."""
 
     def __str__(self):
         return self.name

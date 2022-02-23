@@ -1,7 +1,7 @@
 import numpy as np
 from scipy.cluster.vq import vq
 
-from pqlite import pq_bind
+from annlite import pq_bind
 
 from ...enums import Metric
 from .base import BaseCodec

@@ -1,6 +1,0 @@
-jtype: MatchMerger
-with:
-  metric: 'cosine'
-metas:
-  py_modules:
-    - merger.py

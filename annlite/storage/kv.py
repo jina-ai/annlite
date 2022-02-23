@@ -11,7 +11,9 @@ LMDB_MAP_SIZE = 100 * 1024 * 1024 * 1024
 class DocStorage:
     """The backend storage engine of Documents"""
 
-    def __init__(self, path: Union[str, Path], serialize_config: Dict = {}, lock: bool = True):
+    def __init__(
+        self, path: Union[str, Path], serialize_config: Dict = {}, lock: bool = True
+    ):
         self._path = path
         self._env = self._open(path, lock=lock)
         self._serialize_config = serialize_config

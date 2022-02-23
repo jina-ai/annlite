@@ -1,8 +1,10 @@
-import numpy as np
 import random
 import tempfile
-from pqlite import PQLite
+
+import numpy as np
 from docarray import Document, DocumentArray
+
+from annlite import AnnLite
 
 N = 1000  # number of data points
 Nq = 5
@@ -13,7 +15,9 @@ dirpath = tempfile.mkdtemp()
 
 with tempfile.TemporaryDirectory() as tmpdirname:
 
-    index = PQLite(dim=D, columns=[('x', float)], data_path=tmpdirname, include_metadata=True)
+    index = AnnLite(
+        dim=D, columns=[('x', float)], data_path=tmpdirname, include_metadata=True
+    )
 
     X = np.random.random((N, D)).astype(
         np.float32
@@ -27,7 +31,6 @@ with tempfile.TemporaryDirectory() as tmpdirname:
     )
     index.index(docs)
 
-
     X = np.random.random((Nq, D)).astype(np.float32)  # a 128-dim query vector
     query = DocumentArray([Document(embedding=X[i]) for i in range(5)])
 
@@ -35,7 +38,7 @@ with tempfile.TemporaryDirectory() as tmpdirname:
 
     for m in query[0].matches:
         print(f'{m.scores["euclidean"].value} -> x={m.tags["x"]}')
-        assert m.tags["x"] < 0.2
+        assert m.tags['x'] < 0.2
 
     print(f'====')
 
@@ -43,7 +46,7 @@ with tempfile.TemporaryDirectory() as tmpdirname:
 
     for m in query[0].matches:
         print(f'{m.scores["euclidean"].value} -> x={m.tags["x"]}')
-        assert m.tags["x"] >= 0.9
+        assert m.tags['x'] >= 0.9
 
 #
 # print(f'{[m.scores["euclidean"].value for m in query[0].matches]}')

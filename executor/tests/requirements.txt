@@ -1,2 +1,2 @@
-pqlite
+annlite
 pytest==6.2.4

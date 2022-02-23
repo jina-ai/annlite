@@ -1,7 +1,7 @@
-# PQLiteIndexer
+# AnnLiteIndexer
 
-`PQLiteIndexer` uses the [PQLite](https://github.com/jina-ai/pqlite) class for indexing Jina `Document` objects.
-The `PQLite` class partitions the data into cells at index time, and instantiates a "sub-indexer" in each cell.  Search is performed aggregating results retrieved from cells.
+`AnnLiteIndexer` uses the [AnnLite](https://github.com/jina-ai/annlite) class for indexing Jina `Document` objects.
+The `AnnLite` class partitions the data into cells at index time, and instantiates a "sub-indexer" in each cell.  Search is performed aggregating results retrieved from cells.
 
 This indexer is recommended to be used when an application requires **search with filters** applied on `Document` tags.
 The `filtering query language` is based on [MongoDB's query and projection operators](https://docs.mongodb.com/manual/reference/operator/query/). We currently support a subset of those selectors.
@@ -92,7 +92,7 @@ If documents have a tag `'price'`  that stores floating point values this indexe
 columns = [('price', 'float')]
 
 f = Flow().add(
-    uses='jinahub://PQLiteIndexer/latest',
+    uses='jinahub://AnnLiteIndexer/latest',
     uses_with={
       'dim': 256,
       'columns': columns,

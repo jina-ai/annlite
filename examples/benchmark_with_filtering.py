@@ -1,11 +1,11 @@
-
-from jina import DocumentArray, Document
-from jina.logging.profile import TimeContext
-from pqlite import PQLite
-
 import os
 import shutil
+
 import numpy as np
+from jina import Document, DocumentArray
+from jina.logging.profile import TimeContext
+
+from annlite import AnnLite
 
 n_index = [10_000, 100_000, 500_000, 1_000_000]
 
@@ -14,9 +14,9 @@ D = 768
 R = 5
 B = 5000
 n_cells = 1
-probs =[[0.20, 0.30, 0.50],
-        [0.05, 0.15, 0.80]]
+probs = [[0.20, 0.30, 0.50], [0.05, 0.15, 0.80]]
 categories = ['comic', 'movie', 'audiobook']
+
 
 def clean_workspace():
     if os.path.exists('./data'):
@@ -29,8 +29,8 @@ def clean_workspace():
 def docs_with_tags(N, D, probs, categories):
 
     all_docs = []
-    for k,prob in enumerate(probs):
-        n_current = int(N*prob)
+    for k, prob in enumerate(probs):
+        n_current = int(N * prob)
         X = np.random.random((n_current, D)).astype(np.float32)
 
         docs = [
@@ -55,12 +55,12 @@ for n_i in n_index:
 
         clean_workspace()
         columns = [('category', str)]
-        idxer = PQLite(
+        idxer = AnnLite(
             dim=D,
             initial_size=n_i,
             n_cells=n_cells,
             metas={'workspace': './workspace'},
-            columns=columns
+            columns=columns,
         )
 
         da = docs_with_tags(n_i, D, current_probs, categories)
@@ -69,7 +69,7 @@ for n_i in n_index:
             for i, _batch in enumerate(da.batch(batch_size=B)):
                 idxer.index(_batch)
 
-        for cat,prob in zip(categories, current_probs):
+        for cat, prob in zip(categories, current_probs):
             f = {'category': {'$eq': cat}}
 
             query_times = []
@@ -86,7 +86,7 @@ for n_i in n_index:
                 query_times.append(np.mean(t_qs[1:]))
 
             print(f'\n\nprob={prob}, current_probs={current_probs}, n_i={n_i}\n\n')
-            results_ni.append([n_i, int(100*prob), t_i.duration] + query_times)
+            results_ni.append([n_i, int(100 * prob), t_i.duration] + query_times)
 
     results.append(results_ni)
 
@@ -98,5 +98,8 @@ for block in results:
     sorted_elements_in_block = np.argsort([b[1] for b in block])
     for pos in sorted_elements_in_block:
         res = block[pos]
-        print(''.join( [f'| {x} ' for x in res[0:2]] + [f'| {x:.3f} ' for x in res[2:]] + ['|'])     )
-
+        print(
+            ''.join(
+                [f'| {x} ' for x in res[0:2]] + [f'| {x:.3f} ' for x in res[2:]] + ['|']
+            )
+        )

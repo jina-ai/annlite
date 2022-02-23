@@ -1,8 +1,8 @@
 import numpy as np
 import pytest
 
-from pqlite.core.codec.pq import PQCodec
-from pqlite.pq_bind import dist_pqcodes_to_codebooks, precompute_adc_table
+from annlite.core.codec.pq import PQCodec
+from annlite.pq_bind import dist_pqcodes_to_codebooks, precompute_adc_table
 
 n_examples = 2000
 n_features = 128

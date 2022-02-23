@@ -4,7 +4,7 @@ from typing import List, Optional, Union
 import numpy as np
 from loguru import logger
 
-from pqlite.hnsw_bind import Index
+from annlite.hnsw_bind import Index
 
 from ....enums import Metric
 from ..base import BaseIndex

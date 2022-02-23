@@ -1,7 +1,7 @@
 import pytest
 from docarray import Document, DocumentArray
 
-from pqlite.storage.table import CellTable, MetaTable
+from annlite.storage.table import CellTable, MetaTable
 
 
 @pytest.fixture

@@ -6,7 +6,7 @@ import numpy as np
 from jina import Document, DocumentArray
 from jina.logging.profile import TimeContext
 
-from pqlite import PQLite
+from annlite import AnnLite
 
 n_index = [10_000, 100_000, 500_000, 1_000_000]
 n_index = [100_000]
@@ -39,10 +39,7 @@ def docs_with_tags(N, D, probs, categories):
         docs = [
             Document(
                 embedding=X[i],
-                tags={
-                    'category': categories[k],
-                    'x': random.randint(0, 5)
-                },
+                tags={'category': categories[k], 'x': random.randint(0, 5)},
             )
             for i in range(n_current)
         ]
@@ -58,7 +55,7 @@ for n_i in n_index:
     current_probs = [0.05, 0.15, 0.80]
 
     columns = [('category', str)]
-    idxer = PQLite(
+    idxer = AnnLite(
         dim=D,
         initial_size=n_i,
         n_cells=n_cells,

@@ -64,7 +64,11 @@ class CellContainer:
             ]
 
         self._doc_stores = [
-            DocStorage(data_path / f'cell_{_}', serialize_config=serialize_config or {}, lock=lock)
+            DocStorage(
+                data_path / f'cell_{_}',
+                serialize_config=serialize_config or {},
+                lock=lock,
+            )
             for _ in range(n_cells)
         ]
 

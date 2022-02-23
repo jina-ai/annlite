@@ -3,10 +3,10 @@ from typing import Dict, List, Optional, Tuple
 from jina import Document, DocumentArray, Executor, requests
 from jina.logging.logger import JinaLogger
 
-import pqlite
+import annlite
 
 
-class PQLiteIndexer(Executor):
+class AnnLiteIndexer(Executor):
     """
     A simple Indexer based on PQLite that stores all the Document data together in a local LMDB store.
 
@@ -66,7 +66,7 @@ class PQLiteIndexer(Executor):
                 cols.append((n, eval(t)))
             columns = cols
 
-        self._index = pqlite.PQLite(
+        self._index = annlite.AnnLite(
             dim=dim,
             metric=metric,
             columns=columns,

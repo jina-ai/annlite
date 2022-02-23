@@ -17,14 +17,14 @@ from .helper import setup_logging
 from .math import cdist, top_k
 
 
-class PQLite(CellContainer):
-    """:class:`PQLite` is an approximate nearest neighbor search library.
+class AnnLite(CellContainer):
+    """:class:`AnnLite` is an approximate nearest neighbor search library.
 
-    To create a :class:`PQLite` object, simply:
+    To create a :class:`AnnLite` object, simply:
 
         .. highlight:: python
         .. code-block:: python
-            pqlite = PQLite(dim=256, metric='cosine')
+            pqlite = AnnLite(dim=256, metric='cosine')
 
     :param dim: dimensionality of input vectors. there are 2 constraints on dim:
             (1) it needs to be divisible by n_subvectors; (2) it needs to be a multiple of 4.*
@@ -73,7 +73,6 @@ class PQLite(CellContainer):
             ), '"dim" needs to be divisible by "n_subvectors"'
 
         self.n_subvectors = n_subvectors
-        ###self.n_probe = max(n_probe, n_cells)
         self.n_probe = max(n_probe, n_cells)
         self.n_cells = n_cells
 
@@ -112,7 +111,7 @@ class PQLite(CellContainer):
                 dim, n_subvectors=n_subvectors, n_clusters=256, metric=self.metric
             )
 
-        super(PQLite, self).__init__(
+        super(AnnLite, self).__init__(
             dim=dim,
             metric=metric,
             pq_codec=self.pq_codec,
@@ -221,7 +220,7 @@ class PQLite(CellContainer):
             if self.vq_codec
             else np.zeros(n_data, dtype=np.int64)
         )
-        return super(PQLite, self).insert(x, assigned_cells, docs)
+        return super(AnnLite, self).insert(x, assigned_cells, docs)
 
     def update(self, docs: 'DocumentArray', **kwargs):
         """Update existing documents
@@ -241,7 +240,7 @@ class PQLite(CellContainer):
             else np.zeros(n_data, dtype=np.int64)
         )
 
-        return super(PQLite, self).update(x, assigned_cells, docs)
+        return super(AnnLite, self).update(x, assigned_cells, docs)
 
     def search(
         self,

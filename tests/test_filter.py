@@ -1,6 +1,6 @@
 import pytest
 
-from pqlite.filter import Filter
+from annlite.filter import Filter
 
 
 def test_empty_filter():

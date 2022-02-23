@@ -10,7 +10,7 @@ from setuptools import Extension, find_packages, setup
 from setuptools.command.build_ext import build_ext
 
 if sys.version_info < (3, 7, 0):
-    raise OSError(f'PQlite requires Python 3.7+, but yours is {sys.version}')
+    raise OSError(f'annlite requires Python 3.7+, but yours is {sys.version}')
 
 include_dirs = [pybind11.get_include(), np.get_include()]
 
@@ -18,7 +18,7 @@ libraries = []
 extra_objects = []
 
 try:
-    pkg_name = 'pqlite'
+    pkg_name = 'annlite'
     libinfo_py = os.path.join(pkg_name, '__init__.py')
     libinfo_content = open(libinfo_py, 'r', encoding='utf8').readlines()
     version_line = [l.strip() for l in libinfo_content if l.startswith('__version__')][
@@ -55,7 +55,7 @@ COMPILER_DIRECTIVES = {
 
 ext_modules = [
     Extension(
-        'pqlite.hnsw_bind',
+        'annlite.hnsw_bind',
         ['./bindings/hnsw_bindings.cpp'],
         include_dirs=include_dirs + ['./include/hnswlib'],
         libraries=libraries,
@@ -65,7 +65,7 @@ ext_modules = [
 ] + cythonize(
     [
         Extension(
-            'pqlite.pq_bind',
+            'annlite.pq_bind',
             ['./bindings/pq_bindings.pyx'],
             include_dirs=include_dirs + [get_python_inc(plat_specific=True)],
             libraries=libraries,
@@ -162,15 +162,15 @@ extras['testing'] = ['pytest']
 #     e.cython_directives = COMPILER_DIRECTIVES
 
 setup(
-    name='pqlite',
+    name='annlite',
     version=__version__,
-    description='Fast and Light Approximate Nearest Neighbor Search Database integrated with the Jina Ecosystem',
+    description='Fast and Light Approximate Nearest Neighbor Search Library integrated with the Jina Ecosystem',
     long_description=_long_description,
     long_description_content_type='text/markdown',
     author='Jina AI',
     author_email='team@jina.ai',
-    url='https://github.com/jinaai/pqlite',
-    download_url='https://github.com/jinaai/pqlite/tags',
+    url='https://github.com/jina-ai/annlite',
+    download_url='https://github.com/jina-ai/pqlite/tags',
     license='Apache License 2.0',
     extras_require=extras,
     ext_modules=ext_modules,
@@ -202,5 +202,5 @@ setup(
         ]
     ),
     zip_safe=False,
-    keywords='product-quantization approximate-nearest-neighbor',
+    keywords='product-quantization approximate-nearest-neighbor hnsw',
 )

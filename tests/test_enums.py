@@ -1,6 +1,6 @@
 import pytest
 
-from pqlite.enums import Metric
+from annlite.enums import Metric
 
 
 def test_metric():

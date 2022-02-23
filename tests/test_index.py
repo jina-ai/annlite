@@ -5,7 +5,7 @@ import numpy as np
 import pytest
 from docarray import Document, DocumentArray
 
-from pqlite import PQLite
+from annlite import AnnLite
 
 N = 1000  # number of data points
 Nq = 5
@@ -30,14 +30,14 @@ def pqlite_index(tmpdir):
         np.float32
     )  # 2,000 128-dim vectors for training
 
-    index = PQLite(dim=D, data_path=tmpdir / 'pqlite_test')
+    index = AnnLite(dim=D, data_path=tmpdir / 'pqlite_test')
     return index
 
 
 @pytest.fixture
 def pqlite_with_data(tmpdir):
     columns = [('x', float)]
-    index = PQLite(dim=D, columns=columns, data_path=tmpdir / 'pqlite_test')
+    index = AnnLite(dim=D, columns=columns, data_path=tmpdir / 'pqlite_test')
 
     X = np.random.random((N, D)).astype(
         np.float32
@@ -59,7 +59,7 @@ def heterogenenous_da(tmpdir):
     categories = ['comics', 'movies', 'audiobook']
 
     columns = [('price', float), ('category', str)]
-    index = PQLite(dim=D, columns=columns, data_path=tmpdir / 'pqlite_test')
+    index = AnnLite(dim=D, columns=columns, data_path=tmpdir / 'pqlite_test')
 
     X = np.random.random((N, D)).astype(
         np.float32
@@ -84,7 +84,7 @@ def heterogenenous_da(tmpdir):
 def pqlite_with_heterogeneous_tags(tmpdir, heterogenenous_da):
 
     columns = [('price', float), ('category', str)]
-    index = PQLite(dim=D, columns=columns, data_path=tmpdir / 'pqlite_test')
+    index = AnnLite(dim=D, columns=columns, data_path=tmpdir / 'pqlite_test')
     index.index(heterogenenous_da)
     return index
 

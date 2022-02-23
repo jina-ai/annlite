@@ -8,7 +8,7 @@ from jina import Document, DocumentArray, Flow
 from sklearn.datasets import make_blobs
 from sklearn.model_selection import train_test_split
 
-from executor.executor import PQLiteIndexer
+from executor.executor import AnnLiteIndexer
 
 Nq = 1
 D = 128
@@ -156,7 +156,7 @@ if BENCHMARK_PQLITE:
         clean_workspace()
 
         f = Flow().add(
-            uses=PQLiteIndexer,
+            uses=AnnLiteIndexer,
             uses_with={
                 'dim': D,
                 'limit': 10,
@@ -197,10 +197,10 @@ if BENCHMARK_PQLITE:
         results_current['query_times'] = times_per_n_query
         print(f'==> query_times: {times_per_n_query}')
         df = pd.DataFrame({'results': results_current})
-        df.to_csv(f'pqlite_{n_examples}.csv')
+        df.to_csv(f'annlite_{n_examples}.csv')
         results[n_examples] = results_current
 
     df = pd.DataFrame(results)
-    df.to_csv('pqlite.csv')
+    df.to_csv('annlite.csv')
     clean_workspace()
     ################ PqLite Benchmark END #########################

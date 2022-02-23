@@ -8,9 +8,9 @@ from sklearn.datasets import make_blobs
 from sklearn.model_selection import train_test_split
 from utils import evaluate
 
-from pqlite import PQLite
-from pqlite.math import cdist
-from pqlite.math import top_k as _top_k
+from annlite import AnnLite
+from annlite.math import cdist
+from annlite.math import top_k as _top_k
 
 # N = 100_000 # number of data points
 Nt = 100_020
@@ -44,7 +44,7 @@ results = []
 for n_cells in [1, 4, 8]:
     for n_subvectors in [64, 128]:
 
-        pq = PQLite(
+        pq = AnnLite(
             dim=D, metric='euclidean', n_cells=n_cells, n_subvectors=n_subvectors
         )
 

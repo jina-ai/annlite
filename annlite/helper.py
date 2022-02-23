@@ -7,7 +7,7 @@ from loguru import logger
 
 def setup_logging(debug: bool):
     """
-    Setup the log formatter for PQLite
+    Setup the log formatter for AnnLite.
     """
 
     log_level = 'INFO'

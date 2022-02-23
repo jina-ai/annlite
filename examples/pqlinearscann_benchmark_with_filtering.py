@@ -3,10 +3,9 @@ from docarray import Document, DocumentArray
 from docarray.math.distance import cdist
 from docarray.math.helper import top_k as _top_k
 from jina.logging.profile import TimeContext
-
-from pqlite import PQLite
-
 from utils import clean_workspace, docs_with_tags, evaluate
+
+from annlite import AnnLite
 
 n_index = [10_000, 100_000, 500_000, 1_000_000]
 n_query = [1, 8, 64]
@@ -14,8 +13,7 @@ D = 768
 R = 5
 B = 100_000
 n_cells = 1
-probs = [[0.20, 0.30, 0.50],
-         [0.05, 0.15, 0.80]]
+probs = [[0.20, 0.30, 0.50], [0.05, 0.15, 0.80]]
 
 categories = ['comic', 'movie', 'audiobook']
 
@@ -31,21 +29,21 @@ for n_i in n_index:
 
         clean_workspace()
         columns = [('category', str)]
-        indexer = PQLite(
+        indexer = AnnLite(
             dim=D,
             initial_size=n_i,
             n_subvectors=n_subvectors,
             n_cells=n_cells,
             metas={'workspace': './workspace'},
-            columns=columns
+            columns=columns,
         )
 
         da = docs_with_tags(n_i, D, current_probs, categories)
         da_embeddings = da.embeddings
 
         with TimeContext(f'indexing {n_i} docs') as t_i:
-            n_train_quantizer = min(n_i,  20_000)
-            row_ids = np.random.choice(range(n_i),n_train_quantizer, replace=False)
+            n_train_quantizer = min(n_i, 20_000)
+            row_ids = np.random.choice(range(n_i), n_train_quantizer, replace=False)
             indexer.partial_train(da_embeddings[row_ids, :])
 
             indexer.build_codebook()
@@ -55,8 +53,12 @@ for n_i in n_index:
         for cat, prob in zip(categories, current_probs):
             f = {'category': {'$eq': cat}}
 
-            indices_cat = np.array([t['category'] for t in da.get_attributes('tags')]) == cat
-            ids_indices_cat = np.array([d.id for d in da if d.tags['category'] == cat], dtype='int')
+            indices_cat = (
+                np.array([t['category'] for t in da.get_attributes('tags')]) == cat
+            )
+            ids_indices_cat = np.array(
+                [d.id for d in da if d.tags['category'] == cat], dtype='int'
+            )
 
             da_embeddings_cat = da_embeddings[indices_cat, :]
 
@@ -89,7 +91,9 @@ for n_i in n_index:
 
                     recall, precision = evaluate(ids, true_ids, top_k)
 
-            print(f'\n\nprob={prob}, current_probs={current_probs}, n_i={n_i}, recall={recall}\n\n')
+            print(
+                f'\n\nprob={prob}, current_probs={current_probs}, n_i={n_i}, recall={recall}\n\n'
+            )
             results_ni.append([n_i, prob, t_i.duration] + query_times + [recall])
 
     results.append(results_ni)

@@ -1,6 +1,6 @@
 import pytest
 
-from pqlite.storage.kv import DocStorage
+from annlite.storage.kv import DocStorage
 
 
 def test_get(tmpdir, docs):
