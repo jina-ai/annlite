@@ -43,9 +43,9 @@ jobs:
       - name: Test
         id: test
         run: |
-          pytest --cov=finetuner --cov-report=xml \
+          pytest --cov=annlite --cov-report=xml \
             -v -s -m "not gpu" ${{ matrix.test-path }}
-          echo "::set-output name=codecov_flag::finetuner"
+          echo "::set-output name=codecov_flag::annlite"
         timeout-minutes: 30
       - name: Check codecov file
         id: check_files
