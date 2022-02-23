@@ -156,7 +156,7 @@ class BuildExt(build_ext):
 
 
 extras = {}
-extras['testing'] = ['pytest']
+extras['test'] = ['pytest', 'black']
 
 # for e in ext_modules:
 #     e.cython_directives = COMPILER_DIRECTIVES
