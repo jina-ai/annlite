@@ -186,7 +186,7 @@ setup(
     cmdclass={'build_ext': BuildExt},
     package_data={'bindings': ['*.pyx', '*.pxd', '*.pxi']},
     install_requires=base_deps,
-    setup_requires=['setuptools>=18.0', 'wheel', 'cython'],
+    setup_requires=['setuptools>=18.0', 'wheel', 'cython', 'build'],
     classifiers=[
         'Intended Audience :: Developers',
         'Intended Audience :: Science/Research',
