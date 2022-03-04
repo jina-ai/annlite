@@ -1,6 +1,6 @@
 # AnnLite
 
-`AnnLite` is an  **Approximate Nearest Neighbor Search** (ANNS) library integrated with the Jina ecosystem.
+`AnnLite` is Cython-based Approximate Nearest Neighbor Search (ANNS) library, focuses on usability and efficiency in the monotlith environment.
 
 This indexer is recommended to be used when an application requires **search with filters** applied on `Document` tags.
 The `filtering query language` is based on [MongoDB's query and projection operators](https://docs.mongodb.com/manual/reference/operator/query/). We currently support a subset of those selectors.
