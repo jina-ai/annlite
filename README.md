@@ -76,15 +76,15 @@ For an in-depth overview of the features of AnnLite
 you can follow along with one of the examples below:
 
 
-| Name  | Link  |
-|---|---|
-| E-commerce product image search with PQLite  | [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/jina-ai/pqlite/blob/main/notebooks/fashion_product_search.ipynb)|
+| Name                                         | Link  |
+|----------------------------------------------|---|
+| E-commerce product image search with ANNlite | [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/jina-ai/pqlite/blob/main/notebooks/fashion_product_search.ipynb)|
 
 
 
 ## Quick Start
 
-1. Create a new `pqlite`
+1. Create a new `annlite`
 
 ```python
 import random
@@ -221,7 +221,7 @@ Currently `AnnLite` supports:
 
 
 
-## Research foundations of PQLite
+## Research foundations of AnnLite
 
 - [Xor Filters](https://lemire.me/blog/2019/12/19/xor-filters-faster-and-smaller-than-bloom-filters/) Faster and Smaller Than Bloom Filters
 - [CVPR20 Tutorial](https://www.youtube.com/watch?v=SKrHs03i08Q&list=PLKQB14e0EJUWaTnwgQogJ3nSLzEFNn9d8&t=849s) Billion-scale Approximate Nearest Neighbor Search
