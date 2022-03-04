@@ -19,7 +19,7 @@ n_subvectors = 64
 n_queries = 1
 
 BENCHMARK_SIMPLEINDEXER = False
-BENCHMARK_PQLITE = True
+BENCHMARK_ANNLITE = True
 
 
 def _precision(predicted, relevant, eval_at):
@@ -138,9 +138,9 @@ if BENCHMARK_SIMPLEINDEXER:
     ################ SimpleIndexer Benchmark END #################
 
 
-if BENCHMARK_PQLITE:
+if BENCHMARK_ANNLITE:
 
-    ################ PqLite Benchmark BEGIN ######################
+    ################ AnnLite Benchmark BEGIN ######################
     n_datasets = [10_000, 100_000, 500_000, 1_000_000, 10_000_000]
     # n_datasets = [10_000, 100_000]
     n_queries = [1, 8, 64]
@@ -203,4 +203,4 @@ if BENCHMARK_PQLITE:
     df = pd.DataFrame(results)
     df.to_csv('annlite.csv')
     clean_workspace()
-    ################ PqLite Benchmark END #########################
+    ################ AnnLite Benchmark END #########################
