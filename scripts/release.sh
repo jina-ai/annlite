@@ -37,7 +37,7 @@ function pub_pypi {
     # publish to pypi
     clean_build
 	  python -m build --sdist
-#    twine upload dist/*
+    twine upload dist/*
     clean_build
 }
 
