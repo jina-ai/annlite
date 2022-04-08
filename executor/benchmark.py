@@ -10,12 +10,12 @@ R = 5
 B = 4096
 n_cells = 1
 
-from executor import PQLiteIndexer
+from executor import AnnLiteIndexer
 
 times = {}
 
 for n_i in n_index:
-    idxer = PQLiteIndexer(
+    idxer = AnnLiteIndexer(
         dim=D,
         initial_size=n_i,
         n_cells=n_cells,

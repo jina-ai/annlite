@@ -1,4 +1,4 @@
-jtype: PQLiteIndexer
+jtype: AnnLiteIndexer
 metas:
   py_modules:
     - executor.py

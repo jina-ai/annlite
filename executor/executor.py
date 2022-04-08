@@ -1,12 +1,11 @@
 from typing import Dict, List, Optional, Tuple
 
+import annlite
 from jina import Document, DocumentArray, Executor, requests
 from jina.logging.logger import JinaLogger
 
-import pqlite
 
-
-class PQLiteIndexer(Executor):
+class AnnLiteIndexer(Executor):
     """
     A simple Indexer based on PQLite that stores all the Document data together in a local LMDB store.
 
@@ -22,8 +21,8 @@ class PQLiteIndexer(Executor):
         ef_query: int = 50,
         max_connection: int = 16,
         include_metadata: bool = True,
-        index_traversal_paths: str = 'r',
-        search_traversal_paths: str = 'r',
+        index_traversal_paths: str = '@r',
+        search_traversal_paths: str = '@r',
         columns: Optional[List[Tuple[str, str]]] = None,
         serialize_config: Optional[Dict] = None,
         *args,
@@ -39,10 +38,11 @@ class PQLiteIndexer(Executor):
         :param max_connection: The maximum number of outgoing connections in the
             graph (the "M" parameter)
         :param index_traversal_paths: Default traversal paths on docs
-                (used for indexing, delete and update), e.g. 'r', 'c', 'r,c'
+                (used for indexing, delete and update), e.g. '@r', '@c', '@r,c'
         :param search_traversal_paths: Default traversal paths on docs
-        (used for search), e.g. 'r', 'c', 'r,c'
-        :param columns: List of tuples of the form (column_name, str_type). Here str_type must be a string that can be parsed as a valid Python type.
+        (used for search), e.g. '@r', '@c', '@r,c'
+        :param columns: List of tuples of the form (column_name, str_type). Here str_type must be a string that can be
+                parsed as a valid Python type.
         :param serialize_config: The configurations used for serializing documents, e.g., {'protocol': 'pickle'}
         """
         super().__init__(*args, **kwargs)
@@ -66,7 +66,7 @@ class PQLiteIndexer(Executor):
                 cols.append((n, eval(t)))
             columns = cols
 
-        self._index = pqlite.PQLite(
+        self._index = annlite.AnnLite(
             dim=dim,
             metric=metric,
             columns=columns,
@@ -93,7 +93,7 @@ class PQLiteIndexer(Executor):
             return
 
         traversal_paths = parameters.get('traversal_paths', self.index_traversal_paths)
-        flat_docs = docs.traverse_flat(traversal_paths)
+        flat_docs = docs[traversal_paths]
         if len(flat_docs) == 0:
             return
 
@@ -116,7 +116,7 @@ class PQLiteIndexer(Executor):
             return
 
         traversal_paths = parameters.get('traversal_paths', self.index_traversal_paths)
-        flat_docs = docs.traverse_flat(traversal_paths)
+        flat_docs = docs[traversal_paths]
         if len(flat_docs) == 0:
             return
 
@@ -138,7 +138,7 @@ class PQLiteIndexer(Executor):
             return
 
         traversal_paths = parameters.get('traversal_paths', self.index_traversal_paths)
-        flat_docs = docs.traverse_flat(traversal_paths)
+        flat_docs = docs[traversal_paths]
         if len(flat_docs) == 0:
             return
 
@@ -176,7 +176,7 @@ class PQLiteIndexer(Executor):
         )
 
         traversal_paths = parameters.get('traversal_paths', self.search_traversal_paths)
-        flat_docs = docs.traverse_flat(traversal_paths)
+        flat_docs = docs[traversal_paths]
         if len(flat_docs) == 0:
             return
 
