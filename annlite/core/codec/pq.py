@@ -51,8 +51,8 @@ class PQCodec(BaseCodec):
 
         self.code_dtype = (
             np.uint8
-            if n_clusters <= 2 ** 8
-            else (np.uint16 if n_clusters <= 2 ** 16 else np.uint32)
+            if n_clusters <= 2**8
+            else (np.uint16 if n_clusters <= 2**16 else np.uint32)
         )
 
         # assert (
