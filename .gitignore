@@ -1,5 +1,7 @@
 # Initially taken from Github's Python gitignore file
-
+# local dev
+.vscode
+bindings/pq_bindings.cpp
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
