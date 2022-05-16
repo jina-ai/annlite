@@ -44,3 +44,7 @@ repos:
       args: ["--remove"]
     - id: mixed-line-ending
       args: ["--fix=lf"]
+- repo: https://gitlab.com/daverona/pre-commit/cpp
+  rev: 0.8.0                 # use the most recent version
+  hooks:
+    - id: clang-format         # formatter for C/C++ code based on a style guide
