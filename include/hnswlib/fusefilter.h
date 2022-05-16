@@ -75,8 +75,8 @@ typedef struct binary_hashes_s {
   uint32_t h2;
 } binary_hashes_t;
 
-static inline binary_hashes_t binary_fuse8_hash_batch(uint64_t hash,
-                                        const binary_fuse8_t *filter) {
+static inline binary_hashes_t
+binary_fuse8_hash_batch(uint64_t hash, const binary_fuse8_t *filter) {
   uint64_t hi = binary_fuse_mulhi(hash, filter->SegmentCountLength);
   binary_hashes_t ans;
   ans.h0 = (uint32_t)hi;
@@ -87,14 +87,14 @@ static inline binary_hashes_t binary_fuse8_hash_batch(uint64_t hash,
   return ans;
 }
 static inline uint32_t binary_fuse8_hash(int index, uint64_t hash,
-                                        const binary_fuse8_t *filter) {
-    uint64_t h = binary_fuse_mulhi(hash, filter->SegmentCountLength);
-    h += index * filter->SegmentLength;
-    // keep the lower 36 bits
-    uint64_t hh = hash & ((1UL << 36) - 1);
-    // index 0: right shift by 36; index 1: right shift by 18; index 2: no shift
-    h ^= (size_t)((hh >> (36 - 18 * index)) & filter->SegmentLengthMask);
-    return h;
+                                         const binary_fuse8_t *filter) {
+  uint64_t h = binary_fuse_mulhi(hash, filter->SegmentCountLength);
+  h += index * filter->SegmentLength;
+  // keep the lower 36 bits
+  uint64_t hh = hash & ((1UL << 36) - 1);
+  // index 0: right shift by 36; index 1: right shift by 18; index 2: no shift
+  h ^= (size_t)((hh >> (36 - 18 * index)) & filter->SegmentLengthMask);
+  return h;
 }
 
 // Report if the key is in the set, with false positive rate.
@@ -109,11 +109,12 @@ static inline bool binary_fuse8_contain(uint64_t key,
 }
 
 static inline uint32_t binary_fuse_calculate_segment_length(uint32_t arity,
-                                                             uint32_t size) {
+                                                            uint32_t size) {
   // These parameters are very sensitive. Replacing 'floor' by 'round' can
   // substantially affect the construction time.
   if (arity == 3) {
-    return ((uint32_t)1) << (int)(floor(log((double)(size)) / log(3.33) + 2.25));
+    return ((uint32_t)1) << (int)(floor(log((double)(size)) / log(3.33) +
+                                        2.25));
   } else if (arity == 4) {
     return ((uint32_t)1) << (int)(floor(log((double)(size)) / log(2.91) - 0.5));
   } else {
@@ -129,11 +130,13 @@ double binary_fuse8_max(double a, double b) {
 }
 
 static inline double binary_fuse_calculate_size_factor(uint32_t arity,
-                                                        uint32_t size) {
+                                                       uint32_t size) {
   if (arity == 3) {
-    return binary_fuse8_max(1.125, 0.875 + 0.25 * log(1000000.0) / log((double)size));
+    return binary_fuse8_max(1.125,
+                            0.875 + 0.25 * log(1000000.0) / log((double)size));
   } else if (arity == 4) {
-    return binary_fuse8_max(1.075, 0.77 + 0.305 * log(600000.0) / log((double)size));
+    return binary_fuse8_max(1.075,
+                            0.77 + 0.305 * log(600000.0) / log((double)size));
   } else {
     return 2.0;
   }
@@ -145,13 +148,15 @@ static inline double binary_fuse_calculate_size_factor(uint32_t arity,
 static inline bool binary_fuse8_allocate(uint32_t size,
                                          binary_fuse8_t *filter) {
   uint32_t arity = 3;
-  filter->SegmentLength = size == 0 ? 4 : binary_fuse_calculate_segment_length(arity, size);
+  filter->SegmentLength =
+      size == 0 ? 4 : binary_fuse_calculate_segment_length(arity, size);
   if (filter->SegmentLength > 262144) {
     filter->SegmentLength = 262144;
   }
   filter->SegmentLengthMask = filter->SegmentLength - 1;
   double sizeFactor = binary_fuse_calculate_size_factor(arity, size);
-  uint32_t capacity = size <= 1 ? 0 : (uint32_t)(round((double)size * sizeFactor));
+  uint32_t capacity =
+      size <= 1 ? 0 : (uint32_t)(round((double)size * sizeFactor));
   uint32_t initSegmentCount =
       (capacity + filter->SegmentLength - 1) / filter->SegmentLength -
       (arity - 1);
@@ -166,7 +171,7 @@ static inline bool binary_fuse8_allocate(uint32_t size,
   filter->ArrayLength =
       (filter->SegmentCount + arity - 1) * filter->SegmentLength;
   filter->SegmentCountLength = filter->SegmentCount * filter->SegmentLength;
-  filter->Fingerprints = (uint8_t*)malloc(filter->ArrayLength);
+  filter->Fingerprints = (uint8_t *)malloc(filter->ArrayLength);
   return filter->Fingerprints != NULL;
 }
 
@@ -187,18 +192,16 @@ static inline void binary_fuse8_free(binary_fuse8_t *filter) {
   filter->ArrayLength = 0;
 }
 
-static inline uint8_t binary_fuse_mod3(uint8_t x) {
-    return x > 2 ? x - 3 : x;
-}
+static inline uint8_t binary_fuse_mod3(uint8_t x) { return x > 2 ? x - 3 : x; }
 
 // construct the filter, returns true on success, false on failure.
 // most likely, a failure is due to too high a memory usage
 // size is the number of keys
 // The caller is responsable for calling binary_fuse8_allocate(size,filter)
-// before. The caller is responsible to ensure that there are not too many  duplicated
-// keys. The inner loop will run up to XOR_MAX_ITERATIONS times (default on
-// 100), it should never fail, except if there are many duplicated keys. If it fails,
-// a return value of false is provided.
+// before. The caller is responsible to ensure that there are not too many
+// duplicated keys. The inner loop will run up to XOR_MAX_ITERATIONS times
+// (default on 100), it should never fail, except if there are many duplicated
+// keys. If it fails, a return value of false is provided.
 //
 bool binary_fuse8_populate(const uint64_t *keys, uint32_t size,
                            binary_fuse8_t *filter) {
@@ -266,7 +269,7 @@ bool binary_fuse8_populate(const uint64_t *keys, uint32_t size,
       uint32_t h0 = binary_fuse8_hash(0, hash, filter);
       t2count[h0] += 4;
       t2hash[h0] ^= hash;
-      uint32_t h1= binary_fuse8_hash(1, hash, filter);
+      uint32_t h1 = binary_fuse8_hash(1, hash, filter);
       t2count[h1] += 4;
       t2count[h1] ^= 1;
       t2hash[h1] ^= hash;
@@ -275,25 +278,27 @@ bool binary_fuse8_populate(const uint64_t *keys, uint32_t size,
       t2hash[h2] ^= hash;
       t2count[h2] ^= 2;
       if ((t2hash[h0] & t2hash[h1] & t2hash[h2]) == 0) {
-        if   (((t2hash[h0] == 0) && (t2count[h0] == 8))
-          ||  ((t2hash[h1] == 0) && (t2count[h1] == 8))
-          ||  ((t2hash[h2] == 0) && (t2count[h2] == 8))) {
-					duplicates += 1;
- 					t2count[h0] -= 4;
- 					t2hash[h0] ^= hash;
- 					t2count[h1] -= 4;
- 					t2count[h1] ^= 1;
- 					t2hash[h1] ^= hash;
- 					t2count[h2] -= 4;
- 					t2count[h2] ^= 2;
- 					t2hash[h2] ^= hash;
+        if (((t2hash[h0] == 0) && (t2count[h0] == 8)) ||
+            ((t2hash[h1] == 0) && (t2count[h1] == 8)) ||
+            ((t2hash[h2] == 0) && (t2count[h2] == 8))) {
+          duplicates += 1;
+          t2count[h0] -= 4;
+          t2hash[h0] ^= hash;
+          t2count[h1] -= 4;
+          t2count[h1] ^= 1;
+          t2hash[h1] ^= hash;
+          t2count[h2] -= 4;
+          t2count[h2] ^= 2;
+          t2hash[h2] ^= hash;
         }
       }
       error = (t2count[h0] < 4) ? 1 : error;
       error = (t2count[h1] < 4) ? 1 : error;
       error = (t2count[h2] < 4) ? 1 : error;
     }
-    if(error) { continue; }
+    if (error) {
+      continue;
+    }
 
     // End of key addition
     uint32_t Qsize = 0;
@@ -309,7 +314,7 @@ bool binary_fuse8_populate(const uint64_t *keys, uint32_t size,
       if ((t2count[index] >> 2) == 1) {
         uint64_t hash = t2hash[index];
 
-        //h012[0] = binary_fuse8_hash(0, hash, filter);
+        // h012[0] = binary_fuse8_hash(0, hash, filter);
         h012[1] = binary_fuse8_hash(1, hash, filter);
         h012[2] = binary_fuse8_hash(2, hash, filter);
         h012[3] = binary_fuse8_hash(0, hash, filter); // == h012[0];
@@ -382,33 +387,32 @@ typedef struct binary_fuse16_s {
   uint16_t *Fingerprints;
 
   binary_fuse16_s(uint32_t size) {
-     uint32_t arity = 3;
-     SegmentLength = size == 0 ? 4 : binary_fuse_calculate_segment_length(arity, size);
-     if (SegmentLength > 262144) {
-       SegmentLength = 262144;
-     }
-     SegmentLengthMask = SegmentLength - 1;
-     double sizeFactor = size <= 1 ? 0 : binary_fuse_calculate_size_factor(arity, size);
-     uint32_t capacity = (uint32_t)(round((double)size * sizeFactor));
-     uint32_t initSegmentCount =
-         (capacity + SegmentLength - 1) / SegmentLength -
-         (arity - 1);
-     ArrayLength = (initSegmentCount + arity - 1) * SegmentLength;
-     SegmentCount =
-         (ArrayLength + SegmentLength - 1) / SegmentLength;
-     if (SegmentCount <= arity - 1) {
-       SegmentCount = 1;
-     } else {
-       SegmentCount = SegmentCount - (arity - 1);
-     }
-     ArrayLength =
-         (SegmentCount + arity - 1) * SegmentLength;
-     SegmentCountLength = SegmentCount * SegmentLength;
-     Fingerprints = (uint16_t*)malloc(ArrayLength * sizeof(uint16_t));
-     memset(Fingerprints, 0, ArrayLength * sizeof(uint16_t));
-     if (Fingerprints == NULL) {
-        throw std::runtime_error("not enough memory to hold the fuse filter");
-     }
+    uint32_t arity = 3;
+    SegmentLength =
+        size == 0 ? 4 : binary_fuse_calculate_segment_length(arity, size);
+    if (SegmentLength > 262144) {
+      SegmentLength = 262144;
+    }
+    SegmentLengthMask = SegmentLength - 1;
+    double sizeFactor =
+        size <= 1 ? 0 : binary_fuse_calculate_size_factor(arity, size);
+    uint32_t capacity = (uint32_t)(round((double)size * sizeFactor));
+    uint32_t initSegmentCount =
+        (capacity + SegmentLength - 1) / SegmentLength - (arity - 1);
+    ArrayLength = (initSegmentCount + arity - 1) * SegmentLength;
+    SegmentCount = (ArrayLength + SegmentLength - 1) / SegmentLength;
+    if (SegmentCount <= arity - 1) {
+      SegmentCount = 1;
+    } else {
+      SegmentCount = SegmentCount - (arity - 1);
+    }
+    ArrayLength = (SegmentCount + arity - 1) * SegmentLength;
+    SegmentCountLength = SegmentCount * SegmentLength;
+    Fingerprints = (uint16_t *)malloc(ArrayLength * sizeof(uint16_t));
+    memset(Fingerprints, 0, ArrayLength * sizeof(uint16_t));
+    if (Fingerprints == NULL) {
+      throw std::runtime_error("not enough memory to hold the fuse filter");
+    }
   }
 
   ~binary_fuse16_s() {
@@ -427,8 +431,8 @@ static inline uint64_t binary_fuse16_fingerprint(uint64_t hash) {
   return hash ^ (hash >> 32);
 }
 
-static inline binary_hashes_t binary_fuse16_hash_batch(uint64_t hash,
-                                        const binary_fuse16_t *filter) {
+static inline binary_hashes_t
+binary_fuse16_hash_batch(uint64_t hash, const binary_fuse16_t *filter) {
   uint64_t hi = binary_fuse_mulhi(hash, filter->SegmentCountLength);
   binary_hashes_t ans;
   ans.h0 = (uint32_t)hi;
@@ -439,19 +443,19 @@ static inline binary_hashes_t binary_fuse16_hash_batch(uint64_t hash,
   return ans;
 }
 static inline uint32_t binary_fuse16_hash(int index, uint64_t hash,
-                                        const binary_fuse16_t *filter) {
-    uint64_t h = binary_fuse_mulhi(hash, filter->SegmentCountLength);
-    h += index * filter->SegmentLength;
-    // keep the lower 36 bits
-    uint64_t hh = hash & ((1UL << 36) - 1);
-    // index 0: right shift by 36; index 1: right shift by 18; index 2: no shift
-    h ^= (size_t)((hh >> (36 - 18 * index)) & filter->SegmentLengthMask);
-    return h;
+                                          const binary_fuse16_t *filter) {
+  uint64_t h = binary_fuse_mulhi(hash, filter->SegmentCountLength);
+  h += index * filter->SegmentLength;
+  // keep the lower 36 bits
+  uint64_t hh = hash & ((1UL << 36) - 1);
+  // index 0: right shift by 36; index 1: right shift by 18; index 2: no shift
+  h ^= (size_t)((hh >> (36 - 18 * index)) & filter->SegmentLengthMask);
+  return h;
 }
 
 // Report if the key is in the set, with false positive rate.
 static inline bool binary_fuse16_contain(uint64_t key,
-                                        const binary_fuse16_t *filter) {
+                                         const binary_fuse16_t *filter) {
   uint64_t hash = binary_fuse_mix_split(key, filter->Seed);
   uint16_t f = binary_fuse16_fingerprint(hash);
   binary_hashes_t hashes = binary_fuse16_hash_batch(hash, filter);
@@ -461,7 +465,8 @@ static inline bool binary_fuse16_contain(uint64_t key,
 }
 
 // report memory usage
-static inline size_t binary_fuse16_size_in_bytes(const binary_fuse16_t *filter) {
+static inline size_t
+binary_fuse16_size_in_bytes(const binary_fuse16_t *filter) {
   return filter->ArrayLength * sizeof(uint16_t) + sizeof(binary_fuse16_t);
 }
 
@@ -469,13 +474,13 @@ static inline size_t binary_fuse16_size_in_bytes(const binary_fuse16_t *filter) 
 // most likely, a failure is due to too high a memory usage
 // size is the number of keys
 // The caller is responsable for calling binary_fuse8_allocate(size,filter)
-// before. The caller is responsible to ensure that there are not too many duplicated
-// keys. The inner loop will run up to XOR_MAX_ITERATIONS times (default on
-// 100), it should never fail, except if there are many duplicated keys. If it fails,
-// a return value of false is provided.
+// before. The caller is responsible to ensure that there are not too many
+// duplicated keys. The inner loop will run up to XOR_MAX_ITERATIONS times
+// (default on 100), it should never fail, except if there are many duplicated
+// keys. If it fails, a return value of false is provided.
 //
 bool binary_fuse16_populate(const uint64_t *keys, uint32_t size,
-                           binary_fuse16_t *filter) {
+                            binary_fuse16_t *filter) {
   uint64_t rng_counter = 0x726b2b9d438b9d4d;
   filter->Seed = binary_fuse_rng_splitmix64(&rng_counter);
   uint64_t *reverseOrder = (uint64_t *)calloc((size + 1), sizeof(uint64_t));
@@ -540,7 +545,7 @@ bool binary_fuse16_populate(const uint64_t *keys, uint32_t size,
       uint32_t h0 = binary_fuse16_hash(0, hash, filter);
       t2count[h0] += 4;
       t2hash[h0] ^= hash;
-      uint32_t h1= binary_fuse16_hash(1, hash, filter);
+      uint32_t h1 = binary_fuse16_hash(1, hash, filter);
       t2count[h1] += 4;
       t2count[h1] ^= 1;
       t2hash[h1] ^= hash;
@@ -549,25 +554,27 @@ bool binary_fuse16_populate(const uint64_t *keys, uint32_t size,
       t2hash[h2] ^= hash;
       t2count[h2] ^= 2;
       if ((t2hash[h0] & t2hash[h1] & t2hash[h2]) == 0) {
-        if   (((t2hash[h0] == 0) && (t2count[h0] == 8))
-          ||  ((t2hash[h1] == 0) && (t2count[h1] == 8))
-          ||  ((t2hash[h2] == 0) && (t2count[h2] == 8))) {
-					duplicates += 1;
- 					t2count[h0] -= 4;
- 					t2hash[h0] ^= hash;
- 					t2count[h1] -= 4;
- 					t2count[h1] ^= 1;
- 					t2hash[h1] ^= hash;
- 					t2count[h2] -= 4;
- 					t2count[h2] ^= 2;
- 					t2hash[h2] ^= hash;
+        if (((t2hash[h0] == 0) && (t2count[h0] == 8)) ||
+            ((t2hash[h1] == 0) && (t2count[h1] == 8)) ||
+            ((t2hash[h2] == 0) && (t2count[h2] == 8))) {
+          duplicates += 1;
+          t2count[h0] -= 4;
+          t2hash[h0] ^= hash;
+          t2count[h1] -= 4;
+          t2count[h1] ^= 1;
+          t2hash[h1] ^= hash;
+          t2count[h2] -= 4;
+          t2count[h2] ^= 2;
+          t2hash[h2] ^= hash;
         }
       }
       error = (t2count[h0] < 4) ? 1 : error;
       error = (t2count[h1] < 4) ? 1 : error;
       error = (t2count[h2] < 4) ? 1 : error;
     }
-    if(error) { continue; }
+    if (error) {
+      continue;
+    }
 
     // End of key addition
     uint32_t Qsize = 0;
@@ -583,7 +590,7 @@ bool binary_fuse16_populate(const uint64_t *keys, uint32_t size,
       if ((t2count[index] >> 2) == 1) {
         uint64_t hash = t2hash[index];
 
-        //h012[0] = binary_fuse16_hash(0, hash, filter);
+        // h012[0] = binary_fuse16_hash(0, hash, filter);
         h012[1] = binary_fuse16_hash(1, hash, filter);
         h012[2] = binary_fuse16_hash(2, hash, filter);
         h012[3] = binary_fuse16_hash(0, hash, filter); // == h012[0];
@@ -641,8 +648,5 @@ bool binary_fuse16_populate(const uint64_t *keys, uint32_t size,
   free(startPos);
   return true;
 }
-
-
-
 
 #endif
