@@ -287,6 +287,24 @@ class AnnLite(CellContainer):
         )
         return match_dists, match_docs
 
+    def filter(
+        self,
+        filter: Dict = {},
+        limit: int = 10,
+        include_metadata: bool = True,
+    ):
+
+        cells = [x for x in range(self.n_cells)]
+        where_clause, where_params = Filter(filter).parse_where_clause()
+
+        match_docs = self.filter_cells(
+            cells=cells,
+            where_clause=where_clause,
+            where_params=where_params,
+            include_metadata=include_metadata,
+        )
+        return match_docs[0:limit]
+
     def _cell_selection(self, query_np, limit):
 
         n_data, _ = self._sanity_check(query_np)

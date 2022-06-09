@@ -136,6 +136,49 @@ class CellContainer:
             doc_ids.append(doc_id)
         return dists, doc_ids, cell_ids
 
+    def filter_cells(
+        self,
+        cells: 'np.ndarray',
+        where_clause: str = '',
+        where_params: Tuple = (),
+        limit: int = 10,
+        include_metadata: bool = False,
+    ):
+
+        filtered_docs_list = []
+        for cell_id in cells:
+            cell_table = self.cell_table(cell_id)
+            cell_size = cell_table.count()
+            if cell_size == 0:
+                continue
+
+            indices = None
+            if where_clause or (cell_table.deleted_count() > 0):
+                indices = cell_table.query(
+                    where_clause=where_clause, where_params=where_params
+                )
+
+                if len(indices) == 0:
+                    continue
+
+                indices = np.array(indices, dtype=np.int64)
+
+            filtered_cell_docs = DocumentArray()
+            for offset in indices:
+                doc_id = self.cell_table(cell_id).get_docid_by_offset(offset)
+                doc = Document(id=doc_id)
+                if include_metadata:
+                    doc = self.doc_store(cell_id).get([doc_id])[0]
+
+                filtered_cell_docs.append(doc)
+
+            filtered_docs_list.extend(filtered_cell_docs)
+
+            if len(filtered_cell_docs) >= limit:
+                break
+
+        return filtered_docs_list
+
     def search_cells(
         self,
         query: 'np.ndarray',

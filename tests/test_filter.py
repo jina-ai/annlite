@@ -1,6 +1,11 @@
 import pytest
 
 from annlite.filter import Filter
+from docarray import DocumentArray, Document
+from annlite import AnnLite
+import tempfile
+import random
+import numpy as np
 
 
 def test_empty_filter():
@@ -99,3 +104,29 @@ def test_error_filter():
     f = Filter({'$may': {'brand': {'$lt': 1}, 'price': {'$gte': 50}}})
     with pytest.raises(ValueError):
         f.parse_where_clause()
+
+
+def test_filter_without_query_vector():
+    N = 100
+    D = 2
+    limit = 3
+    with tempfile.TemporaryDirectory() as tmpdirname:
+        index = AnnLite(
+            columns=[('x', float)], dim=D, data_path=tmpdirname, include_metadata=True
+        )
+        X = np.random.random((N, D)).astype(np.float32)
+
+        docs = DocumentArray(
+            [
+                Document(id=f'{i}', embedding=X[i], tags={'x': random.random()})
+                for i in range(N)
+            ]
+        )
+        index.index(docs)
+
+        matches = index.filter(
+            filter={'x': {'$lt': 0.5}}, limit=limit, include_metadata=True
+        )
+        assert len(matches) == limit
+        for m in matches:
+            assert m.tags['x'] < 0.5
