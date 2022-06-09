@@ -301,10 +301,9 @@ class AnnLite(CellContainer):
             cells=cells,
             where_clause=where_clause,
             where_params=where_params,
-            limit=limit,
             include_metadata=include_metadata,
         )
-        return match_docs
+        return match_docs[0:limit]
 
     def _cell_selection(self, query_np, limit):
 

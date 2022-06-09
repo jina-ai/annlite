@@ -164,19 +164,20 @@ class CellContainer:
                 indices = np.array(indices, dtype=np.int64)
 
             filtered_cell_docs = DocumentArray()
-            for doc_id in indices:
+            for offset in indices:
+                doc_id = self.cell_table(cell_id).get_docid_by_offset(offset)
                 doc = Document(id=doc_id)
                 if include_metadata:
                     doc = self.doc_store(cell_id).get([doc_id])[0]
 
                 filtered_cell_docs.append(doc)
 
-            filtered_docs_list.append(filtered_cell_docs)
+            filtered_docs_list.extend(filtered_cell_docs)
 
             if len(filtered_cell_docs) >= limit:
                 break
 
-        return filtered_docs_list[0:limit]
+        return filtered_docs_list
 
     def search_cells(
         self,
