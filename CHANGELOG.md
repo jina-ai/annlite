@@ -2,6 +2,7 @@
 
 
 
+
 <a name=release-note-0-3-0></a>
 ## Release Note (`0.3.0`)
 
@@ -61,3 +62,31 @@
 ### 🍹 Other Improvements
 
  - [[```d15289f9```](https://github.com/jina-ai/docarray/commit/d15289f9912f158c7b9a7ec7d5f58188ecb19cf2)] __-__ __version__: the next version will be 0.3.1 (*Jina Dev Bot*)
+
+<a name=release-note-0-3-2></a>
+## Release Note (`0.3.2`)
+
+> Release time: 2022-06-09 10:04:30
+
+
+
+🙇 We'd like to thank all contributors for this new release! In particular,
+ David Buchaca Prats,  Gustavo Ye,  felix-wang,  Han Xiao,  numb3r3,  Jina Dev Bot,  🙇
+
+
+### 🆕 New Features
+
+ - [[```a7804baf```](https://github.com/jina-ai/docarray/commit/a7804bafc90064f929afff62192f19e44406b5d1)] __-__ add filter method (#121) (*David Buchaca Prats*)
+
+### 🐞 Bug fixes
+
+ - [[```9448fcab```](https://github.com/jina-ai/docarray/commit/9448fcab060efe5b59108f3cac183aeb432a81d6)] __-__ only apply black with changed py files (#118) (*felix-wang*)
+ - [[```e4e706e3```](https://github.com/jina-ai/docarray/commit/e4e706e313ba5cbfb7083a5dea9e75b8d2813394)] __-__ upgrade traverse path (#113) (*felix-wang*)
+ - [[```a0fc7cac```](https://github.com/jina-ai/docarray/commit/a0fc7cac7722d108143f6590c3435c77376f76bd)] __-__ tag yml (*numb3r3*)
+
+### 🍹 Other Improvements
+
+ - [[```2ce1ec22```](https://github.com/jina-ai/docarray/commit/2ce1ec2283b381f5153ea60141a6bb474bbf0f0c)] __-__ __cpp/h__: clang-format (#117) (*Gustavo Ye*)
+ - [[```a6168400```](https://github.com/jina-ai/docarray/commit/a61684000af4518aafa41d1d9dea47766bedf247)] __-__ update readme (*Han Xiao*)
+ - [[```aec33c75```](https://github.com/jina-ai/docarray/commit/aec33c75b8ce883e044a828fbae7142f71dbb05a)] __-__ __version__: the next version will be 0.3.2 (*Jina Dev Bot*)
+
