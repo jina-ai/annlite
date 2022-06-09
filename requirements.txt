@@ -4,5 +4,5 @@ docarray>=0.4.4
 lmdb
 loguru
 numpy
-protobuf>=3.19.3
+protobuf>=3.13.0,<=3.20.1
 scikit-learn
