@@ -7,6 +7,7 @@ import tempfile
 import random
 import numpy as np
 
+
 def test_empty_filter():
     f = Filter()
     where_clause, parameters = f.parse_where_clause()
@@ -104,12 +105,15 @@ def test_error_filter():
     with pytest.raises(ValueError):
         f.parse_where_clause()
 
+
 def test_filter_without_query_vector():
     N = 100
     D = 2
     limit = 3
     with tempfile.TemporaryDirectory() as tmpdirname:
-        index = AnnLite(columns=[('x', float)], dim=D, data_path=tmpdirname, include_metadata=True)
+        index = AnnLite(
+            columns=[('x', float)], dim=D, data_path=tmpdirname, include_metadata=True
+        )
         X = np.random.random((N, D)).astype(np.float32)
 
         docs = DocumentArray(
@@ -120,7 +124,9 @@ def test_filter_without_query_vector():
         )
         index.index(docs)
 
-        matches = index.filter(filter={'x': {'$lt': 0.5}}, limit=limit, include_metadata=True)
+        matches = index.filter(
+            filter={'x': {'$lt': 0.5}}, limit=limit, include_metadata=True
+        )
         assert len(matches) == limit
         for m in matches:
             assert m.tags['x'] < 0.5
