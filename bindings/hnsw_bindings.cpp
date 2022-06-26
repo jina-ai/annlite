@@ -1,4 +1,5 @@
 #include "hnswlib.h"
+#include <Python.h>
 #include <assert.h>
 #include <atomic>
 #include <iostream>
@@ -101,6 +102,11 @@ public:
     num_threads_default = std::thread::hardware_concurrency();
 
     default_ef = 10;
+    pq_enable = false;
+    pq_n_clusters = -1;
+    pq_n_subvectors = -1;
+    pq_d_subvector = -1;
+    pq_object = py::none();
   }
 
   static const int ser_version = 1; // serialization version
@@ -117,6 +123,12 @@ public:
   hnswlib::labeltype cur_l;
   hnswlib::HierarchicalNSW<dist_t> *appr_alg;
   hnswlib::SpaceInterface<float> *l2space;
+  // quantization setting
+  bool pq_enable;
+  int pq_n_subvectors;
+  int pq_n_clusters;
+  int pq_d_subvector;
+  py::object pq_object;
 
   ~Index() {
     delete l2space;
@@ -799,6 +811,49 @@ public:
   size_t getMaxElements() const { return appr_alg->max_elements_; }
 
   size_t getCurrentCount() const { return appr_alg->cur_element_count; }
+
+  void loadPQ(py::object pq_abstract) {
+    int exist_attr = 1, attr_correct = 1;
+    PyObject *pq_raw_ptr = pq_abstract.ptr();
+    exist_attr *= PyObject_HasAttrString(pq_raw_ptr, "encode");
+    exist_attr *= PyObject_HasAttrString(pq_raw_ptr, "get_codebook");
+    exist_attr *= PyObject_HasAttrString(pq_raw_ptr, "get_subspace_splitting");
+    if (exist_attr <= 0) {
+      throw py::index_error(
+          "PQ class should at least have the following attributes:\n"
+          "(encode, get_codebook, get_subspace_splitting)");
+    }
+    attr_correct *=
+        PyMethod_Check(PyObject_GetAttrString(pq_raw_ptr, "encode"));
+    attr_correct *=
+        PyMethod_Check(PyObject_GetAttrString(pq_raw_ptr, "get_codebook"));
+    attr_correct *= PyMethod_Check(
+        PyObject_GetAttrString(pq_raw_ptr, "get_subspace_splitting"));
+    if (attr_correct <= 0) {
+      throw py::attribute_error(
+          "PQ class have at least one of the following attributes' type "
+          "INCORRECT:\n(encode: <bounded method>,\n codebook: "
+          "<bounded method>,\n get_subspace_splitting: <bounded method>)");
+    }
+
+    this->pq_enable = true;
+    this->pq_object = pq_abstract;
+
+    py::tuple subspaces_param = pq_abstract.attr("get_subspace_splitting")();
+    this->pq_n_subvectors = py::cast<int>(subspaces_param[0]);
+    this->pq_n_clusters = py::cast<int>(subspaces_param[1]);
+    this->pq_d_subvector = py::cast<int>(subspaces_param[2]);
+
+    int pq_total_dims = (this->pq_n_subvectors * this->pq_d_subvector);
+    if (this->dim != pq_total_dims) {
+      throw py::value_error(
+          "Initialization Error, expect HNSW.dim == "
+          "PQ.n_subvector*PQ.d_subvector, but got:\n"
+          "HNSW.dim =" +
+          std::to_string(this->dim) +
+          ", PQ.n_subvector*PQ.d_subvector=" + std::to_string(pq_total_dims));
+    }
+  }
 };
 
 PYBIND11_PLUGIN(hnsw_bind) {
@@ -834,6 +889,7 @@ PYBIND11_PLUGIN(hnsw_bind) {
       .def("resize_index", &Index<float>::resizeIndex, py::arg("new_size"))
       .def("get_max_elements", &Index<float>::getMaxElements)
       .def("get_current_count", &Index<float>::getCurrentCount)
+      .def("loadPQ", &Index<float>::loadPQ)
       .def_readonly("space", &Index<float>::space_name)
       .def_readonly("dim", &Index<float>::dim)
       .def_readwrite("num_threads", &Index<float>::num_threads_default)
