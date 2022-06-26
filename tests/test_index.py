@@ -1,16 +1,25 @@
 import operator
 import random
+from collections import namedtuple
 
 import numpy as np
 import pytest
 from docarray import Document, DocumentArray
 
+import annlite
 from annlite import AnnLite
+from annlite.core.codec.pq import PQCodec
+from annlite.core.index import hnsw
 
 N = 1000  # number of data points
 Nq = 5
 Nt = 2000
 D = 128  # dimensionality / number of features
+# pq params below -----------
+n_examples = 512
+n_clusters = 32
+n_subvectors = 8
+d_subvector = int(D / n_subvectors)
 
 numeric_operators = {
     '$gte': operator.ge,
@@ -22,6 +31,20 @@ numeric_operators = {
 }
 
 categorical_operators = {'$eq': operator.eq, '$neq': operator.ne}
+
+
+@pytest.fixture
+def build_pq_data():
+    Xt = np.random.random((n_examples, D)).astype(np.float32)
+    return Xt
+
+
+@pytest.fixture
+def build_pq_codec(build_pq_data):
+    Xt = build_pq_data
+    pq_codec = PQCodec(dim=D, n_subvectors=n_subvectors, n_clusters=n_clusters)
+    pq_codec.fit(Xt)
+    return pq_codec
 
 
 @pytest.fixture
@@ -259,3 +282,36 @@ def test_search_numpy_membership_filter(
                 for doc_id in doc_ids_query_k
             ]
         )
+
+
+def test_annlite_hnsw_pq_init(tmpdir, build_pq_codec):
+    index = AnnLite(
+        dim=D, data_path=tmpdir / 'annlite_test', hnsw_using_pq=build_pq_codec
+    )
+
+
+def test_annlite_hnsw_pq_interface(tmpdir, build_pq_codec):
+    missing_method = namedtuple('PQCodec', ['encode', 'get_codebook'])(0, 0)
+    with pytest.raises(IndexError):
+        AnnLite(dim=D, data_path=tmpdir / 'annlite_test', hnsw_using_pq=missing_method)
+
+    wrong_attrs = namedtuple(
+        'PQCodec', ['encode', 'get_codebook', 'get_subspace_splitting']
+    )(1, 1, 1)
+    with pytest.raises(AttributeError):
+        AnnLite(dim=D, data_path=tmpdir / 'annlite_test', hnsw_using_pq=wrong_attrs)
+
+    wrong_dims = PQCodec(dim=D * 2, n_subvectors=n_subvectors, n_clusters=n_clusters)
+    with pytest.raises(ValueError):
+        AnnLite(dim=D, data_path=tmpdir / 'annlite_test', hnsw_using_pq=wrong_dims)
+
+    assert (
+        n_subvectors,
+        n_clusters,
+        d_subvector,
+    ) == build_pq_codec.get_subspace_splitting()
+    assert (
+        n_subvectors,
+        n_clusters,
+        d_subvector,
+    ) == build_pq_codec.get_codebook().shape
