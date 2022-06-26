@@ -4,12 +4,12 @@ from scipy.cluster.vq import vq
 from annlite import pq_bind
 
 from ...enums import Metric
-from .base import BaseCodec
+from .base import BaseCodec, BaseTrainedPQ
 
 # from pqlite.pq_bind import precompute_adc_table, dist_pqcodes_to_codebooks
 
 
-class PQCodec(BaseCodec):
+class PQCodec(BaseCodec, BaseTrainedPQ):
     """Implementation of Product Quantization (PQ) [Jegou11]_.
 
     For the indexing phase of database vectors,
@@ -196,6 +196,15 @@ class PQCodec(BaseCodec):
     @property
     def codebooks(self):
         return self._codebooks
+
+    # trained pq interface ----------------
+    def get_codebook(self) -> 'np.ndarray':
+        return self.codebooks
+
+    def get_subspace_splitting(self):
+        return (self.n_subvectors, self.n_clusters, self.d_subvector)
+
+    # -------------------------------------
 
 
 class DistanceTable(object):
