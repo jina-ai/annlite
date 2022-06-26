@@ -1,5 +1,5 @@
 import math
-from typing import List, Optional, Union
+from typing import TYPE_CHECKING, List, Optional, Union
 
 import numpy as np
 from loguru import logger
@@ -8,6 +8,9 @@ from annlite.hnsw_bind import Index
 
 from ....enums import Metric
 from ..base import BaseIndex
+
+if TYPE_CHECKING:
+    from ...codec.base import BaseTrainedPQ
 
 
 class HnswIndex(BaseIndex):
@@ -19,6 +22,7 @@ class HnswIndex(BaseIndex):
         ef_construction: int = 200,
         ef_search: int = 50,
         max_connection: int = 16,
+        using_pq: Optional['BaseTrainedPQ'] = None,
         **kwargs,
     ):
         """
@@ -34,7 +38,7 @@ class HnswIndex(BaseIndex):
         self.ef_construction = ef_construction
         self.ef_search = ef_search
         self.max_connection = max_connection
-
+        self.using_pq = using_pq
         self._init_hnsw_index()
 
     def _init_hnsw_index(self):
@@ -45,6 +49,8 @@ class HnswIndex(BaseIndex):
             M=self.max_connection,
         )
         self._index.set_ef(self.ef_search)
+        if self.using_pq is not None:
+            self._index.loadPQ(self.using_pq)
 
     def add_with_ids(self, x: 'np.ndarray', ids: List[int]):
         max_id = max(ids) + 1

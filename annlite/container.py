@@ -7,6 +7,7 @@ from loguru import logger
 
 if TYPE_CHECKING:
     from .core.codec.pq import PQCodec
+    from .core.codec.base import BaseTrainedPQ
 
 from .core.index.hnsw import HnswIndex
 from .core.index.pq_index import PQIndex
@@ -30,6 +31,7 @@ class CellContainer:
         serialize_config: Optional[Dict] = None,
         data_path: Path = Path('./data'),
         lock: bool = True,
+        hnsw_using_pq: Optional['BaseTrainedPQ'] = None,
         **kwargs,
     ):
         self.dim = dim
@@ -58,6 +60,7 @@ class CellContainer:
                     initial_size=initial_size,
                     expand_step_size=expand_step_size,
                     expand_mode=expand_mode,
+                    using_pq=hnsw_using_pq,
                     **kwargs,
                 )
                 for _ in range(n_cells)

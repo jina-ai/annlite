@@ -48,7 +48,7 @@ class BaseTrainedPQ(ABC):
     """
 
     @abstractmethod
-    def get_subspace_splitting(self) -> Tuple[int]:
+    def get_subspace_splitting(self) -> 'Tuple[int]':
         """Return subspace splitting setting
 
         :return: tuple of (`n_subvectors`, `n_clusters`, `d_subvector`)

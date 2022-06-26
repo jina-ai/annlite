@@ -8,6 +8,7 @@ from loguru import logger
 
 if TYPE_CHECKING:
     from docarray import DocumentArray
+    from .core.codec.base import BaseTrainedPQ
 
 from .container import CellContainer
 from .core import PQCodec, VQCodec
@@ -62,6 +63,7 @@ class AnnLite(CellContainer):
         read_only: bool = False,
         verbose: bool = False,
         lock: bool = True,
+        hnsw_using_pq: Optional['BaseTrainedPQ'] = None,
         *args,
         **kwargs,
     ):
@@ -121,6 +123,7 @@ class AnnLite(CellContainer):
             columns=columns,
             data_path=data_path,
             lock=lock,
+            hnsw_using_pq=hnsw_using_pq,
             **kwargs,
         )
 
