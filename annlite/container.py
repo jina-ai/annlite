@@ -5,7 +5,7 @@ import numpy as np
 from docarray import Document, DocumentArray
 from loguru import logger
 
-if TYPE_CHECKING:
+if TYPE_CHECKING:  # pragma: no cover
     from .core.codec.pq import PQCodec
     from .core.codec.base import BaseTrainedPQ
 

@@ -6,7 +6,7 @@ import numpy as np
 from docarray.math.ndarray import to_numpy_array
 from loguru import logger
 
-if TYPE_CHECKING:
+if TYPE_CHECKING:  # pragma: no cover
     from docarray import DocumentArray
     from .core.codec.base import BaseTrainedPQ
 

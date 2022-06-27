@@ -9,7 +9,7 @@ from annlite.hnsw_bind import Index
 from ....enums import Metric
 from ..base import BaseIndex
 
-if TYPE_CHECKING:
+if TYPE_CHECKING:  # pragma: no cover
     from ...codec.base import BaseTrainedPQ
 
 
