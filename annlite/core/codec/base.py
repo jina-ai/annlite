@@ -69,6 +69,6 @@ class BaseTrainedPQ(ABC):
         """Return the codebook parameters.
 
         Expect a 3-dimensional matrix is returned,
-        with shape (`n_subvectors`, `n_clusters`, `d_subvector`)
+        with shape (`n_subvectors`, `n_clusters`, `d_subvector`) and dtype float32
         """
         pass
