@@ -6,6 +6,7 @@
 #include <pybind11/numpy.h>
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>
+#include <stdint.h>
 #include <stdlib.h>
 #include <thread>
 
@@ -125,9 +126,9 @@ public:
   hnswlib::SpaceInterface<float> *l2space;
   // quantization setting
   bool pq_enable;
-  int pq_n_subvectors;
-  int pq_n_clusters;
-  int pq_d_subvector;
+  size_t pq_n_subvectors;
+  size_t pq_n_clusters;
+  size_t pq_d_subvector;
   py::object pq_object;
 
   ~Index() {
@@ -137,9 +138,14 @@ public:
   }
 
   void init_new_index(const size_t maxElements, const size_t M,
-                      const size_t efConstruction, const size_t random_seed) {
+                      const size_t efConstruction, const size_t random_seed,
+                      py::object using_pq) {
     if (appr_alg) {
       throw new std::runtime_error("The index is already initiated.");
+    }
+    if (!using_pq.is_none()) {
+      loadPQ(using_pq);
+      normalize = false; // PQ distance metrics default l2
     }
     cur_l = 0;
     appr_alg = new hnswlib::HierarchicalNSW<dist_t>(
@@ -840,11 +846,11 @@ public:
     this->pq_object = pq_abstract;
 
     py::tuple subspaces_param = pq_abstract.attr("get_subspace_splitting")();
-    this->pq_n_subvectors = py::cast<int>(subspaces_param[0]);
-    this->pq_n_clusters = py::cast<int>(subspaces_param[1]);
-    this->pq_d_subvector = py::cast<int>(subspaces_param[2]);
+    this->pq_n_subvectors = py::cast<size_t>(subspaces_param[0]);
+    this->pq_n_clusters = py::cast<size_t>(subspaces_param[1]);
+    this->pq_d_subvector = py::cast<size_t>(subspaces_param[2]);
 
-    int pq_total_dims = (this->pq_n_subvectors * this->pq_d_subvector);
+    size_t pq_total_dims = (this->pq_n_subvectors * this->pq_d_subvector);
     if (this->dim != pq_total_dims) {
       throw py::value_error(
           "Initialization Error, expect HNSW.dim == "
@@ -852,6 +858,31 @@ public:
           "HNSW.dim =" +
           std::to_string(this->dim) +
           ", PQ.n_subvector*PQ.d_subvector=" + std::to_string(pq_total_dims));
+    }
+    // reading codebook into float buffer
+    py::array_t<dist_t, py::array::c_style | py::array::forcecast> items(
+        pq_abstract.attr("get_codebook")());
+    auto buffer = items.request();
+    if (buffer.ndim != 3 || buffer.shape[0] != pq_n_subvectors ||
+        buffer.shape[1] != pq_n_clusters || buffer.shape[2] != pq_d_subvector) {
+      py::print("Expect the codebook with shape (", pq_n_subvectors,
+                pq_n_clusters, pq_d_subvector, "seq"_a = ",");
+      py::print(" but got shape ", buffer.shape);
+      throw py::attribute_error(
+          "PQ class returning the codebook with wrong dimension");
+    }
+    if (pq_n_clusters < (UINT8_MAX + 1)) {
+      l2space = new hnswlib::PQ_L2Space<uint8_t>(
+          pq_n_subvectors, pq_n_clusters, pq_d_subvector, (float *)buffer.ptr);
+    } else if (pq_n_clusters < (UINT16_MAX + 1)) {
+      l2space = new hnswlib::PQ_L2Space<uint16_t>(
+          pq_n_subvectors, pq_n_clusters, pq_d_subvector, (float *)buffer.ptr);
+    } else {
+      throw py::value_error(
+          "PQ clustering exceed the maximum, annlite set the maximum of "
+          "clusters = " +
+          std::to_string(UINT16_MAX + 1) +
+          ", but got PQ.n_clusters=" + std::to_string(pq_n_clusters));
     }
   }
 };
@@ -868,7 +899,7 @@ PYBIND11_PLUGIN(hnsw_bind) {
            py::arg("dim"))
       .def("init_index", &Index<float>::init_new_index, py::arg("max_elements"),
            py::arg("M") = 16, py::arg("ef_construction") = 200,
-           py::arg("random_seed") = 100)
+           py::arg("random_seed") = 100, py::arg("using_pq") = py::none())
       .def("knn_query", &Index<float>::knnQuery_return_numpy, py::arg("data"),
            py::arg("k") = 1, py::arg("num_threads") = -1)
       .def("knn_query_with_filter", &Index<float>::knnQuery_with_filter,
@@ -892,6 +923,7 @@ PYBIND11_PLUGIN(hnsw_bind) {
       .def("loadPQ", &Index<float>::loadPQ)
       .def_readonly("space", &Index<float>::space_name)
       .def_readonly("dim", &Index<float>::dim)
+      .def_readonly("pq_enable", &Index<float>::pq_enable)
       .def_readwrite("num_threads", &Index<float>::num_threads_default)
       .def_property(
           "ef",
