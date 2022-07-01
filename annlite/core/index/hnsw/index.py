@@ -47,10 +47,9 @@ class HnswIndex(BaseIndex):
             max_elements=self.capacity,
             ef_construction=self.ef_construction,
             M=self.max_connection,
+            using_pq=self.using_pq,
         )
         self._index.set_ef(self.ef_search)
-        if self.using_pq is not None:
-            self._index.loadPQ(self.using_pq)
 
     def add_with_ids(self, x: 'np.ndarray', ids: List[int]):
         max_id = max(ids) + 1
