@@ -1,6 +1,7 @@
 import operator
 import random
 from collections import namedtuple
+from pathlib import Path
 
 import numpy as np
 import pytest
@@ -37,6 +38,17 @@ categorical_operators = {'$eq': operator.eq, '$neq': operator.ne}
 def build_pq_data():
     Xt = np.random.random((n_examples, D)).astype(np.float32)
     return Xt
+
+
+@pytest.fixture
+def vanilla_annlite_hash():
+    import hashlib
+
+    n_cells = 1
+    n_subvectors = None
+    metric_name = 'COSINE'
+    key = f'{n_cells} x {n_subvectors} x {metric_name}'
+    return hashlib.md5(key.encode()).hexdigest()
 
 
 @pytest.fixture
@@ -284,45 +296,11 @@ def test_search_numpy_membership_filter(
         )
 
 
-def test_annlite_hnsw_pq_init(tmpdir, build_pq_codec):
-    index = AnnLite(
-        dim=D, data_path=tmpdir / 'annlite_test', hnsw_using_pq=build_pq_codec
-    )
-
-
-def test_annlite_hnsw_pq_interface(tmpdir, build_pq_codec):
-    # a pq class is accepted only when the abstract methods are correctly established
-    missing_method = namedtuple('PQCodec', ['encode', 'get_codebook'])(0, 0)
-    with pytest.raises(IndexError):
-        AnnLite(dim=D, data_path=tmpdir / 'annlite_test', hnsw_using_pq=missing_method)
-
-    wrong_attrs = namedtuple(
-        'PQCodec', ['encode', 'get_codebook', 'get_subspace_splitting']
-    )(1, 1, 1)
-    with pytest.raises(AttributeError):
-        AnnLite(dim=D, data_path=tmpdir / 'annlite_test', hnsw_using_pq=wrong_attrs)
-
-    wrong_dims = PQCodec(dim=D * 2, n_subvectors=n_subvectors, n_clusters=n_clusters)
-    with pytest.raises(ValueError):
-        AnnLite(dim=D, data_path=tmpdir / 'annlite_test', hnsw_using_pq=wrong_dims)
-    # --------------------------------------------------------------------
-    # interface should return correct results
-    assert (
-        n_subvectors,
-        n_clusters,
-        d_subvector,
-    ) == build_pq_codec.get_subspace_splitting()
-    assert (
-        n_subvectors,
-        n_clusters,
-        d_subvector,
-    ) == build_pq_codec.get_codebook().shape
-    # --------------------------------------------------------------------
-    # pq option enable only when we explicitly pass hnsw_using_pq
-    index = AnnLite(
-        dim=D, data_path=tmpdir / 'annlite_test', hnsw_using_pq=build_pq_codec
-    )
+def test_annlite_hnsw_pq_init(tmpdir, build_pq_codec, vanilla_annlite_hash):
+    tmpdir = Path(str(tmpdir))
+    pq_dump_path = (tmpdir / 'annlite_test') / vanilla_annlite_hash
+    if not pq_dump_path.exists():
+        pq_dump_path.mkdir(parents=True, exist_ok=True)
+    build_pq_codec.dump(pq_dump_path / 'hnsw_pq_codec.bin')
+    index = AnnLite(dim=D, data_path=tmpdir / 'annlite_test', hnsw_using_pq=True)
     assert all([x._index.pq_enable for x in index._vec_indexes])
-    index = AnnLite(dim=D, data_path=tmpdir / 'annlite_test')
-    assert not any([x._index.pq_enable for x in index._vec_indexes])
-    # --------------------------------------------------------------------
