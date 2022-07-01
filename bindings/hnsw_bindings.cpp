@@ -175,7 +175,7 @@ public:
 
   void addItems(py::object input, py::object ids_ = py::none(),
                 int num_threads = -1) {
-    py::array_t<dist_t, py::array::c_style | py::array::forcecast> items(input);
+    py::array_t<data_t, py::array::c_style | py::array::forcecast> items(input);
     auto buffer = items.request();
     if (num_threads <= 0)
       num_threads = num_threads_default;
@@ -585,7 +585,7 @@ public:
   py::object knnQuery_return_numpy(py::object input, size_t k = 1,
                                    int num_threads = -1) {
 
-    py::array_t<dist_t, py::array::c_style | py::array::forcecast> items(input);
+    py::array_t<data_t, py::array::c_style | py::array::forcecast> items(input);
     auto buffer = items.request();
     hnswlib::labeltype *data_numpy_l;
     dist_t *data_numpy_d;
@@ -676,7 +676,7 @@ public:
                                   py::object candidate_ids_ = py::none(),
                                   size_t k = 1, int num_threads = -1) {
 
-    py::array_t<dist_t, py::array::c_style | py::array::forcecast> items(input);
+    py::array_t<data_t, py::array::c_style | py::array::forcecast> items(input);
     auto buffer = items.request();
     hnswlib::labeltype *data_numpy_l;
     dist_t *data_numpy_d;
