@@ -291,6 +291,7 @@ def test_annlite_hnsw_pq_init(tmpdir, build_pq_codec):
 
 
 def test_annlite_hnsw_pq_interface(tmpdir, build_pq_codec):
+    # a pq class is accepted only when the abstract methods are correctly established
     missing_method = namedtuple('PQCodec', ['encode', 'get_codebook'])(0, 0)
     with pytest.raises(IndexError):
         AnnLite(dim=D, data_path=tmpdir / 'annlite_test', hnsw_using_pq=missing_method)
@@ -304,7 +305,8 @@ def test_annlite_hnsw_pq_interface(tmpdir, build_pq_codec):
     wrong_dims = PQCodec(dim=D * 2, n_subvectors=n_subvectors, n_clusters=n_clusters)
     with pytest.raises(ValueError):
         AnnLite(dim=D, data_path=tmpdir / 'annlite_test', hnsw_using_pq=wrong_dims)
-
+    # --------------------------------------------------------------------
+    # interface should return correct results
     assert (
         n_subvectors,
         n_clusters,
@@ -315,3 +317,12 @@ def test_annlite_hnsw_pq_interface(tmpdir, build_pq_codec):
         n_clusters,
         d_subvector,
     ) == build_pq_codec.get_codebook().shape
+    # --------------------------------------------------------------------
+    # pq option enable only when we explicitly pass hnsw_using_pq
+    index = AnnLite(
+        dim=D, data_path=tmpdir / 'annlite_test', hnsw_using_pq=build_pq_codec
+    )
+    assert all([x._index.pq_enable for x in index._vec_indexes])
+    index = AnnLite(dim=D, data_path=tmpdir / 'annlite_test')
+    assert not any([x._index.pq_enable for x in index._vec_indexes])
+    # --------------------------------------------------------------------
