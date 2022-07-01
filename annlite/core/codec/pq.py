@@ -4,12 +4,12 @@ from scipy.cluster.vq import vq
 from annlite import pq_bind
 
 from ...enums import Metric
-from .base import BaseCodec, BaseTrainedPQ
+from .base import BaseCodec
 
 # from pqlite.pq_bind import precompute_adc_table, dist_pqcodes_to_codebooks
 
 
-class PQCodec(BaseCodec, BaseTrainedPQ):
+class PQCodec(BaseCodec):
     """Implementation of Product Quantization (PQ) [Jegou11]_.
 
     For the indexing phase of database vectors,
@@ -199,9 +199,18 @@ class PQCodec(BaseCodec, BaseTrainedPQ):
 
     # trained pq interface ----------------
     def get_codebook(self) -> 'np.ndarray':
+        """Return the codebook parameters.
+
+        Expect a 3-dimensional matrix is returned,
+        with shape (`n_subvectors`, `n_clusters`, `d_subvector`) and dtype float32
+        """
         return self.codebooks
 
     def get_subspace_splitting(self):
+        """Return subspace splitting setting
+
+        :return: tuple of (`n_subvectors`, `n_clusters`, `d_subvector`)
+        """
         return (self.n_subvectors, self.n_clusters, self.d_subvector)
 
     # -------------------------------------

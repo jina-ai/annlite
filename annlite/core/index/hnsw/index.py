@@ -10,7 +10,7 @@ from ....enums import Metric
 from ..base import BaseIndex
 
 if TYPE_CHECKING:  # pragma: no cover
-    from ...codec.base import BaseTrainedPQ
+    from ...codec.base import BaseCodec
 
 
 class HnswIndex(BaseIndex):
@@ -22,7 +22,7 @@ class HnswIndex(BaseIndex):
         ef_construction: int = 200,
         ef_search: int = 50,
         max_connection: int = 16,
-        using_pq: Optional['BaseTrainedPQ'] = None,
+        using_pq: Optional['BaseCodec'] = None,
         **kwargs,
     ):
         """

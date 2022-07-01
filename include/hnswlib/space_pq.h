@@ -44,8 +44,6 @@ public:
     this->d_subvectors = d_subvectors;
     data_size_ = n_subvectors * sizeof(CODETYPE);
     compute_dist_mat();
-    printf("%f, %f, %f\n", param.dist_mat[0], param.dist_mat[1],
-           param.dist_mat[2]);
     fstdistfunc_ = PQLookup<CODETYPE>;
   }
 

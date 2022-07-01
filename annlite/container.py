@@ -7,7 +7,6 @@ from loguru import logger
 
 if TYPE_CHECKING:  # pragma: no cover
     from .core.codec.pq import PQCodec
-    from .core.codec.base import BaseTrainedPQ
 
 from .core.index.hnsw import HnswIndex
 from .core.index.pq_index import PQIndex
@@ -31,7 +30,7 @@ class CellContainer:
         serialize_config: Optional[Dict] = None,
         data_path: Path = Path('./data'),
         lock: bool = True,
-        hnsw_using_pq: Optional['BaseTrainedPQ'] = None,
+        hnsw_using_pq: Optional['PQCodec'] = None,
         **kwargs,
     ):
         self.dim = dim
