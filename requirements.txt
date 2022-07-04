@@ -1,8 +1,7 @@
 click
 cython
-docarray>=0.4.4
+docarray>=0.3.16
 lmdb
 loguru
 numpy
-protobuf>=3.13.0,<=3.20.1
 scikit-learn
