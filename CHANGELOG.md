@@ -3,6 +3,7 @@
 
 
 
+
 <a name=release-note-0-3-0></a>
 ## Release Note (`0.3.0`)
 
@@ -89,4 +90,24 @@
  - [[```2ce1ec22```](https://github.com/jina-ai/docarray/commit/2ce1ec2283b381f5153ea60141a6bb474bbf0f0c)] __-__ __cpp/h__: clang-format (#117) (*Gustavo Ye*)
  - [[```a6168400```](https://github.com/jina-ai/docarray/commit/a61684000af4518aafa41d1d9dea47766bedf247)] __-__ update readme (*Han Xiao*)
  - [[```aec33c75```](https://github.com/jina-ai/docarray/commit/aec33c75b8ce883e044a828fbae7142f71dbb05a)] __-__ __version__: the next version will be 0.3.2 (*Jina Dev Bot*)
+
+<a name=release-note-0-3-3></a>
+## Release Note (`0.3.3`)
+
+> Release time: 2022-07-04 13:57:38
+
+
+
+🙇 We'd like to thank all contributors for this new release! In particular,
+ felix-wang,  Gustavo Ye,  Jina Dev Bot,  🙇
+
+
+### 🐞 Bug fixes
+
+ - [[```e240128f```](https://github.com/jina-ai/docarray/commit/e240128f403bde04bc21e1ac5ce3baa5507db687)] __-__ proto version bump (#126) (*felix-wang*)
+ - [[```f62809b5```](https://github.com/jina-ai/docarray/commit/f62809b5d90f4fca1762c6a1c13beee40e972212)] __-__ change input type to `data_t` (#123) (*Gustavo Ye*)
+
+### 🍹 Other Improvements
+
+ - [[```f7f7b751```](https://github.com/jina-ai/docarray/commit/f7f7b75104a28f1860d3cdc94c87f526e742db51)] __-__ __version__: the next version will be 0.3.3 (*Jina Dev Bot*)
 
