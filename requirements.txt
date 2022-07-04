@@ -1,6 +1,6 @@
 click
 cython
-docarray>=0.3.16
+docarray>=0.13.16
 lmdb
 loguru
 numpy
