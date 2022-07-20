@@ -107,7 +107,7 @@ public:
     pq_n_clusters = -1;
     pq_n_subvectors = -1;
     pq_d_subvector = -1;
-    pq_object = py::none();
+    pq_codec = py::none();
   }
 
   static const int ser_version = 1; // serialization version
@@ -129,7 +129,7 @@ public:
   size_t pq_n_subvectors;
   size_t pq_n_clusters;
   size_t pq_d_subvector;
-  py::object pq_object;
+  py::object pq_codec;
 
   ~Index() {
     delete l2space;
@@ -145,7 +145,6 @@ public:
     }
     if (!using_pq.is_none()) {
       loadPQ(using_pq);
-      normalize = false; // PQ distance metrics default l2
     }
     cur_l = 0;
     appr_alg = new hnswlib::HierarchicalNSW<dist_t>(
@@ -191,24 +190,47 @@ public:
       norm_array[i] = data[i] * norm;
   }
 
+  py::object unsqueeze_head(py::object input) {
+    return input.attr("reshape")(1, *input.attr("shape"));
+  }
+
+  py::object unsqueeze_tail(py::object input) {
+    return input.attr("reshape")(*input.attr("shape"), 1);
+  }
+
+  py::object py_power(py::object input, float pow) {
+    return input.attr("__pow__")(pow);
+  }
+
   void addItems(py::object input, py::object ids_ = py::none(),
                 int num_threads = -1) {
+    int dim = this->dim;
+
+    size_t input_dim = input.attr("shape").attr("__len__")().cast<size_t>();
+    if (input_dim > 2) {
+      throw std::runtime_error("data must be a 1d/2d array");
+    } else if (input_dim == 1) {
+      input = unsqueeze_head(input);
+    }
+    if (normalize) {
+      input = input.attr("__truediv__")(
+          unsqueeze_tail(py_power(py_power(input, 2).attr("sum")(1), 0.5)) +
+          py::float_(1e-30f));
+    }
+    if (pq_enable) {
+      input = pq_codec.attr("encode")(input);
+      dim = pq_n_subvectors;
+    }
     py::array_t<data_t, py::array::c_style | py::array::forcecast> items(input);
     auto buffer = items.request();
+    // py::print("Buffer", input.attr("dtype"));
     if (num_threads <= 0)
       num_threads = num_threads_default;
 
     size_t rows, features;
 
-    if (buffer.ndim != 2 && buffer.ndim != 1)
-      throw std::runtime_error("data must be a 1d/2d array");
-    if (buffer.ndim == 2) {
-      rows = buffer.shape[0];
-      features = buffer.shape[1];
-    } else {
-      rows = 1;
-      features = buffer.shape[0];
-    }
+    rows = buffer.shape[0];
+    features = buffer.shape[1];
 
     if (features != dim)
       throw std::runtime_error("wrong dimensionality of the vectors");
@@ -235,42 +257,41 @@ public:
       } else
         throw std::runtime_error("wrong dimensionality of the labels");
     }
-
     {
 
       int start = 0;
       if (!ep_added) {
         size_t id = ids.size() ? ids.at(0) : (cur_l);
-        float *vector_data = (float *)items.data(0);
-        std::vector<float> norm_array(dim);
-        if (normalize) {
-          normalize_vector(vector_data, norm_array.data());
-          vector_data = norm_array.data();
-        }
-        appr_alg->addPoint((void *)vector_data, (size_t)id);
+        appr_alg->addPoint((void *)items.data(0), (size_t)id);
         start = 1;
         ep_added = true;
       }
 
       py::gil_scoped_release l;
-      if (normalize == false) {
-        ParallelFor(start, rows, num_threads, [&](size_t row, size_t threadId) {
-          size_t id = ids.size() ? ids.at(row) : (cur_l + row);
-          appr_alg->addPoint((void *)items.data(row), (size_t)id);
-        });
-      } else {
-        std::vector<float> norm_array(num_threads * dim);
-        ParallelFor(start, rows, num_threads, [&](size_t row, size_t threadId) {
-          // normalize vector:
-          size_t start_idx = threadId * dim;
-          normalize_vector((float *)items.data(row),
-                           (norm_array.data() + start_idx));
+      ParallelFor(start, rows, num_threads, [&](size_t row, size_t threadId) {
+        size_t id = ids.size() ? ids.at(row) : (cur_l + row);
+        appr_alg->addPoint((void *)items.data(row), (size_t)id);
+      });
+      // if (normalize == false || pq_enable) {
+      //   ParallelFor(start, rows, num_threads, [&](size_t row, size_t
+      //   threadId) {
+      //     size_t id = ids.size() ? ids.at(row) : (cur_l + row);
+      //     appr_alg->addPoint((void *)items.data(row), (size_t)id);
+      //   });
+      // } else {
+      //   std::vector<float> norm_array(num_threads * dim);
+      //   ParallelFor(start, rows, num_threads, [&](size_t row, size_t
+      //   threadId) {
+      //     // normalize vector:
+      //     size_t start_idx = threadId * dim;
+      //     normalize_vector((float *)items.data(row),
+      //                      (norm_array.data() + start_idx));
 
-          size_t id = ids.size() ? ids.at(row) : (cur_l + row);
-          appr_alg->addPoint((void *)(norm_array.data() + start_idx),
-                             (size_t)id);
-        });
-      };
+      //     size_t id = ids.size() ? ids.at(row) : (cur_l + row);
+      //     appr_alg->addPoint((void *)(norm_array.data() + start_idx),
+      //                        (size_t)id);
+      //   });
+      // };
       cur_l += rows;
     }
   }
@@ -599,10 +620,14 @@ public:
       }
     }
   }
-
+  // TODO: add pq
   py::object knnQuery_return_numpy(py::object input, size_t k = 1,
                                    int num_threads = -1) {
-
+    int dim = this->dim;
+    if (pq_enable) {
+      input = pq_codec.attr("encode")(input);
+      dim = pq_n_subvectors;
+    }
     py::array_t<data_t, py::array::c_style | py::array::forcecast> items(input);
     auto buffer = items.request();
     hnswlib::labeltype *data_numpy_l;
@@ -634,7 +659,7 @@ public:
       data_numpy_l = new hnswlib::labeltype[rows * k];
       data_numpy_d = new dist_t[rows * k];
 
-      if (normalize == false) {
+      if (normalize == false || pq_enable) {
         ParallelFor(0, rows, num_threads, [&](size_t row, size_t threadId) {
           std::priority_queue<std::pair<dist_t, hnswlib::labeltype>> result =
               appr_alg->searchKnn((void *)items.data(row), k);
@@ -689,7 +714,7 @@ public:
             data_numpy_d,     // the data pointer
             free_when_done_d));
   }
-
+  // TODO: add pq with filter
   py::object knnQuery_with_filter(py::object input,
                                   py::object candidate_ids_ = py::none(),
                                   size_t k = 1, int num_threads = -1) {
@@ -843,7 +868,7 @@ public:
     }
 
     this->pq_enable = true;
-    this->pq_object = pq_abstract;
+    this->pq_codec = pq_abstract;
 
     py::tuple subspaces_param = pq_abstract.attr("get_subspace_splitting")();
     this->pq_n_subvectors = py::cast<size_t>(subspaces_param[0]);
@@ -871,11 +896,14 @@ public:
       throw py::attribute_error(
           "PQ class returning the codebook with wrong dimension");
     }
-    if (pq_n_clusters < (UINT8_MAX + 1)) {
+    if (pq_n_clusters <= (UINT8_MAX + 1)) {
       l2space = new hnswlib::PQ_L2Space<uint8_t>(
           pq_n_subvectors, pq_n_clusters, pq_d_subvector, (float *)buffer.ptr);
-    } else if (pq_n_clusters < (UINT16_MAX + 1)) {
+    } else if (pq_n_clusters <= (UINT16_MAX + 1)) {
       l2space = new hnswlib::PQ_L2Space<uint16_t>(
+          pq_n_subvectors, pq_n_clusters, pq_d_subvector, (float *)buffer.ptr);
+    } else if (pq_n_clusters <= (UINT32_MAX + 1)) {
+      l2space = new hnswlib::PQ_L2Space<uint32_t>(
           pq_n_subvectors, pq_n_clusters, pq_d_subvector, (float *)buffer.ptr);
     } else {
       throw py::value_error(
