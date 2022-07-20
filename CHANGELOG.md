@@ -4,6 +4,7 @@
 
 
 
+
 <a name=release-note-0-3-0></a>
 ## Release Note (`0.3.0`)
 
@@ -110,4 +111,23 @@
 ### 🍹 Other Improvements
 
  - [[```f7f7b751```](https://github.com/jina-ai/docarray/commit/f7f7b75104a28f1860d3cdc94c87f526e742db51)] __-__ __version__: the next version will be 0.3.3 (*Jina Dev Bot*)
+
+<a name=release-note-0-3-4></a>
+## Release Note (`0.3.4`)
+
+> Release time: 2022-07-20 07:12:22
+
+
+
+🙇 We'd like to thank all contributors for this new release! In particular,
+ Jie Fu,  Jina Dev Bot,  🙇
+
+
+### 🆕 New Features
+
+ - [[```1a9de05c```](https://github.com/jina-ai/docarray/commit/1a9de05cdcbb861cd036b2ed9a3a66fa84e707f9)] __-__ copy executor.py to annlite folder (#129) (*Jie Fu*)
+
+### 🍹 Other Improvements
+
+ - [[```5225e6cb```](https://github.com/jina-ai/docarray/commit/5225e6cbec7df3fbf4dbd7ab404d34bb7d899a29)] __-__ __version__: the next version will be 0.3.4 (*Jina Dev Bot*)
 
