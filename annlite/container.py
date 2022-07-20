@@ -30,7 +30,6 @@ class CellContainer:
         serialize_config: Optional[Dict] = None,
         data_path: Path = Path('./data'),
         lock: bool = True,
-        hnsw_using_pq: Optional['PQCodec'] = None,
         **kwargs,
     ):
         self.dim = dim
@@ -38,32 +37,32 @@ class CellContainer:
         self.n_cells = n_cells
         self.data_path = data_path
 
-        if pq_codec is not None:
-            self._vec_indexes = [
-                PQIndex(
-                    dim,
-                    pq_codec,
-                    metric=metric,
-                    initial_size=initial_size,
-                    expand_step_size=expand_step_size,
-                    expand_mode=expand_mode,
-                    **kwargs,
-                )
-                for _ in range(n_cells)
-            ]
-        else:
-            self._vec_indexes = [
-                HnswIndex(
-                    dim,
-                    metric=metric,
-                    initial_size=initial_size,
-                    expand_step_size=expand_step_size,
-                    expand_mode=expand_mode,
-                    using_pq=hnsw_using_pq,
-                    **kwargs,
-                )
-                for _ in range(n_cells)
-            ]
+        # if pq_codec is not None:
+        #     self._vec_indexes = [
+        #         PQIndex(
+        #             dim,
+        #             pq_codec,
+        #             metric=metric,
+        #             initial_size=initial_size,
+        #             expand_step_size=expand_step_size,
+        #             expand_mode=expand_mode,
+        #             **kwargs,
+        #         )
+        #         for _ in range(n_cells)
+        #     ]
+        # else:
+        self._vec_indexes = [
+            HnswIndex(
+                dim,
+                metric=metric,
+                initial_size=initial_size,
+                expand_step_size=expand_step_size,
+                expand_mode=expand_mode,
+                pq_codec=pq_codec,
+                **kwargs,
+            )
+            for _ in range(n_cells)
+        ]
 
         self._doc_stores = [
             DocStorage(

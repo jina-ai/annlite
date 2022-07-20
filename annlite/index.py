@@ -62,7 +62,6 @@ class AnnLite(CellContainer):
         read_only: bool = False,
         verbose: bool = False,
         lock: bool = True,
-        hnsw_using_pq: bool = False,
         *args,
         **kwargs,
     ):
@@ -112,13 +111,6 @@ class AnnLite(CellContainer):
                 dim, n_subvectors=n_subvectors, n_clusters=256, metric=self.metric
             )
 
-        self.hnsw_pq_codec = None
-        if self._hnsw_pq_codec_path.exists() and hnsw_using_pq:
-            self.hnsw_pq_codec = PQCodec.load(self._hnsw_pq_codec_path)
-            logger.info(
-                f'Load trained PQ codec with config {self.hnsw_pq_codec.get_subspace_splitting()} from {self.model_path}'
-            )
-
         super(AnnLite, self).__init__(
             dim=dim,
             metric=metric,
@@ -129,7 +121,6 @@ class AnnLite(CellContainer):
             columns=columns,
             data_path=data_path,
             lock=lock,
-            hnsw_using_pq=self.hnsw_pq_codec,
             **kwargs,
         )
 
@@ -424,8 +415,6 @@ class AnnLite(CellContainer):
             self.vq_codec.dump(self._vq_codec_path)
         if self.pq_codec:
             self.pq_codec.dump(self._pq_codec_path)
-        if self.hnsw_pq_codec:
-            self.hnsw_pq_codec.dump(self._hnsw_pq_codec_path)
 
     def _rebuild_index(self):
         for cell_id in range(self.n_cells):
@@ -461,10 +450,6 @@ class AnnLite(CellContainer):
     @property
     def _pq_codec_path(self):
         return self.model_path / 'pq_codec.bin'
-
-    @property
-    def _hnsw_pq_codec_path(self):
-        return self.model_path / 'hnsw_pq_codec.bin'
 
     @property
     def use_smart_probing(self):
