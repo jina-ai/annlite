@@ -1,16 +1,25 @@
 import operator
 import random
+from collections import namedtuple
+from pathlib import Path
 
 import numpy as np
 import pytest
 from docarray import Document, DocumentArray
 
+import annlite
 from annlite import AnnLite
+from annlite.core.codec.pq import PQCodec
+from annlite.core.index import hnsw
 
 N = 1000  # number of data points
 Nq = 5
 Nt = 2000
 D = 128  # dimensionality / number of features
+# pq params below -----------
+n_clusters = 256
+n_subvectors = 8
+d_subvector = int(D / n_subvectors)
 
 numeric_operators = {
     '$gte': operator.ge,
@@ -22,6 +31,16 @@ numeric_operators = {
 }
 
 categorical_operators = {'$eq': operator.eq, '$neq': operator.ne}
+
+
+@pytest.fixture
+def vanilla_annlite_hash():
+    import hashlib
+
+    n_cells = 1
+    metric_name = 'COSINE'
+    key = f'{n_cells} x {n_subvectors} x {metric_name}'
+    return hashlib.md5(key.encode()).hexdigest()
 
 
 @pytest.fixture
@@ -259,3 +278,44 @@ def test_search_numpy_membership_filter(
                 for doc_id in doc_ids_query_k
             ]
         )
+
+
+def test_annlite_hnsw_pq_init(tmpdir, vanilla_annlite_hash):
+    columns = [('x', str)]
+    no_pq_index = AnnLite(dim=D, columns=columns, data_path=tmpdir / 'annlite_test')
+
+    X = np.random.random((N, D)).astype(
+        np.float32
+    )  # 10,000 128-dim vectors to be indexed
+    docs = DocumentArray(
+        [Document(id=f'{i}', embedding=X[i], tags={'x': str(i)}) for i in range(N)]
+    )
+    docs_mock = DocumentArray(
+        [
+            Document(id=f'{i}', embedding=X[i], tags={'x': str(i) + '-'})
+            for i in range(N)
+        ]
+    )
+    no_pq_index.index(docs)
+
+    # building PQ from X
+    build_pq_codec = PQCodec(dim=D, n_subvectors=n_subvectors, n_clusters=n_clusters)
+    build_pq_codec.fit(X)
+
+    tmpdir = Path(str(tmpdir))
+    pq_dump_path = (tmpdir / 'annlite_pq_test') / vanilla_annlite_hash
+    if not pq_dump_path.exists():
+        pq_dump_path.mkdir(parents=True, exist_ok=True)
+    build_pq_codec.dump(pq_dump_path / 'pq_codec.bin')
+
+    # TODO: pq_codec can only be loaded at init
+    pq_index = AnnLite(
+        dim=D,
+        columns=columns,
+        data_path=tmpdir / 'annlite_pq_test',
+        n_subvectors=n_subvectors,
+    )
+    # pq_index.train(X)
+
+    assert all([x._index.pq_enable for x in pq_index._vec_indexes])
+    pq_index.index(docs_mock)

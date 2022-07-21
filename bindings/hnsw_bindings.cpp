@@ -1,10 +1,13 @@
 #include "hnswlib.h"
+#include <Python.h>
 #include <assert.h>
 #include <atomic>
 #include <iostream>
+#include <memory>
 #include <pybind11/numpy.h>
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>
+#include <stdint.h>
 #include <stdlib.h>
 #include <thread>
 
@@ -101,6 +104,11 @@ public:
     num_threads_default = std::thread::hardware_concurrency();
 
     default_ef = 10;
+    pq_enable = false;
+    pq_n_clusters = -1;
+    pq_n_subvectors = -1;
+    pq_d_subvector = -1;
+    pq_codec = py::none();
   }
 
   static const int ser_version = 1; // serialization version
@@ -117,6 +125,12 @@ public:
   hnswlib::labeltype cur_l;
   hnswlib::HierarchicalNSW<dist_t> *appr_alg;
   hnswlib::SpaceInterface<float> *l2space;
+  // quantization setting
+  bool pq_enable;
+  size_t pq_n_subvectors;
+  size_t pq_n_clusters;
+  size_t pq_d_subvector;
+  py::object pq_codec;
 
   ~Index() {
     delete l2space;
@@ -125,9 +139,13 @@ public:
   }
 
   void init_new_index(const size_t maxElements, const size_t M,
-                      const size_t efConstruction, const size_t random_seed) {
+                      const size_t efConstruction, const size_t random_seed,
+                      const py::object using_pq) {
     if (appr_alg) {
       throw new std::runtime_error("The index is already initiated.");
+    }
+    if (!using_pq.is_none()) {
+      loadPQ(using_pq);
     }
     cur_l = 0;
     appr_alg = new hnswlib::HierarchicalNSW<dist_t>(
@@ -173,8 +191,42 @@ public:
       norm_array[i] = data[i] * norm;
   }
 
+  py::object unsqueeze_head(const py::object input) {
+    return input.attr("reshape")(1, *input.attr("shape"));
+  }
+
+  py::object unsqueeze_tail(const py::object input) {
+    return input.attr("reshape")(*input.attr("shape"), 1);
+  }
+
+  py::object py_power(const py::object input, float pow) {
+    return input.attr("__pow__")(pow);
+  }
+
+  py::object l2_normalize(py::object input) {
+    return input.attr("__truediv__")(
+        unsqueeze_tail(py_power(py_power(input, 2).attr("sum")(1), 0.5)) +
+        py::float_(1e-30f));
+  }
+
   void addItems(py::object input, py::object ids_ = py::none(),
                 int num_threads = -1) {
+    int dim = this->dim;
+
+    size_t input_dim = input.attr("shape").attr("__len__")().cast<size_t>();
+    if (input_dim > 2) {
+      throw std::runtime_error("data must be a 1d/2d array");
+    } else if (input_dim == 1) {
+      input = unsqueeze_head(input);
+    }
+    if (normalize) {
+      input = l2_normalize(input);
+    }
+    if (pq_enable) {
+      input = pq_codec.attr("encode")(input);
+      dim = pq_n_subvectors;
+    }
+    // TODO: template below block
     py::array_t<data_t, py::array::c_style | py::array::forcecast> items(input);
     auto buffer = items.request();
     if (num_threads <= 0)
@@ -182,15 +234,8 @@ public:
 
     size_t rows, features;
 
-    if (buffer.ndim != 2 && buffer.ndim != 1)
-      throw std::runtime_error("data must be a 1d/2d array");
-    if (buffer.ndim == 2) {
-      rows = buffer.shape[0];
-      features = buffer.shape[1];
-    } else {
-      rows = 1;
-      features = buffer.shape[0];
-    }
+    rows = buffer.shape[0];
+    features = buffer.shape[1];
 
     if (features != dim)
       throw std::runtime_error("wrong dimensionality of the vectors");
@@ -217,42 +262,21 @@ public:
       } else
         throw std::runtime_error("wrong dimensionality of the labels");
     }
-
     {
 
       int start = 0;
       if (!ep_added) {
         size_t id = ids.size() ? ids.at(0) : (cur_l);
-        float *vector_data = (float *)items.data(0);
-        std::vector<float> norm_array(dim);
-        if (normalize) {
-          normalize_vector(vector_data, norm_array.data());
-          vector_data = norm_array.data();
-        }
-        appr_alg->addPoint((void *)vector_data, (size_t)id);
+        appr_alg->addPoint((void *)items.data(0), (size_t)id);
         start = 1;
         ep_added = true;
       }
 
       py::gil_scoped_release l;
-      if (normalize == false) {
-        ParallelFor(start, rows, num_threads, [&](size_t row, size_t threadId) {
-          size_t id = ids.size() ? ids.at(row) : (cur_l + row);
-          appr_alg->addPoint((void *)items.data(row), (size_t)id);
-        });
-      } else {
-        std::vector<float> norm_array(num_threads * dim);
-        ParallelFor(start, rows, num_threads, [&](size_t row, size_t threadId) {
-          // normalize vector:
-          size_t start_idx = threadId * dim;
-          normalize_vector((float *)items.data(row),
-                           (norm_array.data() + start_idx));
-
-          size_t id = ids.size() ? ids.at(row) : (cur_l + row);
-          appr_alg->addPoint((void *)(norm_array.data() + start_idx),
-                             (size_t)id);
-        });
-      };
+      ParallelFor(start, rows, num_threads, [&](size_t row, size_t threadId) {
+        size_t id = ids.size() ? ids.at(row) : (cur_l + row);
+        appr_alg->addPoint((void *)items.data(row), (size_t)id);
+      });
       cur_l += rows;
     }
   }
@@ -581,10 +605,14 @@ public:
       }
     }
   }
-
+  // TODO: add pq
   py::object knnQuery_return_numpy(py::object input, size_t k = 1,
                                    int num_threads = -1) {
-
+    int dim = this->dim;
+    if (pq_enable) {
+      input = pq_codec.attr("encode")(input);
+      dim = pq_n_subvectors;
+    }
     py::array_t<data_t, py::array::c_style | py::array::forcecast> items(input);
     auto buffer = items.request();
     hnswlib::labeltype *data_numpy_l;
@@ -616,7 +644,7 @@ public:
       data_numpy_l = new hnswlib::labeltype[rows * k];
       data_numpy_d = new dist_t[rows * k];
 
-      if (normalize == false) {
+      if (normalize == false || pq_enable) {
         ParallelFor(0, rows, num_threads, [&](size_t row, size_t threadId) {
           std::priority_queue<std::pair<dist_t, hnswlib::labeltype>> result =
               appr_alg->searchKnn((void *)items.data(row), k);
@@ -671,7 +699,7 @@ public:
             data_numpy_d,     // the data pointer
             free_when_done_d));
   }
-
+  // TODO: add pq with filter
   py::object knnQuery_with_filter(py::object input,
                                   py::object candidate_ids_ = py::none(),
                                   size_t k = 1, int num_threads = -1) {
@@ -799,6 +827,79 @@ public:
   size_t getMaxElements() const { return appr_alg->max_elements_; }
 
   size_t getCurrentCount() const { return appr_alg->cur_element_count; }
+
+  void loadPQ(const py::object pq_abstract) {
+    int exist_attr = 1, attr_correct = 1;
+    PyObject *pq_raw_ptr = pq_abstract.ptr();
+    exist_attr *= PyObject_HasAttrString(pq_raw_ptr, "encode");
+    exist_attr *= PyObject_HasAttrString(pq_raw_ptr, "get_codebook");
+    exist_attr *= PyObject_HasAttrString(pq_raw_ptr, "get_subspace_splitting");
+    if (exist_attr <= 0) {
+      throw py::index_error(
+          "PQ class should at least have the following attributes:\n"
+          "(encode, get_codebook, get_subspace_splitting)");
+    }
+    attr_correct *=
+        PyMethod_Check(PyObject_GetAttrString(pq_raw_ptr, "encode"));
+    attr_correct *=
+        PyMethod_Check(PyObject_GetAttrString(pq_raw_ptr, "get_codebook"));
+    attr_correct *= PyMethod_Check(
+        PyObject_GetAttrString(pq_raw_ptr, "get_subspace_splitting"));
+    if (attr_correct <= 0) {
+      throw py::attribute_error(
+          "PQ class have at least one of the following attributes' type "
+          "INCORRECT:\n(encode: <bounded method>,\n codebook: "
+          "<bounded method>,\n get_subspace_splitting: <bounded method>)");
+    }
+
+    this->pq_enable = true;
+    this->pq_codec = pq_abstract;
+
+    py::tuple subspaces_param = pq_abstract.attr("get_subspace_splitting")();
+    this->pq_n_subvectors = py::cast<size_t>(subspaces_param[0]);
+    this->pq_n_clusters = py::cast<size_t>(subspaces_param[1]);
+    this->pq_d_subvector = py::cast<size_t>(subspaces_param[2]);
+
+    size_t pq_total_dims = (this->pq_n_subvectors * this->pq_d_subvector);
+    if (this->dim != pq_total_dims) {
+      throw py::value_error(
+          "Initialization Error, expect HNSW.dim == "
+          "PQ.n_subvector*PQ.d_subvector, but got:\n"
+          "HNSW.dim =" +
+          std::to_string(this->dim) +
+          ", PQ.n_subvector*PQ.d_subvector=" + std::to_string(pq_total_dims));
+    }
+    // reading codebook into float buffer
+    py::array_t<dist_t, py::array::c_style | py::array::forcecast> items(
+        pq_abstract.attr("get_codebook")());
+    auto buffer = items.request();
+    if (buffer.ndim != 3 || buffer.shape[0] != pq_n_subvectors ||
+        buffer.shape[1] != pq_n_clusters || buffer.shape[2] != pq_d_subvector) {
+      py::print("Expect the codebook with shape (", pq_n_subvectors,
+                pq_n_clusters, pq_d_subvector, "seq"_a = ",");
+      py::print(" but got shape ", buffer.shape);
+      throw py::attribute_error(
+          "PQ class returning the codebook with wrong dimension");
+    }
+    std::shared_ptr<float *> codebook_buffer =
+        std::make_shared<float *>((float *)buffer.ptr);
+    if (pq_n_clusters <= (UINT8_MAX + 1)) {
+      l2space = new hnswlib::PQ_L2Space<uint8_t>(
+          pq_n_subvectors, pq_n_clusters, pq_d_subvector, codebook_buffer);
+    } else if (pq_n_clusters <= (UINT16_MAX + 1)) {
+      l2space = new hnswlib::PQ_L2Space<uint16_t>(
+          pq_n_subvectors, pq_n_clusters, pq_d_subvector, codebook_buffer);
+    } else if (pq_n_clusters <= (UINT32_MAX + 1)) {
+      l2space = new hnswlib::PQ_L2Space<uint32_t>(
+          pq_n_subvectors, pq_n_clusters, pq_d_subvector, codebook_buffer);
+    } else {
+      throw py::value_error(
+          "PQ clustering exceed the maximum, annlite set the maximum of "
+          "clusters = " +
+          std::to_string(UINT16_MAX + 1) +
+          ", but got PQ.n_clusters=" + std::to_string(pq_n_clusters));
+    }
+  }
 };
 
 PYBIND11_PLUGIN(hnsw_bind) {
@@ -813,7 +914,7 @@ PYBIND11_PLUGIN(hnsw_bind) {
            py::arg("dim"))
       .def("init_index", &Index<float>::init_new_index, py::arg("max_elements"),
            py::arg("M") = 16, py::arg("ef_construction") = 200,
-           py::arg("random_seed") = 100)
+           py::arg("random_seed") = 100, py::arg("using_pq") = py::none())
       .def("knn_query", &Index<float>::knnQuery_return_numpy, py::arg("data"),
            py::arg("k") = 1, py::arg("num_threads") = -1)
       .def("knn_query_with_filter", &Index<float>::knnQuery_with_filter,
@@ -834,8 +935,10 @@ PYBIND11_PLUGIN(hnsw_bind) {
       .def("resize_index", &Index<float>::resizeIndex, py::arg("new_size"))
       .def("get_max_elements", &Index<float>::getMaxElements)
       .def("get_current_count", &Index<float>::getCurrentCount)
+      .def("loadPQ", &Index<float>::loadPQ)
       .def_readonly("space", &Index<float>::space_name)
       .def_readonly("dim", &Index<float>::dim)
+      .def_readonly("pq_enable", &Index<float>::pq_enable)
       .def_readwrite("num_threads", &Index<float>::num_threads_default)
       .def_property(
           "ef",

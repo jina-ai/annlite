@@ -101,3 +101,4 @@ AlgorithmInterface<dist_t>::searchKnnCloserFirst(const void *query_data,
 #include "hnswalg.h"
 #include "space_ip.h"
 #include "space_l2.h"
+#include "space_pq.h"

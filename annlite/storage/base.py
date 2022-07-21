@@ -1,7 +1,7 @@
 import abc
 from typing import TYPE_CHECKING, List, Optional
 
-if TYPE_CHECKING:
+if TYPE_CHECKING:  # pragma: no cover
     import numpy as np
 
 from ..enums import ExpandMode

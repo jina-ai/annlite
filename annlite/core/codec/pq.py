@@ -4,6 +4,7 @@ from scipy.cluster.vq import vq
 from annlite import pq_bind
 
 from ...enums import Metric
+from ...helper import l2_normalize
 from .base import BaseCodec
 
 # from pqlite.pq_bind import precompute_adc_table, dist_pqcodes_to_codebooks
@@ -36,7 +37,7 @@ class PQCodec(BaseCodec):
         dim: int,
         n_subvectors: int = 8,
         n_clusters: int = 256,
-        metric: Metric = Metric.EUCLIDEAN,
+        metric: Metric = Metric.COSINE,
         n_init: int = 4,
     ):
         super(PQCodec, self).__init__(require_train=True)
@@ -73,6 +74,9 @@ class PQCodec(BaseCodec):
 
         assert x.dtype == np.float32
         assert x.ndim == 2
+
+        if self.metric == Metric.COSINE:
+            x = l2_normalize(x)
 
         # [m][ks][ds]: m-th subspace, ks-the codeword, ds-th dim
         self._codebooks = np.zeros(
@@ -196,6 +200,24 @@ class PQCodec(BaseCodec):
     @property
     def codebooks(self):
         return self._codebooks
+
+    # trained pq interface ----------------
+    def get_codebook(self) -> 'np.ndarray':
+        """Return the codebook parameters.
+
+        Expect a 3-dimensional matrix is returned,
+        with shape (`n_subvectors`, `n_clusters`, `d_subvector`) and dtype float32
+        """
+        return self.codebooks
+
+    def get_subspace_splitting(self):
+        """Return subspace splitting setting
+
+        :return: tuple of (`n_subvectors`, `n_clusters`, `d_subvector`)
+        """
+        return (self.n_subvectors, self.n_clusters, self.d_subvector)
+
+    # -------------------------------------
 
 
 class DistanceTable(object):

@@ -1,5 +1,5 @@
 import math
-from typing import List, Optional, Union
+from typing import TYPE_CHECKING, List, Optional, Union
 
 import numpy as np
 from loguru import logger
@@ -8,6 +8,9 @@ from annlite.hnsw_bind import Index
 
 from ....enums import Metric
 from ..base import BaseIndex
+
+if TYPE_CHECKING:  # pragma: no cover
+    from ...codec.base import BaseCodec
 
 
 class HnswIndex(BaseIndex):
@@ -19,6 +22,7 @@ class HnswIndex(BaseIndex):
         ef_construction: int = 200,
         ef_search: int = 50,
         max_connection: int = 16,
+        pq_codec: Optional['BaseCodec'] = None,
         **kwargs,
     ):
         """
@@ -34,7 +38,7 @@ class HnswIndex(BaseIndex):
         self.ef_construction = ef_construction
         self.ef_search = ef_search
         self.max_connection = max_connection
-
+        self.pq_codec = pq_codec
         self._init_hnsw_index()
 
     def _init_hnsw_index(self):
@@ -43,6 +47,7 @@ class HnswIndex(BaseIndex):
             max_elements=self.capacity,
             ef_construction=self.ef_construction,
             M=self.max_connection,
+            using_pq=self.pq_codec,
         )
         self._index.set_ef(self.ef_search)
 
