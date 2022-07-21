@@ -67,3 +67,7 @@ def open_lmdb(db_path: str):
         max_spare_txns=1,
         lock=True,
     )
+
+
+def l2_normalize(x: np.ndarray):
+    return x / (np.sum(x**2, 1) ** 0.5 + 1e-30).reshape(-1, 1)

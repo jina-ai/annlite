@@ -4,6 +4,7 @@ from scipy.cluster.vq import vq
 from annlite import pq_bind
 
 from ...enums import Metric
+from ...helper import l2_normalize
 from .base import BaseCodec
 
 # from pqlite.pq_bind import precompute_adc_table, dist_pqcodes_to_codebooks
@@ -36,7 +37,7 @@ class PQCodec(BaseCodec):
         dim: int,
         n_subvectors: int = 8,
         n_clusters: int = 256,
-        metric: Metric = Metric.EUCLIDEAN,
+        metric: Metric = Metric.COSINE,
         n_init: int = 4,
     ):
         super(PQCodec, self).__init__(require_train=True)
@@ -73,6 +74,9 @@ class PQCodec(BaseCodec):
 
         assert x.dtype == np.float32
         assert x.ndim == 2
+
+        if self.metric == Metric.COSINE:
+            x = l2_normalize(x)
 
         # [m][ks][ds]: m-th subspace, ks-the codeword, ds-th dim
         self._codebooks = np.zeros(
