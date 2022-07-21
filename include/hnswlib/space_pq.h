@@ -1,5 +1,6 @@
 #pragma once
 #include "hnswlib.h"
+#include <memory>
 #include <stdint.h>
 
 namespace hnswlib {
@@ -33,13 +34,13 @@ template <typename CODETYPE> class PQ_L2Space : public SpaceInterface<float> {
   DISTFUNC<float> fstdistfunc_;
   size_t data_size_, d_subvectors;
   pq_dist_param_t param;
-  float *codebook;
+  std::shared_ptr<float *> codebook;
 
 public:
   PQ_L2Space(size_t n_subvectors, size_t n_clusters, size_t d_subvectors,
-             float *codebook) {
-    param.n_subvectors = n_subvectors;
-    param.n_clusters = n_clusters;
+             std::shared_ptr<float *> codebook) {
+    this->param.n_subvectors = n_subvectors;
+    this->param.n_clusters = n_clusters;
     this->codebook = codebook;
     this->d_subvectors = d_subvectors;
     data_size_ = n_subvectors * sizeof(CODETYPE);
@@ -59,8 +60,9 @@ public:
           float dist = 0;
           float temp;
           for (size_t d = 0; d < d_subvectors; d++) {
-            temp = (codebook[i * subspace_size + j * d_subvectors + d] -
-                    codebook[i * subspace_size + k * d_subvectors + d]);
+            temp =
+                ((codebook.get() + (i * subspace_size + j * d_subvectors + d)) -
+                 (codebook.get() + (i * subspace_size + k * d_subvectors + d)));
             dist += temp * temp;
           }
           param.dist_mat[i * subspace_mat_size + j * param.n_clusters + k] =

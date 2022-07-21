@@ -3,6 +3,7 @@
 #include <assert.h>
 #include <atomic>
 #include <iostream>
+#include <memory>
 #include <pybind11/numpy.h>
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>
@@ -139,7 +140,7 @@ public:
 
   void init_new_index(const size_t maxElements, const size_t M,
                       const size_t efConstruction, const size_t random_seed,
-                      py::object using_pq) {
+                      const py::object using_pq) {
     if (appr_alg) {
       throw new std::runtime_error("The index is already initiated.");
     }
@@ -190,16 +191,22 @@ public:
       norm_array[i] = data[i] * norm;
   }
 
-  py::object unsqueeze_head(py::object input) {
+  py::object unsqueeze_head(const py::object input) {
     return input.attr("reshape")(1, *input.attr("shape"));
   }
 
-  py::object unsqueeze_tail(py::object input) {
+  py::object unsqueeze_tail(const py::object input) {
     return input.attr("reshape")(*input.attr("shape"), 1);
   }
 
-  py::object py_power(py::object input, float pow) {
+  py::object py_power(const py::object input, float pow) {
     return input.attr("__pow__")(pow);
+  }
+
+  py::object l2_normalize(py::object input) {
+    return input.attr("__truediv__")(
+        unsqueeze_tail(py_power(py_power(input, 2).attr("sum")(1), 0.5)) +
+        py::float_(1e-30f));
   }
 
   void addItems(py::object input, py::object ids_ = py::none(),
@@ -213,17 +220,15 @@ public:
       input = unsqueeze_head(input);
     }
     if (normalize) {
-      input = input.attr("__truediv__")(
-          unsqueeze_tail(py_power(py_power(input, 2).attr("sum")(1), 0.5)) +
-          py::float_(1e-30f));
+      input = l2_normalize(input);
     }
     if (pq_enable) {
       input = pq_codec.attr("encode")(input);
       dim = pq_n_subvectors;
     }
+    // TODO: template below block
     py::array_t<data_t, py::array::c_style | py::array::forcecast> items(input);
     auto buffer = items.request();
-    // py::print("Buffer", input.attr("dtype"));
     if (num_threads <= 0)
       num_threads = num_threads_default;
 
@@ -272,26 +277,6 @@ public:
         size_t id = ids.size() ? ids.at(row) : (cur_l + row);
         appr_alg->addPoint((void *)items.data(row), (size_t)id);
       });
-      // if (normalize == false || pq_enable) {
-      //   ParallelFor(start, rows, num_threads, [&](size_t row, size_t
-      //   threadId) {
-      //     size_t id = ids.size() ? ids.at(row) : (cur_l + row);
-      //     appr_alg->addPoint((void *)items.data(row), (size_t)id);
-      //   });
-      // } else {
-      //   std::vector<float> norm_array(num_threads * dim);
-      //   ParallelFor(start, rows, num_threads, [&](size_t row, size_t
-      //   threadId) {
-      //     // normalize vector:
-      //     size_t start_idx = threadId * dim;
-      //     normalize_vector((float *)items.data(row),
-      //                      (norm_array.data() + start_idx));
-
-      //     size_t id = ids.size() ? ids.at(row) : (cur_l + row);
-      //     appr_alg->addPoint((void *)(norm_array.data() + start_idx),
-      //                        (size_t)id);
-      //   });
-      // };
       cur_l += rows;
     }
   }
@@ -843,7 +828,7 @@ public:
 
   size_t getCurrentCount() const { return appr_alg->cur_element_count; }
 
-  void loadPQ(py::object pq_abstract) {
+  void loadPQ(const py::object pq_abstract) {
     int exist_attr = 1, attr_correct = 1;
     PyObject *pq_raw_ptr = pq_abstract.ptr();
     exist_attr *= PyObject_HasAttrString(pq_raw_ptr, "encode");
@@ -896,15 +881,17 @@ public:
       throw py::attribute_error(
           "PQ class returning the codebook with wrong dimension");
     }
+    std::shared_ptr<float *> codebook_buffer =
+        std::make_shared<float *>((float *)buffer.ptr);
     if (pq_n_clusters <= (UINT8_MAX + 1)) {
       l2space = new hnswlib::PQ_L2Space<uint8_t>(
-          pq_n_subvectors, pq_n_clusters, pq_d_subvector, (float *)buffer.ptr);
+          pq_n_subvectors, pq_n_clusters, pq_d_subvector, codebook_buffer);
     } else if (pq_n_clusters <= (UINT16_MAX + 1)) {
       l2space = new hnswlib::PQ_L2Space<uint16_t>(
-          pq_n_subvectors, pq_n_clusters, pq_d_subvector, (float *)buffer.ptr);
+          pq_n_subvectors, pq_n_clusters, pq_d_subvector, codebook_buffer);
     } else if (pq_n_clusters <= (UINT32_MAX + 1)) {
       l2space = new hnswlib::PQ_L2Space<uint32_t>(
-          pq_n_subvectors, pq_n_clusters, pq_d_subvector, (float *)buffer.ptr);
+          pq_n_subvectors, pq_n_clusters, pq_d_subvector, codebook_buffer);
     } else {
       throw py::value_error(
           "PQ clustering exceed the maximum, annlite set the maximum of "
