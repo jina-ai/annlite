@@ -20,7 +20,7 @@ class AnnLiteIndexer(Executor):
     def __init__(
         self,
         dim: int = 0,
-        data_path: str = None,
+        data_path: str = './workspace',
         metric: str = 'cosine',
         limit: int = 10,
         ef_construction: int = 200,
@@ -152,7 +152,7 @@ class AnnLiteIndexer(Executor):
         """
         if len(self._task_queue) > 0:
             self.logger.info(
-                'updateing operation is not allowed when len(task queue) > 0'
+                'updating operation is not allowed when len(task queue) > 0'
             )
             return
 
@@ -180,7 +180,7 @@ class AnnLiteIndexer(Executor):
         """
         if len(self._task_queue) > 0:
             self.logger.info(
-                'updateing operation is not allowed when len(task queue) > 0'
+                'deleting operation is not allowed when len(task queue) > 0'
             )
             return
 
