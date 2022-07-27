@@ -1,3 +1,7 @@
+import threading
+import time
+import traceback
+from threading import Thread
 from typing import Dict, List, Optional, Tuple
 
 from docarray import Document, DocumentArray
@@ -17,6 +21,7 @@ class AnnLiteIndexer(Executor):
     def __init__(
         self,
         dim: int = 0,
+        data_path: str = None,
         metric: str = 'cosine',
         limit: int = 10,
         ef_construction: int = 200,
@@ -58,6 +63,11 @@ class AnnLiteIndexer(Executor):
         self.index_traversal_paths = index_traversal_paths
         self.search_traversal_paths = search_traversal_paths
         self._valid_input_columns = ['str', 'float', 'int']
+        self._task_queue = DocumentArray()
+        self._index_batch_size = 1024
+        self._max_length_queue = 2048
+
+        self.logger = JinaLogger(getattr(self.metas, 'name', self.__class__.__name__))
 
         if columns:
             cols = []
@@ -75,11 +85,14 @@ class AnnLiteIndexer(Executor):
             ef_construction=ef_construction,
             ef_query=ef_query,
             max_connection=max_connection,
-            data_path=self.workspace or './workspace',
+            data_path=data_path,
             serialize_config=serialize_config or {},
             **kwargs,
         )
 
+        self._start_index()
+
+    @requests(on='/index')
     def index(
         self, docs: Optional[DocumentArray] = None, parameters: dict = {}, **kwargs
     ):
@@ -98,8 +111,35 @@ class AnnLiteIndexer(Executor):
         if len(flat_docs) == 0:
             return
 
-        self._index.index(flat_docs)
+        while len(self._task_queue) >= self._max_length_queue:
+            time.sleep(1)
 
+        self._task_queue.extend(flat_docs)
+
+    def _start_index(self):
+        self._index_thread = Thread(target=self._index_task, daemon=False)
+        self._index_thread.start()
+
+    def _index_task(self):
+        try:
+            self.logger.info(f'started index thread')
+            while True:
+                if len(self._task_queue) == 0:
+                    continue
+                batch_docs = self._task_queue.pop(
+                    range(
+                        self._index_batch_size
+                        if len(self._task_queue) > self._index_batch_size
+                        else len(self._task_queue)
+                    )
+                )
+                self._index.index(batch_docs)
+                self.logger.info(f'indexing {len(batch_docs)} docs done...')
+        except Exception as e:
+            self.logger.error(f'index thread failed: {e}')
+            self.logger.error(traceback.format_exc())
+
+    @requests(on='/update')
     def update(
         self, docs: Optional[DocumentArray] = None, parameters: dict = {}, **kwargs
     ):
@@ -111,6 +151,11 @@ class AnnLiteIndexer(Executor):
 
             - 'traversal_paths' (str): traversal path for the docs
         """
+        if len(self._task_queue) > 0:
+            self.logger.info(
+                'updateing operation is not allowed when len(task queue) > 0'
+            )
+            return
 
         if not docs:
             return
@@ -122,6 +167,7 @@ class AnnLiteIndexer(Executor):
 
         self._index.update(flat_docs)
 
+    @requests(on='/delete')
     def delete(
         self, docs: Optional[DocumentArray] = None, parameters: dict = {}, **kwargs
     ):
@@ -133,6 +179,12 @@ class AnnLiteIndexer(Executor):
         Keys accepted:
             - 'traversal_paths' (str): traversal path for the docs
         """
+        if len(self._task_queue) > 0:
+            self.logger.info(
+                'updateing operation is not allowed when len(task queue) > 0'
+            )
+            return
+
         if not docs:
             return
 
@@ -143,6 +195,7 @@ class AnnLiteIndexer(Executor):
 
         self._index.delete(flat_docs)
 
+    @requests(on='/search')
     def search(
         self, docs: Optional[DocumentArray] = None, parameters: dict = {}, **kwargs
     ):
@@ -185,6 +238,7 @@ class AnnLiteIndexer(Executor):
             include_metadata=include_metadata,
         )
 
+    @requests(on='/status')
     def status(self, **kwargs) -> DocumentArray:
         """Return the document containing status information about the indexer.
 
@@ -192,11 +246,15 @@ class AnnLiteIndexer(Executor):
         documents, and on the number of (searchable) documents currently in the index.
         """
 
-        status = Document(tags=self._index.stat)
+        status = Document(
+            tags={'waiting_list_docs': len(self._task_queue), **self._index.stat}
+        )
         return DocumentArray([status])
 
+    @requests(on='/clear')
     def clear(self, **kwargs):
         """Clear the index of all entries."""
+        self._task_queue = DocumentArray()
         self._index.clear()
 
     def close(self, **kwargs):
