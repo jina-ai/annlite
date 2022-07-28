@@ -6,8 +6,6 @@ if TYPE_CHECKING:  # pragma: no cover
     from pathlib import Path
     from typing import Tuple
 
-    import numpy as np
-
 
 class BaseCodec(ABC):
     def __init__(self, require_train: bool = True):
