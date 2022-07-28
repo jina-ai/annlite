@@ -53,6 +53,7 @@ class AnnLite(CellContainer):
         metric: Union[str, Metric] = 'cosine',
         n_cells: int = 1,
         n_subvectors: Optional[int] = None,
+        n_clusters: Optional[int] = 256,
         n_probe: int = 16,
         initial_size: Optional[int] = None,
         expand_step_size: int = 10240,
@@ -73,6 +74,7 @@ class AnnLite(CellContainer):
             ), '"dim" needs to be divisible by "n_subvectors"'
 
         self.n_subvectors = n_subvectors
+        self.n_clusters = n_clusters
         self.n_probe = max(n_probe, n_cells)
         self.n_cells = n_cells
 
@@ -106,9 +108,14 @@ class AnnLite(CellContainer):
             )
             self.pq_codec = PQCodec.load(self._pq_codec_path)
         elif n_subvectors:
-            logger.info(f'Initialize PQ codec (n_subvectors={self.n_subvectors})')
+            logger.info(
+                f'Initialize PQ codec (n_subvectors={self.n_subvectors}, n_clusters={self.n_clusters})'
+            )
             self.pq_codec = PQCodec(
-                dim, n_subvectors=n_subvectors, n_clusters=256, metric=self.metric
+                dim,
+                n_subvectors=self.n_subvectors,
+                n_clusters=self.n_clusters,
+                metric=self.metric,
             )
 
         super(AnnLite, self).__init__(
