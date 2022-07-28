@@ -2,8 +2,10 @@ from typing import Tuple
 
 import numpy as np
 
+EPS = 1e-30
 
-def cosine(x_mat: 'np.ndarray', y_mat: 'np.ndarray', eps: float = 1e-7) -> 'np.ndarray':
+
+def cosine(x_mat: 'np.ndarray', y_mat: 'np.ndarray', eps: float = EPS) -> 'np.ndarray':
     """Cosine distance between each row in x_mat and each row in y_mat.
 
     :param x_mat: np.ndarray with ndim=2
