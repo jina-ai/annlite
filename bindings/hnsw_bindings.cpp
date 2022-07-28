@@ -121,6 +121,7 @@ public:
   bool index_inited;
   bool ep_added;
   bool normalize;
+  size_t maxElements, M, efConstruction;
   int num_threads_default;
   hnswlib::labeltype cur_l;
   hnswlib::HierarchicalNSW<dist_t> *appr_alg;
@@ -140,20 +141,38 @@ public:
 
   void init_new_index(const size_t maxElements, const size_t M,
                       const size_t efConstruction, const size_t random_seed,
-                      const py::object using_pq) {
+                      const py::object &pq_codec) {
     if (appr_alg) {
       throw new std::runtime_error("The index is already initiated.");
     }
-    if (!using_pq.is_none()) {
-      loadPQ(using_pq);
+    if (!pq_codec.is_none()) {
+      _loadPQ(pq_codec);
     }
-    cur_l = 0;
-    appr_alg = new hnswlib::HierarchicalNSW<dist_t>(
+    this->cur_l = 0;
+    this->appr_alg = new hnswlib::HierarchicalNSW<dist_t>(
         l2space, maxElements, M, efConstruction, random_seed);
-    index_inited = true;
-    ep_added = false;
-    appr_alg->ef_ = default_ef;
-    seed = random_seed;
+    this->index_inited = true;
+    this->ep_added = false;
+    this->appr_alg->ef_ = default_ef;
+    this->maxElements = maxElements;
+    this->M = M;
+    this->efConstruction = efConstruction;
+    this->seed = random_seed;
+  }
+
+  void loadPQ(const py::object &pq_codec) {
+    if (this->appr_alg) {
+      delete this->appr_alg;
+    }
+    if (pq_codec.is_none()) {
+      throw new std::runtime_error("Passed PQ class is none");
+    }
+    _loadPQ(pq_codec);
+    this->cur_l = 0;
+    this->ep_added = false;
+    this->appr_alg = new hnswlib::HierarchicalNSW<dist_t>(
+        l2space, maxElements, M, efConstruction, seed);
+    this->appr_alg->ef_ = default_ef;
   }
 
   void set_ef(size_t ef) {
@@ -191,47 +210,28 @@ public:
       norm_array[i] = data[i] * norm;
   }
 
-  py::object unsqueeze_head(const py::object input) {
-    return input.attr("reshape")(1, *input.attr("shape"));
-  }
+  // py::object unsqueeze_head(const py::object & input) {
+  //   return input.attr("reshape")(1, *input.attr("shape"));
+  // }
 
-  py::object unsqueeze_tail(const py::object input) {
-    return input.attr("reshape")(*input.attr("shape"), 1);
-  }
+  // py::object unsqueeze_tail(const py::object & input) {
+  //   return input.attr("reshape")(*input.attr("shape"), 1);
+  // }
 
-  py::object py_power(const py::object input, float pow) {
-    return input.attr("__pow__")(pow);
-  }
+  // py::object py_power(const py::object & input, float pow) {
+  //   return input.attr("__pow__")(pow);
+  // }
 
-  py::object l2_normalize(py::object input) {
-    return input.attr("__truediv__")(
-        unsqueeze_tail(py_power(py_power(input, 2).attr("sum")(1), 0.5)) +
-        py::float_(1e-30f));
-  }
-
-  void addItems(py::object input, py::object ids_ = py::none(),
-                int num_threads = -1) {
-    int dim = this->dim;
-
-    size_t input_dim = input.attr("shape").attr("__len__")().cast<size_t>();
-    if (input_dim > 2) {
-      throw std::runtime_error("data must be a 1d/2d array");
-    } else if (input_dim == 1) {
-      input = unsqueeze_head(input);
-    }
-    if (normalize) {
-      input = l2_normalize(input);
-    }
-    if (pq_enable) {
-      input = pq_codec.attr("encode")(input);
-      dim = pq_n_subvectors;
-    }
-    // TODO: template below block
-    py::array_t<data_t, py::array::c_style | py::array::forcecast> items(input);
+  // py::object l2_normalize(py::object input) {
+  //   return input.attr("__truediv__")(
+  //       unsqueeze_tail(py_power(py_power(input, 2).attr("sum")(1), 0.5)) +
+  //       py::float_(1e-30f));
+  // }
+  template <typename T>
+  void addRows_(int dim, int num_threads, const py::object &ids_,
+                const py::object &input) {
+    py::array_t<T, py::array::c_style | py::array::forcecast> items(input);
     auto buffer = items.request();
-    if (num_threads <= 0)
-      num_threads = num_threads_default;
-
     size_t rows, features;
 
     rows = buffer.shape[0];
@@ -240,13 +240,14 @@ public:
     if (features != dim)
       throw std::runtime_error("wrong dimensionality of the vectors");
 
+    if (num_threads <= 0)
+      num_threads = num_threads_default;
     // avoid using threads when the number of searches is small:
     if (rows <= num_threads * 4) {
       num_threads = 1;
     }
 
     std::vector<size_t> ids;
-
     if (!ids_.is_none()) {
       py::array_t<size_t, py::array::c_style | py::array::forcecast> items(
           ids_);
@@ -262,6 +263,7 @@ public:
       } else
         throw std::runtime_error("wrong dimensionality of the labels");
     }
+
     {
 
       int start = 0;
@@ -278,6 +280,21 @@ public:
         appr_alg->addPoint((void *)items.data(row), (size_t)id);
       });
       cur_l += rows;
+    }
+  }
+  void addItems(py::object input, py::object ids_ = py::none(),
+                int num_threads = -1) {
+    // remove dim check and normalization to python
+    if (!pq_enable) {
+      addRows_<float>(this->dim, num_threads, ids_, input);
+    } else {
+      if (pq_n_clusters <= (UINT8_MAX + 1)) {
+        addRows_<uint8_t>(pq_n_subvectors, num_threads, ids_, input);
+      } else if (pq_n_clusters <= (UINT16_MAX + 1)) {
+        addRows_<uint16_t>(pq_n_subvectors, num_threads, ids_, input);
+      } else if (pq_n_clusters <= (UINT32_MAX + 1)) {
+        addRows_<uint32_t>(pq_n_subvectors, num_threads, ids_, input);
+      }
     }
   }
 
@@ -606,37 +623,29 @@ public:
     }
   }
   // TODO: add pq
-  py::object knnQuery_return_numpy(py::object input, size_t k = 1,
-                                   int num_threads = -1) {
-    int dim = this->dim;
-    if (pq_enable) {
-      input = pq_codec.attr("encode")(input);
-      dim = pq_n_subvectors;
-    }
-    py::array_t<data_t, py::array::c_style | py::array::forcecast> items(input);
+  template <typename T>
+  py::object knnQuery_return_numpy_(size_t k, int num_threads,
+                                    const py::object &input) {
+    py::array_t<T, py::array::c_style | py::array::forcecast> items(input);
     auto buffer = items.request();
+
+    // for (int I = 0; I < 8; I++) {
+    //   std::cout << "from index " << (float)((T *)items.data(0))[I] << ',';
+    // }
+
     hnswlib::labeltype *data_numpy_l;
     dist_t *data_numpy_d;
+
     size_t rows, features;
-
-    if (num_threads <= 0)
-      num_threads = num_threads_default;
-
     {
       py::gil_scoped_release l;
 
-      if (buffer.ndim != 2 && buffer.ndim != 1)
-        throw std::runtime_error("data must be a 1d/2d array");
-      if (buffer.ndim == 2) {
-        rows = buffer.shape[0];
-        features = buffer.shape[1];
-      } else {
-        rows = 1;
-        features = buffer.shape[0];
-      }
+      rows = buffer.shape[0];
+      features = buffer.shape[1];
 
+      if (num_threads <= 0)
+        num_threads = num_threads_default;
       // avoid using threads when the number of searches is small:
-
       if (rows <= num_threads * 4) {
         num_threads = 1;
       }
@@ -644,43 +653,22 @@ public:
       data_numpy_l = new hnswlib::labeltype[rows * k];
       data_numpy_d = new dist_t[rows * k];
 
-      if (normalize == false || pq_enable) {
-        ParallelFor(0, rows, num_threads, [&](size_t row, size_t threadId) {
-          std::priority_queue<std::pair<dist_t, hnswlib::labeltype>> result =
-              appr_alg->searchKnn((void *)items.data(row), k);
-          if (result.size() != k)
-            throw std::runtime_error(
-                "Cannot return the results in a contigious 2D array. Probably "
-                "ef or M is too small");
-          for (int i = k - 1; i >= 0; i--) {
-            auto &result_tuple = result.top();
-            data_numpy_d[row * k + i] = result_tuple.first;
-            data_numpy_l[row * k + i] = result_tuple.second;
-            result.pop();
-          }
-        });
-      } else {
-        std::vector<float> norm_array(num_threads * features);
-        ParallelFor(0, rows, num_threads, [&](size_t row, size_t threadId) {
-          size_t start_idx = threadId * dim;
-          normalize_vector((float *)items.data(row),
-                           (norm_array.data() + start_idx));
-
-          std::priority_queue<std::pair<dist_t, hnswlib::labeltype>> result =
-              appr_alg->searchKnn((void *)(norm_array.data() + start_idx), k);
-          if (result.size() != k)
-            throw std::runtime_error(
-                "Cannot return the results in a contigious 2D array. Probably "
-                "ef or M is too small");
-          for (int i = k - 1; i >= 0; i--) {
-            auto &result_tuple = result.top();
-            data_numpy_d[row * k + i] = result_tuple.first;
-            data_numpy_l[row * k + i] = result_tuple.second;
-            result.pop();
-          }
-        });
-      }
+      ParallelFor(0, rows, num_threads, [&](size_t row, size_t threadId) {
+        std::priority_queue<std::pair<dist_t, hnswlib::labeltype>> result =
+            appr_alg->searchKnn((void *)items.data(row), k);
+        if (result.size() != k)
+          throw std::runtime_error(
+              "Cannot return the results in a contigious 2D array. Probably "
+              "ef or M is too small");
+        for (int i = k - 1; i >= 0; i--) {
+          auto &result_tuple = result.top();
+          data_numpy_d[row * k + i] = result_tuple.first;
+          data_numpy_l[row * k + i] = result_tuple.second;
+          result.pop();
+        }
+      });
     }
+
     py::capsule free_when_done_l(data_numpy_l, [](void *f) { delete[] f; });
     py::capsule free_when_done_d(data_numpy_d, [](void *f) { delete[] f; });
 
@@ -699,12 +687,26 @@ public:
             data_numpy_d,     // the data pointer
             free_when_done_d));
   }
-  // TODO: add pq with filter
-  py::object knnQuery_with_filter(py::object input,
-                                  py::object candidate_ids_ = py::none(),
-                                  size_t k = 1, int num_threads = -1) {
-
-    py::array_t<data_t, py::array::c_style | py::array::forcecast> items(input);
+  py::object knnQuery_return_numpy(py::object input, size_t k = 1,
+                                   int num_threads = -1) {
+    // remove dim check and normalization to python
+    if (!pq_enable) {
+      return knnQuery_return_numpy_<float>(k, num_threads, input);
+    } else {
+      if (pq_n_clusters <= (UINT8_MAX + 1)) {
+        return knnQuery_return_numpy_<uint8_t>(k, num_threads, input);
+      } else if (pq_n_clusters <= (UINT16_MAX + 1)) {
+        return knnQuery_return_numpy_<uint16_t>(k, num_threads, input);
+      } else if (pq_n_clusters <= (UINT32_MAX + 1)) {
+        return knnQuery_return_numpy_<uint32_t>(k, num_threads, input);
+      }
+    }
+  }
+  template <typename T>
+  py::object knnQuery_with_filter_(size_t k, int num_threads,
+                                   const py::object &candidate_ids_,
+                                   const py::object &input) {
+    py::array_t<T, py::array::c_style | py::array::forcecast> items(input);
     auto buffer = items.request();
     hnswlib::labeltype *data_numpy_l;
     dist_t *data_numpy_d;
@@ -712,16 +714,11 @@ public:
     if (num_threads <= 0)
       num_threads = num_threads_default;
 
-    if (buffer.ndim != 2 && buffer.ndim != 1)
-      throw std::runtime_error("data must be a 1d/2d array");
+    size_t rows;
+    size_t features;
 
-    size_t rows = 1;
-    size_t features = buffer.shape[0];
-
-    if (buffer.ndim == 2) {
-      rows = buffer.shape[0];
-      features = buffer.shape[1];
-    }
+    rows = buffer.shape[0];
+    features = buffer.shape[1];
 
     // avoid using threads when the number of searches is small:
 
@@ -759,46 +756,20 @@ public:
       data_numpy_l = new hnswlib::labeltype[rows * k];
       data_numpy_d = new dist_t[rows * k];
 
-      if (normalize == false) {
-        ParallelFor(0, rows, num_threads, [&](size_t row, size_t threadId) {
-          std::priority_queue<std::pair<dist_t, hnswlib::labeltype>> result =
-              appr_alg->searchKnnWithFilter((void *)items.data(row), &filter,
-                                            k);
-          if (result.size() != k)
-            throw std::runtime_error(
-                "Cannot return the results in a contigious 2D array. Probably "
-                "ef or M is too small");
-          for (int i = k - 1; i >= 0; i--) {
-            auto &result_tuple = result.top();
-            data_numpy_d[row * k + i] = result_tuple.first;
-            data_numpy_l[row * k + i] = result_tuple.second;
-            result.pop();
-          }
-        });
-      } else {
-        std::vector<float> norm_array(num_threads * features);
-        ParallelFor(0, rows, num_threads, [&](size_t row, size_t threadId) {
-          float *data = (float *)items.data(row);
-
-          size_t start_idx = threadId * dim;
-          normalize_vector((float *)items.data(row),
-                           (norm_array.data() + start_idx));
-
-          std::priority_queue<std::pair<dist_t, hnswlib::labeltype>> result =
-              appr_alg->searchKnnWithFilter(
-                  (void *)(norm_array.data() + start_idx), &filter, k);
-          if (result.size() != k)
-            throw std::runtime_error(
-                "Cannot return the results in a contigious 2D array. Probably "
-                "ef or M is too small");
-          for (int i = k - 1; i >= 0; i--) {
-            auto &result_tuple = result.top();
-            data_numpy_d[row * k + i] = result_tuple.first;
-            data_numpy_l[row * k + i] = result_tuple.second;
-            result.pop();
-          }
-        });
-      }
+      ParallelFor(0, rows, num_threads, [&](size_t row, size_t threadId) {
+        std::priority_queue<std::pair<dist_t, hnswlib::labeltype>> result =
+            appr_alg->searchKnnWithFilter((void *)items.data(row), &filter, k);
+        if (result.size() != k)
+          throw std::runtime_error(
+              "Cannot return the results in a contigious 2D array. Probably "
+              "ef or M is too small");
+        for (int i = k - 1; i >= 0; i--) {
+          auto &result_tuple = result.top();
+          data_numpy_d[row * k + i] = result_tuple.first;
+          data_numpy_l[row * k + i] = result_tuple.second;
+          result.pop();
+        }
+      });
     }
 
     py::capsule free_when_done_l(data_numpy_l, [](void *f) { delete[] f; });
@@ -819,6 +790,26 @@ public:
             data_numpy_d,     // the data pointer
             free_when_done_d));
   }
+  py::object knnQuery_with_filter(py::object input,
+                                  py::object candidate_ids_ = py::none(),
+                                  size_t k = 1, int num_threads = -1) {
+    // remove dim check and normalization to python
+    if (!pq_enable) {
+      return knnQuery_with_filter_<float>(k, num_threads, candidate_ids_,
+                                          input);
+    } else {
+      if (pq_n_clusters <= (UINT8_MAX + 1)) {
+        return knnQuery_with_filter_<uint8_t>(k, num_threads, candidate_ids_,
+                                              input);
+      } else if (pq_n_clusters <= (UINT16_MAX + 1)) {
+        return knnQuery_with_filter_<uint16_t>(k, num_threads, candidate_ids_,
+                                               input);
+      } else if (pq_n_clusters <= (UINT32_MAX + 1)) {
+        return knnQuery_with_filter_<uint32_t>(k, num_threads, candidate_ids_,
+                                               input);
+      }
+    }
+  }
 
   void markDeleted(size_t label) { appr_alg->markDelete(label); }
 
@@ -828,7 +819,7 @@ public:
 
   size_t getCurrentCount() const { return appr_alg->cur_element_count; }
 
-  void loadPQ(const py::object pq_abstract) {
+  void _loadPQ(const py::object &pq_abstract) {
     int exist_attr = 1, attr_correct = 1;
     PyObject *pq_raw_ptr = pq_abstract.ptr();
     exist_attr *= PyObject_HasAttrString(pq_raw_ptr, "encode");
@@ -881,17 +872,23 @@ public:
       throw py::attribute_error(
           "PQ class returning the codebook with wrong dimension");
     }
-    std::shared_ptr<float *> codebook_buffer =
-        std::make_shared<float *>((float *)buffer.ptr);
+    // std::shared_ptr<float> codebook_buffer((float *)buffer.ptr);
+    float *codebook_buffer = (float *)buffer.ptr;
+    if (l2space) {
+      delete l2space;
+    }
     if (pq_n_clusters <= (UINT8_MAX + 1)) {
-      l2space = new hnswlib::PQ_L2Space<uint8_t>(
-          pq_n_subvectors, pq_n_clusters, pq_d_subvector, codebook_buffer);
+      l2space = new hnswlib::PQ_Space<uint8_t>(space_name, pq_n_subvectors,
+                                               pq_n_clusters, pq_d_subvector,
+                                               codebook_buffer);
     } else if (pq_n_clusters <= (UINT16_MAX + 1)) {
-      l2space = new hnswlib::PQ_L2Space<uint16_t>(
-          pq_n_subvectors, pq_n_clusters, pq_d_subvector, codebook_buffer);
+      l2space = new hnswlib::PQ_Space<uint16_t>(space_name, pq_n_subvectors,
+                                                pq_n_clusters, pq_d_subvector,
+                                                codebook_buffer);
     } else if (pq_n_clusters <= (UINT32_MAX + 1)) {
-      l2space = new hnswlib::PQ_L2Space<uint32_t>(
-          pq_n_subvectors, pq_n_clusters, pq_d_subvector, codebook_buffer);
+      l2space = new hnswlib::PQ_Space<uint32_t>(space_name, pq_n_subvectors,
+                                                pq_n_clusters, pq_d_subvector,
+                                                codebook_buffer);
     } else {
       throw py::value_error(
           "PQ clustering exceed the maximum, annlite set the maximum of "
@@ -914,7 +911,7 @@ PYBIND11_PLUGIN(hnsw_bind) {
            py::arg("dim"))
       .def("init_index", &Index<float>::init_new_index, py::arg("max_elements"),
            py::arg("M") = 16, py::arg("ef_construction") = 200,
-           py::arg("random_seed") = 100, py::arg("using_pq") = py::none())
+           py::arg("random_seed") = 100, py::arg("pq_codec") = py::none())
       .def("knn_query", &Index<float>::knnQuery_return_numpy, py::arg("data"),
            py::arg("k") = 1, py::arg("num_threads") = -1)
       .def("knn_query_with_filter", &Index<float>::knnQuery_with_filter,
