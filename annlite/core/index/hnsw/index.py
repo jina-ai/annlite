@@ -15,12 +15,12 @@ class HnswIndex(BaseIndex):
     def __init__(
         self,
         dim: int,
-        path_to_load: Optional[str] = None,
         dtype: np.dtype = np.float32,
         metric: Metric = Metric.COSINE,
         ef_construction: int = 200,
         ef_search: int = 50,
         max_connection: int = 16,
+        path_to_load: Optional[str] = None,
         **kwargs,
     ):
         """
