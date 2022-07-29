@@ -1,6 +1,8 @@
 import math
+import os.path
 from argparse import ArgumentError
 from functools import wraps
+from pathlib import Path
 from typing import TYPE_CHECKING, List, Optional, Union
 
 import numpy as np
@@ -61,10 +63,12 @@ class HnswIndex(BaseIndex):
         ef_search: int = 50,
         max_connection: int = 16,
         pq_codec: Optional['BaseCodec'] = None,
+        index_file: Optional[Union[str, Path]] = None,
         **kwargs,
     ):
         """
         :param dim: The dimensionality of vectors to index
+        :param index_file: A file-like object or a string containing a file name.
         :param metric: Distance metric type, can be 'euclidean', 'inner_product', or 'cosine'
         :param ef_construction: the size of the dynamic list for the nearest neighbors (used during the building).
         :param ef_search: the size of the dynamic list for the nearest neighbors (used during the search).
@@ -78,27 +82,45 @@ class HnswIndex(BaseIndex):
         self.max_connection = max_connection
         self.pq_codec = pq_codec
         self._set_backend_pq = False
+        self.index_file = index_file
+
         self._init_hnsw_index()
 
     def _init_hnsw_index(self):
         self._index = Index(space=self.space_name, dim=self.dim)
-        if self.pq_codec is not None and self.pq_codec.is_trained:
-            self._index.init_index(
-                max_elements=self.capacity,
-                ef_construction=self.ef_construction,
-                M=self.max_connection,
-                pq_codec=self.pq_codec,
+        if self.index_file and os.path.exists(self.index_file):
+            logger.info(
+                f'indexer will be loaded from {self.index_file}',
             )
-            self._set_backend_pq = True
+            self.load_index(self.index_file)
         else:
-            self._index.init_index(
-                max_elements=self.capacity,
-                ef_construction=self.ef_construction,
-                M=self.max_connection,
-                pq_codec=None,
-            )
-            self._set_backend_pq = False
+            if self.index_file:
+                raise FileNotFoundError(
+                    f'index path: {self.index_file} does not exist',
+                )
+            if self.pq_codec is not None and self.pq_codec.is_trained:
+                self._index.init_index(
+                    max_elements=self.capacity,
+                    ef_construction=self.ef_construction,
+                    M=self.max_connection,
+                    pq_codec=self.pq_codec,
+                )
+                self._set_backend_pq = True
+            else:
+                self._index.init_index(
+                    max_elements=self.capacity,
+                    ef_construction=self.ef_construction,
+                    M=self.max_connection,
+                    pq_codec=None,
+                )
+                self._set_backend_pq = False
         self._index.set_ef(self.ef_search)
+
+    def load_index(self, index_file: Union[str, Path]):
+        self._index.load_index(index_file)
+
+    def save_index(self, index_file: Union[str, Path]):
+        self._index.save_index(index_file)
 
     @pre_process
     def add_with_ids(self, x: 'np.ndarray', ids: List[int]):
