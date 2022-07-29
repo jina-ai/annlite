@@ -1,5 +1,6 @@
 import math
 import os.path
+from pathlib import Path
 from typing import List, Optional, Union
 
 import numpy as np
@@ -20,12 +21,12 @@ class HnswIndex(BaseIndex):
         ef_construction: int = 200,
         ef_search: int = 50,
         max_connection: int = 16,
-        path_to_load: Optional[str] = None,
+        index_file: Optional[Union[str, Path]] = None,
         **kwargs,
     ):
         """
         :param dim: The dimensionality of vectors to index
-        :param path_to_load: The path of saved index, will load the indexer from it when provided
+        :param index_file: A file-like object or a string containing a file name.
         :param metric: Distance metric type, can be 'euclidean', 'inner_product', or 'cosine'
         :param ef_construction: the size of the dynamic list for the nearest neighbors (used during the building).
         :param ef_search: the size of the dynamic list for the nearest neighbors (used during the search).
@@ -37,21 +38,21 @@ class HnswIndex(BaseIndex):
         self.ef_construction = ef_construction
         self.ef_search = ef_search
         self.max_connection = max_connection
-        self.path_to_load = path_to_load
+        self.index_file = index_file
 
         self._init_hnsw_index()
 
     def _init_hnsw_index(self):
         self._index = Index(space=self.space_name, dim=self.dim)
-        if self.path_to_load and os.path.exists(self.path_to_load):
+        if self.index_file and os.path.exists(self.index_file):
             logger.info(
-                f'indexer will be loaded from {self.path_to_load}',
+                f'indexer will be loaded from {self.index_file}',
             )
-            self._load_index()
+            self.load_index(self.index_file)
         else:
-            if self.path_to_load:
-                logger.warning(
-                    f'index path: {self.path_to_load} does not exist, a new indexer will be initialized',
+            if self.index_file:
+                raise FileNotFoundError(
+                    f'index path: {self.index_file} does not exist',
                 )
             self._index.init_index(
                 max_elements=self.capacity,
@@ -60,11 +61,11 @@ class HnswIndex(BaseIndex):
             )
             self._index.set_ef(self.ef_search)
 
-    def _load_index(self):
-        self._index.load_index(self.path_to_load)
+    def load_index(self, index_file: Union[str, Path]):
+        self._index.load_index(index_file)
 
-    def save_index(self, path):
-        self._index.save_index(path)
+    def save_index(self, index_file: Union[str, Path]):
+        self._index.save_index(index_file)
 
     def add_with_ids(self, x: 'np.ndarray', ids: List[int]):
         max_id = max(ids) + 1
