@@ -77,12 +77,11 @@ template <typename CODETYPE> class PQ_Space : public SpaceInterface<float> {
   size_t data_size_, d_subvectors;
   pq_dist_param_t param;
   bool ip_enable, normalize;
-  float *codebook;
 
 public:
   PQ_Space(const std::string &space_name, size_t n_subvectors,
            size_t n_clusters, size_t d_subvectors, float *codebook)
-      : codebook(codebook), d_subvectors(d_subvectors) {
+      : d_subvectors(d_subvectors) {
     param.n_subvectors = n_subvectors;
     param.n_clusters = n_clusters;
     data_size_ = n_subvectors * sizeof(CODETYPE);
@@ -99,10 +98,10 @@ public:
       normalize = true;
       fstdistfunc_ = PQLookup_Cosine<CODETYPE>;
     }
-    compute_mats();
+    compute_mats(codebook);
   }
 
-  void compute_mats() {
+  void compute_mats(float *codebook) {
     param.dist_mat = (float *)malloc(param.n_subvectors * param.n_clusters *
                                      param.n_clusters * sizeof(float));
     if (normalize) {
@@ -151,9 +150,6 @@ public:
 
   void *get_dist_func_param() { return &param; }
 
-  ~PQ_Space() {
-    free(param.dist_mat);
-    this->codebook = nullptr;
-  }
+  ~PQ_Space() { free(param.dist_mat); }
 };
 } // namespace hnswlib
