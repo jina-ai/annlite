@@ -20,7 +20,6 @@ class AnnLiteIndexer(Executor):
     def __init__(
         self,
         dim: int = 0,
-        data_path: Optional[str] = None,
         metric: str = 'cosine',
         limit: int = 10,
         ef_construction: int = 200,
@@ -31,6 +30,7 @@ class AnnLiteIndexer(Executor):
         search_traversal_paths: str = '@r',
         columns: Optional[List[Tuple[str, str]]] = None,
         serialize_config: Optional[Dict] = None,
+        data_path: Optional[str] = None,
         *args,
         **kwargs,
     ):
@@ -50,6 +50,7 @@ class AnnLiteIndexer(Executor):
         :param columns: List of tuples of the form (column_name, str_type). Here str_type must be a string that can be
                 parsed as a valid Python type.
         :param serialize_config: The configurations used for serializing documents, e.g., {'protocol': 'pickle'}
+        :param data_path: location of directory to store the database.
         """
         super().__init__(*args, **kwargs)
         self.logger = JinaLogger(self.__class__.__name__)
@@ -64,7 +65,7 @@ class AnnLiteIndexer(Executor):
         self._valid_input_columns = ['str', 'float', 'int']
         self._data_buffer = DocumentArray()
         self._index_batch_size = 1024
-        self._max_length_queue = 2048
+        self._max_length_queue = 2 * self._index_batch_size
 
         self.logger = JinaLogger(getattr(self.metas, 'name', self.__class__.__name__))
 
