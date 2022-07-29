@@ -20,7 +20,7 @@ class AnnLiteIndexer(Executor):
     def __init__(
         self,
         dim: int = 0,
-        data_path: str = './workspace',
+        data_path: Optional[str] = None,
         metric: str = 'cosine',
         limit: int = 10,
         ef_construction: int = 200,
@@ -62,7 +62,7 @@ class AnnLiteIndexer(Executor):
         self.index_traversal_paths = index_traversal_paths
         self.search_traversal_paths = search_traversal_paths
         self._valid_input_columns = ['str', 'float', 'int']
-        self._task_queue = DocumentArray()
+        self._data_buffer = DocumentArray()
         self._index_batch_size = 1024
         self._max_length_queue = 2048
 
@@ -84,7 +84,7 @@ class AnnLiteIndexer(Executor):
             ef_construction=ef_construction,
             ef_query=ef_query,
             max_connection=max_connection,
-            data_path=data_path,
+            data_path=data_path or self.workspace,
             serialize_config=serialize_config or {},
             **kwargs,
         )
@@ -110,10 +110,10 @@ class AnnLiteIndexer(Executor):
         if len(flat_docs) == 0:
             return
 
-        while len(self._task_queue) >= self._max_length_queue:
+        while len(self._data_buffer) >= self._max_length_queue:
             time.sleep(1)
 
-        self._task_queue.extend(flat_docs)
+        self._data_buffer.extend(flat_docs)
 
     def _start_index(self):
         self._index_thread = Thread(target=self._index_task, daemon=False)
@@ -123,13 +123,13 @@ class AnnLiteIndexer(Executor):
         try:
             self.logger.info(f'started index thread')
             while True:
-                if len(self._task_queue) == 0:
+                if len(self._data_buffer) == 0:
                     continue
-                batch_docs = self._task_queue.pop(
+                batch_docs = self._data_buffer.pop(
                     range(
                         self._index_batch_size
-                        if len(self._task_queue) > self._index_batch_size
-                        else len(self._task_queue)
+                        if len(self._data_buffer) > self._index_batch_size
+                        else len(self._data_buffer)
                     )
                 )
                 self._index.index(batch_docs)
@@ -150,7 +150,7 @@ class AnnLiteIndexer(Executor):
 
             - 'traversal_paths' (str): traversal path for the docs
         """
-        if len(self._task_queue) > 0:
+        if len(self._data_buffer) > 0:
             self.logger.info(
                 'updating operation is not allowed when len(task queue) > 0'
             )
@@ -178,7 +178,7 @@ class AnnLiteIndexer(Executor):
         Keys accepted:
             - 'traversal_paths' (str): traversal path for the docs
         """
-        if len(self._task_queue) > 0:
+        if len(self._data_buffer) > 0:
             self.logger.info(
                 'deleting operation is not allowed when len(task queue) > 0'
             )
@@ -246,14 +246,14 @@ class AnnLiteIndexer(Executor):
         """
 
         status = Document(
-            tags={'waiting_list_docs': len(self._task_queue), **self._index.stat}
+            tags={'waiting_list_docs': len(self._data_buffer), **self._index.stat}
         )
         return DocumentArray([status])
 
     @requests(on='/clear')
     def clear(self, **kwargs):
         """Clear the index of all entries."""
-        self._task_queue = DocumentArray()
+        self._data_buffer = DocumentArray()
         self._index.clear()
 
     def close(self, **kwargs):
