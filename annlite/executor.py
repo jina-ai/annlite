@@ -1,3 +1,7 @@
+import threading
+import time
+import traceback
+from threading import Thread
 from typing import Dict, List, Optional, Tuple
 
 from docarray import Document, DocumentArray
@@ -27,6 +31,7 @@ class AnnLiteIndexer(Executor):
         search_traversal_paths: str = '@r',
         columns: Optional[List[Tuple[str, str]]] = None,
         serialize_config: Optional[Dict] = None,
+        data_path: Optional[str] = None,
         *args,
         **kwargs,
     ):
@@ -46,6 +51,7 @@ class AnnLiteIndexer(Executor):
         :param columns: List of tuples of the form (column_name, str_type). Here str_type must be a string that can be
                 parsed as a valid Python type.
         :param serialize_config: The configurations used for serializing documents, e.g., {'protocol': 'pickle'}
+        :param data_path: location of directory to store the database.
         """
         super().__init__(*args, **kwargs)
         self.logger = JinaLogger(self.__class__.__name__)
@@ -58,6 +64,12 @@ class AnnLiteIndexer(Executor):
         self.index_traversal_paths = index_traversal_paths
         self.search_traversal_paths = search_traversal_paths
         self._valid_input_columns = ['str', 'float', 'int']
+        self._data_buffer = DocumentArray()
+        self._index_batch_size = 1024
+        self._max_length_queue = 2 * self._index_batch_size
+        self._index_lock = threading.Lock()
+
+        self.logger = JinaLogger(getattr(self.metas, 'name', self.__class__.__name__))
 
         if columns:
             cols = []
@@ -75,11 +87,14 @@ class AnnLiteIndexer(Executor):
             ef_construction=ef_construction,
             ef_query=ef_query,
             max_connection=max_connection,
-            data_path=self.workspace or './workspace',
+            data_path=data_path or self.workspace,
             serialize_config=serialize_config or {},
             **kwargs,
         )
 
+        self._start_index()
+
+    @requests(on='/index')
     def index(
         self, docs: Optional[DocumentArray] = None, parameters: dict = {}, **kwargs
     ):
@@ -98,8 +113,37 @@ class AnnLiteIndexer(Executor):
         if len(flat_docs) == 0:
             return
 
-        self._index.index(flat_docs)
+        while len(self._data_buffer) >= self._max_length_queue:
+            time.sleep(0.01)
 
+        with self._index_lock:
+            self._data_buffer.extend(flat_docs)
+
+    def _start_index(self):
+        self._index_thread = Thread(target=self._index_task, daemon=False)
+        self._index_thread.start()
+
+    def _index_task(self):
+        try:
+            self.logger.info(f'started index thread')
+            while True:
+                if len(self._data_buffer) == 0:
+                    continue
+                with self._index_lock:
+                    batch_docs = self._data_buffer.pop(
+                        range(
+                            self._index_batch_size
+                            if len(self._data_buffer) > self._index_batch_size
+                            else len(self._data_buffer)
+                        )
+                    )
+                self._index.index(batch_docs)
+                self.logger.info(f'indexing {len(batch_docs)} docs done...')
+        except Exception as e:
+            self.logger.error(f'index thread failed: {e}')
+            self.logger.error(traceback.format_exc())
+
+    @requests(on='/update')
     def update(
         self, docs: Optional[DocumentArray] = None, parameters: dict = {}, **kwargs
     ):
@@ -111,6 +155,11 @@ class AnnLiteIndexer(Executor):
 
             - 'traversal_paths' (str): traversal path for the docs
         """
+        if len(self._data_buffer) > 0:
+            raise Exception(
+                'updating operation is not allowed when length of data buffer '
+                'is bigger than 0'
+            )
 
         if not docs:
             return
@@ -122,6 +171,7 @@ class AnnLiteIndexer(Executor):
 
         self._index.update(flat_docs)
 
+    @requests(on='/delete')
     def delete(
         self, docs: Optional[DocumentArray] = None, parameters: dict = {}, **kwargs
     ):
@@ -133,6 +183,12 @@ class AnnLiteIndexer(Executor):
         Keys accepted:
             - 'traversal_paths' (str): traversal path for the docs
         """
+        if len(self._data_buffer) > 0:
+            raise Exception(
+                'deleting operation is not allowed when length of data buffer '
+                'is bigger than 0'
+            )
+
         if not docs:
             return
 
@@ -143,6 +199,7 @@ class AnnLiteIndexer(Executor):
 
         self._index.delete(flat_docs)
 
+    @requests(on='/search')
     def search(
         self, docs: Optional[DocumentArray] = None, parameters: dict = {}, **kwargs
     ):
@@ -185,6 +242,7 @@ class AnnLiteIndexer(Executor):
             include_metadata=include_metadata,
         )
 
+    @requests(on='/status')
     def status(self, **kwargs) -> DocumentArray:
         """Return the document containing status information about the indexer.
 
@@ -192,13 +250,19 @@ class AnnLiteIndexer(Executor):
         documents, and on the number of (searchable) documents currently in the index.
         """
 
-        status = Document(tags=self._index.stat)
+        status = Document(
+            tags={'appending_size': len(self._data_buffer), **self._index.stat}
+        )
         return DocumentArray([status])
 
+    @requests(on='/clear')
     def clear(self, **kwargs):
         """Clear the index of all entries."""
+        self._data_buffer = DocumentArray()
         self._index.clear()
 
     def close(self, **kwargs):
         """Close the index."""
+        while len(self._data_buffer) > 0:
+            time.sleep(0.01)
         self._index.close()
