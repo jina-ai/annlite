@@ -1,3 +1,4 @@
+import threading
 import time
 import traceback
 from threading import Thread
@@ -66,6 +67,7 @@ class AnnLiteIndexer(Executor):
         self._data_buffer = DocumentArray()
         self._index_batch_size = 1024
         self._max_length_queue = 2 * self._index_batch_size
+        self.lock = threading.Lock()
 
         self.logger = JinaLogger(getattr(self.metas, 'name', self.__class__.__name__))
 
@@ -112,9 +114,10 @@ class AnnLiteIndexer(Executor):
             return
 
         while len(self._data_buffer) >= self._max_length_queue:
-            time.sleep(1)
+            time.sleep(0.01)
 
-        self._data_buffer.extend(flat_docs)
+        with self.lock:
+            self._data_buffer.extend(flat_docs)
 
     def _start_index(self):
         self._index_thread = Thread(target=self._index_task, daemon=False)
@@ -126,13 +129,14 @@ class AnnLiteIndexer(Executor):
             while True:
                 if len(self._data_buffer) == 0:
                     continue
-                batch_docs = self._data_buffer.pop(
-                    range(
-                        self._index_batch_size
-                        if len(self._data_buffer) > self._index_batch_size
-                        else len(self._data_buffer)
+                with self.lock:
+                    batch_docs = self._data_buffer.pop(
+                        range(
+                            self._index_batch_size
+                            if len(self._data_buffer) > self._index_batch_size
+                            else len(self._data_buffer)
+                        )
                     )
-                )
                 self._index.index(batch_docs)
                 self.logger.info(f'indexing {len(batch_docs)} docs done...')
         except Exception as e:
@@ -152,10 +156,10 @@ class AnnLiteIndexer(Executor):
             - 'traversal_paths' (str): traversal path for the docs
         """
         if len(self._data_buffer) > 0:
-            self.logger.info(
-                'updating operation is not allowed when len(task queue) > 0'
+            raise Exception(
+                'updating operation is not allowed when length of data buffer '
+                'is bigger than 0'
             )
-            return
 
         if not docs:
             return
@@ -180,10 +184,10 @@ class AnnLiteIndexer(Executor):
             - 'traversal_paths' (str): traversal path for the docs
         """
         if len(self._data_buffer) > 0:
-            self.logger.info(
-                'deleting operation is not allowed when len(task queue) > 0'
+            raise Exception(
+                'deleting operation is not allowed when length of data buffer '
+                'is bigger than 0'
             )
-            return
 
         if not docs:
             return
@@ -247,7 +251,7 @@ class AnnLiteIndexer(Executor):
         """
 
         status = Document(
-            tags={'waiting_list_docs': len(self._data_buffer), **self._index.stat}
+            tags={'appending_size': len(self._data_buffer), **self._index.stat}
         )
         return DocumentArray([status])
 
@@ -259,4 +263,6 @@ class AnnLiteIndexer(Executor):
 
     def close(self, **kwargs):
         """Close the index."""
+        while len(self._data_buffer) > 0:
+            time.sleep(0.01)
         self._index.close()
