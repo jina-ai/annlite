@@ -67,7 +67,7 @@ class AnnLiteIndexer(Executor):
         self._data_buffer = DocumentArray()
         self._index_batch_size = 1024
         self._max_length_queue = 2 * self._index_batch_size
-        self.lock = threading.Lock()
+        self._index_lock = threading.Lock()
 
         self.logger = JinaLogger(getattr(self.metas, 'name', self.__class__.__name__))
 
@@ -116,7 +116,7 @@ class AnnLiteIndexer(Executor):
         while len(self._data_buffer) >= self._max_length_queue:
             time.sleep(0.01)
 
-        with self.lock:
+        with self._index_lock:
             self._data_buffer.extend(flat_docs)
 
     def _start_index(self):
@@ -129,7 +129,7 @@ class AnnLiteIndexer(Executor):
             while True:
                 if len(self._data_buffer) == 0:
                     continue
-                with self.lock:
+                with self._index_lock:
                     batch_docs = self._data_buffer.pop(
                         range(
                             self._index_batch_size
