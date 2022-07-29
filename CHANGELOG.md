@@ -5,6 +5,7 @@
 
 
 
+
 <a name=release-note-0-3-0></a>
 ## Release Note (`0.3.0`)
 
@@ -130,4 +131,24 @@
 ### 🍹 Other Improvements
 
  - [[```5225e6cb```](https://github.com/jina-ai/docarray/commit/5225e6cbec7df3fbf4dbd7ab404d34bb7d899a29)] __-__ __version__: the next version will be 0.3.4 (*Jina Dev Bot*)
+
+<a name=release-note-0-3-5></a>
+## Release Note (`0.3.5`)
+
+> Release time: 2022-07-29 08:17:02
+
+
+
+🙇 We'd like to thank all contributors for this new release! In particular,
+ Jie Fu,  Jina Dev Bot,  🙇
+
+
+### 🆕 New Features
+
+ - [[```534eed81```](https://github.com/jina-ai/docarray/commit/534eed810e6b56238f0b71cc4123783236eac7fd)] __-__ support load and save hnsw (#133) (*Jie Fu*)
+
+### 🍹 Other Improvements
+
+ - [[```1f76fb5d```](https://github.com/jina-ai/docarray/commit/1f76fb5dedc79d331dc655d6409718457c6c05d7)] __-__ Feat task queue (#131) (*Jie Fu*)
+ - [[```103b5bf3```](https://github.com/jina-ai/docarray/commit/103b5bf31b59ca041d7ca70b8e0442421bcdf279)] __-__ __version__: the next version will be 0.3.5 (*Jina Dev Bot*)
 
