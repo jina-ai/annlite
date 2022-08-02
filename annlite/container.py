@@ -27,11 +27,10 @@ class CellContainer:
         n_cells: int = 1,
         initial_size: Optional[int] = None,
         expand_step_size: int = 50000,
-        expand_mode: ExpandMode = ExpandMode.STEP,
+        expand_mode: 'ExpandMode' = ExpandMode.STEP,
         columns: Optional[List[tuple]] = None,
         serialize_config: Optional[Dict] = None,
-        data_path: Path = Path('./data'),
-        lock: bool = True,
+        data_path: 'Path' = Path('./data'),
         **kwargs,
     ):
         self.dim = dim
@@ -72,7 +71,7 @@ class CellContainer:
             DocStorage(
                 data_path / f'cell_{_}',
                 serialize_config=serialize_config or {},
-                lock=lock,
+                lock=True,
             )
             for _ in range(n_cells)
         ]
@@ -332,6 +331,7 @@ class CellContainer:
                 new_docs.append(doc)
             else:
                 # relpace
+                self.vec_index(cell_id).delete(_offset)
                 self.cell_table(_cell_id).delete_by_offset(_offset)
                 self.doc_store(_cell_id).delete([doc.id])
 
@@ -351,6 +351,7 @@ class CellContainer:
         for doc_id in ids:
             cell_id, offset = self._meta_table.get_address(doc_id)
             if cell_id is not None:
+                self.vec_index(cell_id).delete(offset)
                 self.cell_table(cell_id).delete_by_offset(offset)
                 self.doc_store(cell_id).delete([doc_id])
 
@@ -364,7 +365,7 @@ class CellContainer:
         da = self.doc_store(cell_id).get([doc_id])
         return da[0] if len(da) > 0 else None
 
-    def documents_generator(self, cell_id: int, batch_size: int = 256):
+    def documents_generator(self, cell_id: int, batch_size: int = 1000):
         for docs in self.doc_store(cell_id).batched_iterator(batch_size=batch_size):
             yield docs
 

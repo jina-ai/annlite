@@ -103,9 +103,8 @@ class HnswIndex(BaseIndex):
         return dists[0], ids[0]
 
     def delete(self, ids: List[int]):
-        raise RuntimeError(
-            f'the deletion operation is not allowed for {self.__class__.__name__}!'
-        )
+        for i in ids:
+            self._index.mark_deleted(i)
 
     def update_with_ids(self, x: 'np.ndarray', ids: List[int], **kwargs):
         raise RuntimeError(
