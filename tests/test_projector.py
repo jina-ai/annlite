@@ -58,3 +58,18 @@ def test_wrong_insert_size(build_data, insert_size):
     )
     with pytest.raises(Exception):
         projector.partial_fit(Xt)
+
+
+def test_save_and_load(tmpdir, build_projector):
+    import os
+    from pathlib import Path
+
+    projector_list = build_projector
+
+    for projector in projector_list:
+        projector.dump(Path(os.path.join(tmpdir, 'projector.pkl')))
+        assert os.path.exists(os.path.join(tmpdir, 'projector.pkl')) is True
+
+        projector_ = ProjectorCodec.load(Path(os.path.join(tmpdir, 'projector.pkl')))
+
+        assert projector.components.shape == projector_.components.shape
