@@ -60,10 +60,11 @@ def test_wrong_insert_size(build_data, insert_size):
         projector.partial_fit(Xt)
 
 
-def test_save_and_load(tmpdir, build_projector):
+def test_save_and_load(tmpdir, build_data, build_projector):
     import os
     from pathlib import Path
 
+    Xt = build_data
     projector_list = build_projector
 
     for projector in projector_list:
@@ -71,5 +72,8 @@ def test_save_and_load(tmpdir, build_projector):
         assert os.path.exists(os.path.join(tmpdir, 'projector.pkl')) is True
 
         projector_ = ProjectorCodec.load(Path(os.path.join(tmpdir, 'projector.pkl')))
-
         assert projector.components.shape == projector_.components.shape
+
+        before = projector.encode(Xt)
+        after = projector_.encode(Xt)
+        np.testing.assert_array_almost_equal(before, after, decimal=5)
