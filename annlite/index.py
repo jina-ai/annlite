@@ -43,7 +43,6 @@ class AnnLite(CellContainer):
     :param create_if_missing: if False, do not create the directory path if it is missing.
     :param read_only: if True, the index is not writable.
     :param verbose: if True, will print the debug logging info.
-    :param lock: if True, lock table is enabled for lmdb container.
 
     .. note::
         Remember that the shape of any tensor that contains data points has to be `[n_data, dim]`.
@@ -64,7 +63,6 @@ class AnnLite(CellContainer):
         create_if_missing: bool = True,
         read_only: bool = False,
         verbose: bool = False,
-        lock: bool = True,
         *args,
         **kwargs,
     ):
@@ -137,7 +135,6 @@ class AnnLite(CellContainer):
             expand_step_size=expand_step_size,
             columns=columns,
             data_path=data_path,
-            lock=lock,
             **kwargs,
         )
 
@@ -145,26 +142,23 @@ class AnnLite(CellContainer):
             self._rebuild_index()
 
     def _sanity_check(self, x: 'np.ndarray'):
-        assert len(x.shape) == 2
-        assert x.shape[1] == self.dim
+        assert x.shape == (2, self.dim)
 
         return x.shape
 
-    def train(
-        self, x: 'np.ndarray', auto_save: bool = True, force_retrain: bool = False
-    ):
+    def train(self, x: 'np.ndarray', auto_save: bool = True, force_train: bool = False):
         """Train pqlite with training data.
 
         :param x: the ndarray data for training.
         :param auto_save: if False, will not dump the trained model to ``model_path``.
-        :param force_retrain: if True, enforce to retrain the model, and overwrite the model if ``auto_save=True``.
+        :param force_train: if True, enforce to retrain the model, and overwrite the model if ``auto_save=True``.
 
         """
         n_data, _ = self._sanity_check(x)
 
         if self.is_trained and not force_retrain:
             logger.warning(
-                'The pqlite has been trained or is not trainable. Please use ``force_retrain=True`` to retrain.'
+                'The annlite has been trained or is not trainable. Please use ``force_train=True`` to retrain.'
             )
             return
 
@@ -186,19 +180,19 @@ class AnnLite(CellContainer):
             )
             self.pq_codec.fit(x)
 
-        logger.info(f'The pqlite is successfully trained!')
+        logger.info(f'The annlite is successfully trained!')
 
         if auto_save:
             self.dump_model()
 
     def partial_train(
-        self, x: np.ndarray, auto_save: bool = True, force_retrain: bool = False
+        self, x: np.ndarray, auto_save: bool = True, force_train: bool = False
     ):
         """Train vector quantizers and product quantizers with a minibatch of  data.
 
         :param x: the ndarray data for training.
         :param auto_save: if False, will not dump the trained model to ``model_path``.
-        :param force_retrain: if True, enforce to retrain the model, and overwrite the model if ``auto_save=True``.
+        :param force_train: if True, enforce to retrain the model, and overwrite the model if ``auto_save=True``.
 
         """
         n_data, _ = self._sanity_check(x)
@@ -221,6 +215,9 @@ class AnnLite(CellContainer):
             )
             self.pq_codec.partial_fit(x)
 
+        if auto_save:
+            self.dump_model()
+
     def build_codebook(self):
         """Constructs a codebooks for the vq_codec and pq_codec.
         This step is not necessary if full KMeans is trained used calling `.fit`.
@@ -237,7 +234,7 @@ class AnnLite(CellContainer):
         """
 
         if self.read_only:
-            logger.warning('The pqlite is readonly, cannot add documents')
+            logger.warning('The annlite is readonly, cannot add new documents')
             return
 
         x = to_numpy_array(docs.embeddings)
@@ -256,7 +253,7 @@ class AnnLite(CellContainer):
         :param docs: the documents to update
         """
         if self.read_only:
-            logger.warning('The pqlite is readonly, cannot update documents')
+            logger.warning('The annlite is readonly, cannot update documents')
             return
 
         x = to_numpy_array(docs.embeddings)
