@@ -405,6 +405,13 @@ class MetaTable(Table):
         for doc_id, cell_id, offset in cursor.execute(sql, (time_since,)):
             yield doc_id, cell_id, offset
 
+    def get_latest_address(self):
+        sql = f'SELECT _doc_id, cell_id, offset from {self.name} ORDER BY time_at DESC LIMIT 1;'
+
+        cursor = self._conn.execute(sql)
+        row = cursor.fetchone()
+        return row if row else (None, None)
+
     def get_address(self, doc_id: str):
         sql = f'SELECT cell_id, offset from {self.name} WHERE _doc_id = ?;'
         cursor = self._conn.execute(sql, (doc_id,))
