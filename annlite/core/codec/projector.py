@@ -72,9 +72,9 @@ class ProjectorCodec(BaseCodec):
         :param x: Training vectors with shape=(N, D)
         """
         assert x.dtype == np.float32
-        assert x.shape == (
-            2,
-            self.dim,
+        assert x.ndim == 2
+        assert (
+            x.shape[1] == self.dim,
         ), 'dimension of input data must be equal to "dim"'
         assert (
             x.shape[0] > self.n_components
