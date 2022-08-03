@@ -1,4 +1,5 @@
 import hashlib
+import logging
 from pathlib import Path
 from typing import TYPE_CHECKING, Dict, List, Optional, Union
 
@@ -10,7 +11,7 @@ if TYPE_CHECKING:
     from docarray import DocumentArray
 
 from .container import CellContainer
-from .core import PQCodec, VQCodec
+from .core import PQCodec, ProjectorCodec, VQCodec
 from .enums import Metric
 from .filter import Filter
 from .helper import setup_logging
@@ -33,6 +34,7 @@ class AnnLite(CellContainer):
             each quantized vector, default is None.
     :param n_cells:  number of coarse quantizer clusters, default is 1.
     :param n_probe: number of cells to search for each query, default is 16.
+    :param n_components: number of components to keep.
     :param initial_size: initial capacity assigned to each voronoi cell of coarse quantizer.
             ``n_cells * initial_size`` is the number of vectors that can be stored initially.
             if any cell has reached its capacity, that cell will be automatically expanded.
@@ -54,6 +56,7 @@ class AnnLite(CellContainer):
         n_cells: int = 1,
         n_subvectors: Optional[int] = None,
         n_probe: int = 16,
+        n_components: Optional[int] = None,
         initial_size: Optional[int] = None,
         expand_step_size: int = 10240,
         columns: Optional[List[tuple]] = None,
@@ -72,6 +75,7 @@ class AnnLite(CellContainer):
                 dim % n_subvectors == 0
             ), '"dim" needs to be divisible by "n_subvectors"'
 
+        self.n_components = n_components
         self.n_subvectors = n_subvectors
         self.n_probe = max(n_probe, n_cells)
         self.n_cells = n_cells
@@ -88,6 +92,18 @@ class AnnLite(CellContainer):
         if create_if_missing:
             data_path.mkdir(parents=True, exist_ok=True)
         self.data_path = data_path
+
+        self.projector_codec = None
+        if self._projector_codec_path.exists() and n_components:
+            logger.info(
+                f'Load projector codec (n_components={self.n_components}) from {self.model_path}'
+            )
+            self.projector_codec = ProjectorCodec.load(self._projector_codec_path)
+        elif n_components:
+            logger.info(
+                f'Initialize Projector codec (n_components={self.n_components})'
+            )
+            self.projector_codec = ProjectorCodec(self.n_components)
 
         self.vq_codec = None
         if self._vq_codec_path.exists() and n_cells > 1:
@@ -113,7 +129,9 @@ class AnnLite(CellContainer):
 
         super(AnnLite, self).__init__(
             dim=dim,
+            n_components=n_components,
             metric=metric,
+            projector_codec=self.projector_codec,
             pq_codec=self.pq_codec,
             n_cells=n_cells,
             initial_size=initial_size,
@@ -151,6 +169,12 @@ class AnnLite(CellContainer):
             )
             return
 
+        if self.projector_codec:
+            logger.info(
+                f'Start training Projector codec (n_components={self.n_components}) with {n_data} data...'
+            )
+            self.projector_codec.fit(x)
+
         if self.vq_codec:
             logger.info(
                 f'Start training VQ codec (K={self.n_cells}) with {n_data} data...'
@@ -179,6 +203,12 @@ class AnnLite(CellContainer):
 
         """
         n_data, _ = self._sanity_check(x)
+
+        if self.projector_codec:
+            logging.info(
+                f'Partial training Projector codec (n_components={self.n_components}) with {n_data} data...'
+            )
+            self.projector_codec.partial_fit(x)
 
         if self.vq_codec:
             logger.info(
@@ -212,7 +242,6 @@ class AnnLite(CellContainer):
             return
 
         x = to_numpy_array(docs.embeddings)
-
         n_data, _ = self._sanity_check(x)
 
         assigned_cells = (
@@ -392,13 +421,20 @@ class AnnLite(CellContainer):
 
     def encode(self, x: 'np.ndarray'):
         n_data, _ = self._sanity_check(x)
+        if self.n_components:
+            x = self.projector_codec.encode(x)
+
         y = self.pq_codec.encode(x)
         return y
 
     def decode(self, x: 'np.ndarray'):
         assert len(x.shape) == 2
         assert x.shape[1] == self.n_subvectors
-        return self.pq_codec.decode(x)
+
+        if self.n_components:
+            return self.projector_codec.decode(self.pq_codec.decode(x))
+        else:
+            return self.pq_codec.decode(x)
 
     def model_dir_exists(self):
         """Check whether the model directory exists at the data path"""
@@ -411,6 +447,8 @@ class AnnLite(CellContainer):
     def dump_model(self):
         logger.info(f'Save the trained parameters to {self.model_path}')
         self.create_model_dir()
+        if self.projector_codec:
+            self.projector_codec.dump(self._projector_codec_path)
         if self.vq_codec:
             self.vq_codec.dump(self._vq_codec_path)
         if self.pq_codec:
@@ -423,11 +461,15 @@ class AnnLite(CellContainer):
             self.vec_index(cell_id).reset(capacity=cell_size)
             for docs in self.documents_generator(cell_id, batch_size=10240):
                 x = docs.embeddings
+                if self.n_components:
+                    x = self.projector_codec.encode(x)
                 assigned_cells = np.ones(len(docs), dtype=np.int64) * cell_id
                 super().insert(x, assigned_cells, docs)
 
     @property
     def is_trained(self):
+        if self.projector_codec and (not self.projector_codec.is_trained):
+            return False
         if self.vq_codec and (not self.vq_codec.is_trained):
             return False
         if self.pq_codec and (not self.pq_codec.is_trained):
@@ -436,7 +478,7 @@ class AnnLite(CellContainer):
 
     @property
     def _model_hash(self):
-        key = f'{self.n_cells} x {self.n_subvectors} x {self.metric.name}'
+        key = f'{self.n_components} x {self.n_cells} x {self.n_subvectors} x {self.metric.name}'
         return hashlib.md5(key.encode()).hexdigest()
 
     @property
@@ -450,6 +492,10 @@ class AnnLite(CellContainer):
     @property
     def _pq_codec_path(self):
         return self.model_path / 'pq_codec.bin'
+
+    @property
+    def _projector_codec_path(self):
+        return self.model_path / 'projector_codec.bin'
 
     @property
     def use_smart_probing(self):
@@ -468,6 +514,7 @@ class AnnLite(CellContainer):
             'index_size': self.index_size,
             'n_cells': self.n_cells,
             'dim': self.dim,
+            'n_components': self.n_components,
             'metric': self.metric.name,
             'is_trained': self.is_trained,
         }

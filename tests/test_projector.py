@@ -22,6 +22,7 @@ def build_projector(build_data):
     projector_list = []
     for is_incremental in [True, False]:
         projector = ProjectorCodec(
+            dim=n_features,
             n_components=n_components,
             is_incremental=is_incremental,
             batch_size=batch_size,
@@ -54,7 +55,10 @@ def test_wrong_insert_size(build_data, insert_size):
     Xt = build_data[:insert_size]
 
     projector = ProjectorCodec(
-        n_components=n_components, is_incremental=True, batch_size=batch_size
+        dim=n_features,
+        n_components=n_components,
+        is_incremental=True,
+        batch_size=batch_size,
     )
     with pytest.raises(Exception):
         projector.partial_fit(Xt)
