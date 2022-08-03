@@ -450,6 +450,9 @@ class AnnLite(CellContainer):
         if self.pq_codec:
             self.pq_codec.dump(self._pq_codec_path)
 
+    def dump_index(self):
+        logger.info(f'Save the HNSW indexer to {self.model_path}')
+
     def _rebuild_index(self):
         for cell_id in range(self.n_cells):
             cell_size = self.doc_store(cell_id).size

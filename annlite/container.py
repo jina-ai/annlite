@@ -330,8 +330,8 @@ class CellContainer:
                 new_cells.append(cell_id)
                 new_docs.append(doc)
             else:
-                # relpace
-                self.vec_index(cell_id).delete(_offset)
+                # DELETE and INSERT
+                self.vec_index(_cell_id).delete(_offset)
                 self.cell_table(_cell_id).delete_by_offset(_offset)
                 self.doc_store(_cell_id).delete([doc.id])
 
