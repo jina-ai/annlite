@@ -142,7 +142,8 @@ class AnnLite(CellContainer):
             self._rebuild_index()
 
     def _sanity_check(self, x: 'np.ndarray'):
-        assert x.shape == (2, self.dim)
+        assert x.ndim == 2
+        assert x.shape[1] == self.dim
 
         return x.shape
 
@@ -454,21 +455,55 @@ class AnnLite(CellContainer):
                 self.vec_index(cell_id).dump(self.index_path / f'cell_{cell_id}.hnsw')
                 self.cell_table(cell_id).dump(self.index_path / f'cell_{cell_id}.db')
         except Exception as ex:
+            logger.error(f'Failed to dump the indexer, {ex!r}')
             import shutil
 
             shutil.rmtree(self.index_path)
 
+    def snapshot(self):
+        self.dump_model()
+        self.dump_index()
+
+    @property
+    def snapshot_path(self):
+        snapshots = list(self.data_path.glob('*-SNAPSHOT'))
+        if len(snapshots) > 0:
+            return snapshots[0]
+        return None
+
     def _rebuild_index(self):
-        for cell_id in range(self.n_cells):
-            cell_size = self.doc_store(cell_id).size
-            logger.debug(f'Rebuild the index of cell-{cell_id} ({cell_size} docs)...')
-            self.vec_index(cell_id).reset(capacity=cell_size)
-            for docs in self.documents_generator(cell_id, batch_size=10240):
-                x = docs.embeddings
-                if self.n_components:
-                    x = self.projector_codec.encode(x)
-                assigned_cells = np.ones(len(docs), dtype=np.int64) * cell_id
-                super().insert(x, assigned_cells, docs)
+        if self.snapshot_path:
+            logger.info(f'Load the indexer from snapshot {self.snapshot_path}')
+            self.meta_table.load(self.snapshot_path / 'meta_table.db')
+            for cell_id in range(self.n_cells):
+                self.vec_index(cell_id).load(
+                    self.snapshot_path / f'cell_{cell_id}.hnsw'
+                )
+                self.cell_table(cell_id).load(self.snapshot_path / f'cell_{cell_id}.db')
+        else:
+            logger.info(f'Rebuild the indexer from scratch')
+
+            to_snapshot = False
+            for cell_id in range(self.n_cells):
+                cell_size = self.doc_store(cell_id).size
+
+                if cell_size == 0:
+                    continue  # skip empty cell
+
+                to_snapshot = True
+
+                logger.debug(
+                    f'Rebuild the index of cell-{cell_id} ({cell_size} docs)...'
+                )
+                for docs in self.documents_generator(cell_id, batch_size=10240):
+                    x = to_numpy_array(docs.embeddings)
+
+                    assigned_cells = np.ones(len(docs), dtype=np.int64) * cell_id
+                    super().insert(x, assigned_cells, docs)
+                logger.debug(f'Rebuild the index of cell-{cell_id} done')
+
+            if to_snapshot:
+                self.snapshot()
 
     @property
     def is_trained(self):
@@ -491,17 +526,17 @@ class AnnLite(CellContainer):
 
     @property
     def _index_hash(self):
-        latest_addr = self.meta_table.get_latest_address()
-        date_time = latest_addr[-1] if latest_addr else None
+        latest_commit = self.meta_table.get_latest_commit()
+        date_time = latest_commit[-1] if latest_commit else None
         if date_time:
-            return date_time.isoformat()
+            return date_time.isoformat('#', 'seconds')
 
         return None
 
     @property
     def index_path(self):
         if self._index_hash:
-            return self.model_path / f'{self._index_hash}-SNAPSHOT'
+            return self.data_path / f'{self._index_hash}-SNAPSHOT'
 
     @property
     def _vq_codec_path(self):

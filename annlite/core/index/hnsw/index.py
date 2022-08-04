@@ -62,10 +62,10 @@ class HnswIndex(BaseIndex):
             self._index.set_ef(self.ef_search)
 
     def load(self, index_file: Union[str, Path]):
-        self._index.load_index(index_file)
+        self._index.load_index(str(index_file))
 
     def dump(self, index_file: Union[str, Path]):
-        self._index.save_index(index_file)
+        self._index.save_index(str(index_file))
 
     def add_with_ids(self, x: 'np.ndarray', ids: List[int]):
         max_id = max(ids) + 1

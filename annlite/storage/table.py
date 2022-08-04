@@ -115,6 +115,8 @@ class Table:
             self._conn_name = data_path / f'{name}.db'
         self._name = name
 
+        self.detect_types = detect_types
+
         self._conn = sqlite3.connect(
             self._conn_name, detect_types=detect_types, check_same_thread=False
         )
@@ -401,24 +403,26 @@ class MetaTable(Table):
                         (_doc_id TEXT NOT NULL PRIMARY KEY,
                          cell_id INTEGER NOT NULL,
                          offset INTEGER NOT NULL,
-                         time_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)'''
+                         time_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                         _deleted NUMERIC DEFAULT 0)'''
 
         self._conn.execute(sql)
 
-        self._conn.execute(f'CREATE INDEX idx__time_at_ ON {self.name}(time_at)')
+        self._conn.execute(f'CREATE INDEX idx_time_at_ ON {self.name}(time_at)')
+        self._conn.execute(f'CREATE INDEX idx__delete_ ON {self.name}(_deleted)')
 
         self._conn.commit()
 
     def iter_addresses(
         self, time_since: 'datetime.datetime' = datetime.datetime(2020, 2, 2, 0, 0)
     ):
-        sql = f'SELECT _doc_id, cell_id, offset from {self.name} WHERE time_at > ? ORDER BY time_at ASC;'
+        sql = f'SELECT _doc_id, cell_id, offset from {self.name} WHERE time_at > ? AND _deleted = 0 ORDER BY time_at ASC;'
 
         cursor = self._conn.cursor()
         for doc_id, cell_id, offset in cursor.execute(sql, (time_since,)):
             yield doc_id, cell_id, offset
 
-    def get_latest_address(self):
+    def get_latest_commit(self):
         sql = f'SELECT _doc_id, cell_id, offset, time_at from {self.name} ORDER BY time_at DESC LIMIT 1;'
 
         cursor = self._conn.execute(sql)
@@ -426,16 +430,29 @@ class MetaTable(Table):
         return row
 
     def get_address(self, doc_id: str):
-        sql = f'SELECT cell_id, offset from {self.name} WHERE _doc_id = ?;'
+        sql = f'SELECT cell_id, offset from {self.name} WHERE _doc_id = ? AND _deleted = 0 LIMIT 1;'
         cursor = self._conn.execute(sql, (doc_id,))
         row = cursor.fetchone()
         return (row[0], row[1]) if row else (None, None)
 
-    def add_address(self, doc_id: str, cell_id: int, offset: int, commit: bool = True):
-        sql = f'INSERT OR REPLACE INTO {self.name}(_doc_id, cell_id, offset, time_at) VALUES (?, ?, ?, ?);'
+    def delete_address(self, doc_id: str, commit: bool = True):
+        sql = f'UPDATE {self.name} SET _deleted = 1, time_at = ? WHERE _doc_id = ?'
         self._conn.execute(
             sql,
-            (doc_id, cell_id, offset, time_now()),
+            (
+                time_now(),
+                doc_id,
+            ),
+        )
+        print(f'Deleted {doc_id} at: {time_now()}')
+        if commit:
+            self._conn.commit()
+
+    def add_address(self, doc_id: str, cell_id: int, offset: int, commit: bool = True):
+        sql = f'INSERT OR REPLACE INTO {self.name}(_doc_id, cell_id, offset, time_at, _deleted) VALUES (?, ?, ?, ?, ?);'
+        self._conn.execute(
+            sql,
+            (doc_id, cell_id, offset, time_now(), 0),
         )
         if commit:
             self._conn.commit()
@@ -447,11 +464,11 @@ class MetaTable(Table):
         offsets: Union[List[int], np.ndarray],
         commit: bool = True,
     ):
-        sql = f'INSERT OR REPLACE INTO {self.name}(_doc_id, cell_id, offset, time_at) VALUES (?, ?, ?, ?);'
+        sql = f'INSERT OR REPLACE INTO {self.name}(_doc_id, cell_id, offset, time_at, _deleted) VALUES (?, ?, ?, ?, ?);'
         self._conn.executemany(
             sql,
             [
-                (doc_id, cell_id, offset, time_now())
+                (doc_id, cell_id, offset, time_now(), 0)
                 for doc_id, cell_id, offset in zip(doc_ids, cell_ids, offsets)
             ],
         )
