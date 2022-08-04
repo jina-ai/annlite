@@ -404,6 +404,9 @@ class MetaTable(Table):
                          time_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)'''
 
         self._conn.execute(sql)
+
+        self._conn.execute(f'CREATE INDEX idx__time_at_ ON {self.name}(time_at)')
+
         self._conn.commit()
 
     def iter_addresses(

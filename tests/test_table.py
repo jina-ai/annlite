@@ -127,4 +127,5 @@ def test_create_meta_table(tmpdir):
     assert addresses == [('0', 1, 2)]
 
     addr = table.get_latest_address()
-    assert addr == ('0', 1, 2)
+    assert addr[:3] == ('0', 1, 2)
+    assert addr[-1] > time_since
