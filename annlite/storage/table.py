@@ -145,6 +145,16 @@ class Table:
         self.drop_table()
         self.create_table()
 
+    def load(self, data_file: Union[str, Path]):
+        disk_db = sqlite3.connect(data_file, detect_types=self.detect_types)
+        disk_db.backup(self._conn)
+        disk_db.close()
+
+    def dump(self, data_file: Union[str, Path]):
+        backup_db = sqlite3.connect(data_file, detect_types=self.detect_types)
+        self._conn.backup(backup_db)
+        backup_db.close()
+
     @property
     def name(self):
         return self._name
@@ -406,7 +416,7 @@ class MetaTable(Table):
             yield doc_id, cell_id, offset
 
     def get_latest_address(self):
-        sql = f'SELECT _doc_id, cell_id, offset from {self.name} ORDER BY time_at DESC LIMIT 1;'
+        sql = f'SELECT _doc_id, cell_id, offset, time_at from {self.name} ORDER BY time_at DESC LIMIT 1;'
 
         cursor = self._conn.execute(sql)
         row = cursor.fetchone()

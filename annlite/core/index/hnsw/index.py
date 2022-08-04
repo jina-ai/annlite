@@ -48,7 +48,7 @@ class HnswIndex(BaseIndex):
             logger.info(
                 f'indexer will be loaded from {self.index_file}',
             )
-            self.load_index(self.index_file)
+            self.load(self.index_file)
         else:
             if self.index_file:
                 raise FileNotFoundError(
@@ -61,10 +61,10 @@ class HnswIndex(BaseIndex):
             )
             self._index.set_ef(self.ef_search)
 
-    def load_index(self, index_file: Union[str, Path]):
+    def load(self, index_file: Union[str, Path]):
         self._index.load_index(index_file)
 
-    def save_index(self, index_file: Union[str, Path]):
+    def dump(self, index_file: Union[str, Path]):
         self._index.save_index(index_file)
 
     def add_with_ids(self, x: 'np.ndarray', ids: List[int]):

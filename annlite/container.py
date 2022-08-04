@@ -373,6 +373,10 @@ class CellContainer:
     def cell_tables(self):
         return self._cell_tables
 
+    @property
+    def cell_indexes(self):
+        return self._vec_indexes
+
     def cell_table(self, cell_id: int):
         return self._cell_tables[cell_id]
 
