@@ -129,7 +129,6 @@ class AnnLite(CellContainer):
 
         super(AnnLite, self).__init__(
             dim=dim,
-            n_components=n_components,
             metric=metric,
             projector_codec=self.projector_codec,
             pq_codec=self.pq_codec,

@@ -21,7 +21,6 @@ class CellContainer:
     def __init__(
         self,
         dim: int,
-        n_components: Optional[int] = None,
         metric: Metric = Metric.COSINE,
         projector_codec: Optional['ProjectorCodec'] = None,
         pq_codec: Optional['PQCodec'] = None,
@@ -36,7 +35,7 @@ class CellContainer:
         **kwargs,
     ):
         self.dim = dim
-        self.n_components = n_components
+        self.n_components = projector_codec.n_components if projector_codec else 0
         self.metric = metric
         self.n_cells = n_cells
         self.data_path = data_path
@@ -44,7 +43,7 @@ class CellContainer:
         if pq_codec is not None:
             self._vec_indexes = [
                 PQIndex(
-                    n_components or dim,
+                    self.n_components or dim,
                     pq_codec,
                     metric=metric,
                     initial_size=initial_size,
@@ -57,7 +56,7 @@ class CellContainer:
         else:
             self._vec_indexes = [
                 HnswIndex(
-                    dim=n_components or dim,
+                    dim=self.n_components or dim,
                     metric=metric,
                     initial_size=initial_size,
                     expand_step_size=expand_step_size,
