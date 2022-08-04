@@ -7,6 +7,7 @@ from loguru import logger
 
 if TYPE_CHECKING:
     from .core.codec.pq import PQCodec
+    from .core.codec.projector import ProjectorCodec
 
 from .core.index.hnsw import HnswIndex
 from .core.index.pq_index import PQIndex
@@ -21,6 +22,7 @@ class CellContainer:
         self,
         dim: int,
         metric: Metric = Metric.COSINE,
+        projector_codec: Optional['ProjectorCodec'] = None,
         pq_codec: Optional['PQCodec'] = None,
         n_cells: int = 1,
         initial_size: Optional[int] = None,
@@ -33,6 +35,7 @@ class CellContainer:
         **kwargs,
     ):
         self.dim = dim
+        self.n_components = projector_codec.n_components if projector_codec else None
         self.metric = metric
         self.n_cells = n_cells
         self.data_path = data_path
@@ -40,7 +43,7 @@ class CellContainer:
         if pq_codec is not None:
             self._vec_indexes = [
                 PQIndex(
-                    dim,
+                    self.n_components or dim,
                     pq_codec,
                     metric=metric,
                     initial_size=initial_size,
@@ -53,7 +56,7 @@ class CellContainer:
         else:
             self._vec_indexes = [
                 HnswIndex(
-                    dim,
+                    dim=self.n_components or dim,
                     metric=metric,
                     initial_size=initial_size,
                     expand_step_size=expand_step_size,
@@ -62,6 +65,8 @@ class CellContainer:
                 )
                 for _ in range(n_cells)
             ]
+
+        self._projector_codec = projector_codec
 
         self._doc_stores = [
             DocStorage(
@@ -188,6 +193,9 @@ class CellContainer:
         limit: int = 10,
         include_metadata: bool = False,
     ):
+        if self._projector_codec:
+            query = self._projector_codec.encode(query)
+
         topk_dists, topk_docs = [], []
         for x, cell_idx in zip(query, cells):
             # x.shape = (self.dim,)
@@ -220,6 +228,9 @@ class CellContainer:
         where_params: Tuple = (),
         limit: int = 10,
     ):
+        if self._projector_codec:
+            query = self._projector_codec.encode(query)
+
         topk_dists, topk_ids = [], []
         for x, cell_idx in zip(query, cells):
             dists, ids, cells = self.ivf_search(
@@ -241,6 +252,9 @@ class CellContainer:
         docs: 'DocumentArray',
     ):
         assert len(docs) == len(data)
+
+        if self._projector_codec:
+            data = self._projector_codec.encode(data)
 
         unique_cells, unique_cell_counts = np.unique(cells, return_counts=True)
 
