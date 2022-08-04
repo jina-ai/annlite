@@ -410,7 +410,7 @@ class MetaTable(Table):
 
         cursor = self._conn.execute(sql)
         row = cursor.fetchone()
-        return row if row else (None, None)
+        return row
 
     def get_address(self, doc_id: str):
         sql = f'SELECT cell_id, offset from {self.name} WHERE _doc_id = ?;'

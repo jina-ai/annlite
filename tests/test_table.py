@@ -111,7 +111,7 @@ def test_create_meta_table(tmpdir):
 
     table = MetaTable('meta_test', data_path=tmpdir)
     addr = table.get_latest_address()
-    assert addr == (None, None)
+    assert addr is None
 
     table.add_address('0', 0, 1)
     table.add_address('2', 1, 5)
