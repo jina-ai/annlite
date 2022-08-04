@@ -432,17 +432,9 @@ class AnnLite(CellContainer):
         else:
             return self.pq_codec.decode(x)
 
-    def model_dir_exists(self):
-        """Check whether the model directory exists at the data path"""
-        return self.model_path.exists()
-
-    def create_model_dir(self):
-        """Create a new directory at the data path to save model."""
-        self.model_path.mkdir(exist_ok=True)
-
     def dump_model(self):
         logger.info(f'Save the trained parameters to {self.model_path}')
-        self.create_model_dir()
+        self.model_path.mkdir(exist_ok=True)
         if self.projector_codec:
             self.projector_codec.dump(self._projector_codec_path)
         if self.vq_codec:
