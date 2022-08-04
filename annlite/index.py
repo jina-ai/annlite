@@ -156,7 +156,7 @@ class AnnLite(CellContainer):
         """
         n_data, _ = self._sanity_check(x)
 
-        if self.is_trained and not force_retrain:
+        if self.is_trained and not force_train:
             logger.warning(
                 'The annlite has been trained or is not trainable. Please use ``force_train=True`` to retrain.'
             )
@@ -443,7 +443,20 @@ class AnnLite(CellContainer):
             self.pq_codec.dump(self._pq_codec_path)
 
     def dump_index(self):
-        logger.info(f'Save the HNSW indexer to {self.model_path}')
+        logger.info(f'Save the annlite indexer to {self.index_path}')
+
+        try:
+            self.index_path.mkdir(parents=True)
+
+            self.meta_table.dump(self.index_path / 'meta_table.db')
+
+            for cell_id in range(self.n_cells):
+                self.vec_index(cell_id).dump(self.index_path / f'cell_{cell_id}.hnsw')
+                self.cell_table(cell_id).dump(self.index_path / f'cell_{cell_id}.db')
+        except Exception as ex:
+            import shutil
+
+            shutil.rmtree(self.index_path)
 
     def _rebuild_index(self):
         for cell_id in range(self.n_cells):
@@ -475,6 +488,20 @@ class AnnLite(CellContainer):
     @property
     def model_path(self):
         return self.data_path / self._model_hash
+
+    @property
+    def _index_hash(self):
+        latest_addr = self.meta_table.get_latest_address()
+        date_time = latest_addr[-1] if latest_addr else None
+        if date_time:
+            return date_time.isoformat()
+
+        return None
+
+    @property
+    def index_path(self):
+        if self._index_hash:
+            return self.model_path / f'{self._index_hash}-SNAPSHOT'
 
     @property
     def _vq_codec_path(self):
