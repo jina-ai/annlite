@@ -35,7 +35,7 @@ class CellContainer:
         **kwargs,
     ):
         self.dim = dim
-        self.n_components = projector_codec.n_components if projector_codec else 0
+        self.n_components = projector_codec.n_components if projector_codec else None
         self.metric = metric
         self.n_cells = n_cells
         self.data_path = data_path
