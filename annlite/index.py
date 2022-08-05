@@ -103,7 +103,7 @@ class AnnLite(CellContainer):
             logger.info(
                 f'Initialize Projector codec (n_components={self.n_components})'
             )
-            self.projector_codec = ProjectorCodec(self.n_components)
+            self.projector_codec = ProjectorCodec(dim, n_components=self.n_components)
 
         self.vq_codec = None
         if self._vq_codec_path.exists():
@@ -159,7 +159,7 @@ class AnnLite(CellContainer):
         assert x.ndim == 2, 'inputs must be a 2D array'
         assert (
             x.shape[1] == self.dim
-        ), 'inputs must have the same dimension as the index'
+        ), f'inputs must have the same dimension as the index , got {x.shape[1]}, expected {self.dim}'
 
         return x.shape
 
@@ -492,6 +492,15 @@ class AnnLite(CellContainer):
             )
         return None
 
+    @property
+    def snapshot_path(self):
+        paths = list(
+            (self.data_path / f'snapshot-{self.params_hash}').glob(f'*-SNAPSHOT')
+        )
+        if paths:
+            return paths[0]
+        return None
+
     def dump_model(self):
         logger.info(f'Save the parameters to {self.model_path}')
         self.model_path.mkdir(parents=True, exist_ok=True)
@@ -524,12 +533,14 @@ class AnnLite(CellContainer):
         self.dump_index()
 
     def _rebuild_index(self):
-        if self.index_path.exists():
-            logger.info(f'Load the indexer from snapshot {self.index_path}')
-            self.meta_table.load(self.index_path / 'meta_table.db')
+        if self.snapshot_path:
+            logger.info(f'Load the indexer from snapshot {self.snapshot_path}')
+            self.meta_table.load(self.snapshot_path / 'meta_table.db')
             for cell_id in range(self.n_cells):
-                self.vec_index(cell_id).load(self.index_path / f'cell_{cell_id}.hnsw')
-                self.cell_table(cell_id).load(self.index_path / f'cell_{cell_id}.db')
+                self.vec_index(cell_id).load(
+                    self.snapshot_path / f'cell_{cell_id}.hnsw'
+                )
+                self.cell_table(cell_id).load(self.snapshot_path / f'cell_{cell_id}.db')
         else:
             logger.info(f'Rebuild the indexer from scratch')
             dump_after_building = False
