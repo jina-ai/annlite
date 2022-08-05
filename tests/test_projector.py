@@ -48,18 +48,6 @@ def test_encode_decode(build_data, build_projector):
         assert original_vecs.shape == Xt.shape
 
 
-@pytest.mark.parametrize('insert_size', [10, 190, 390])
-def test_wrong_insert_size(build_data, insert_size):
-    Xt = build_data[:insert_size]
-
-    projector = ProjectorCodec(
-        dim=n_features,
-        n_components=n_components,
-    )
-    with pytest.raises(Exception):
-        projector.partial_fit(Xt)
-
-
 def test_save_and_load(tmpdir, build_data, build_projector):
     import os
     from pathlib import Path
