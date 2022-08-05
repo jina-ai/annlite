@@ -175,7 +175,7 @@ class AnnLite(CellContainer):
 
         if self.is_trained and not force_train:
             logger.warning(
-                'The annlite has been trained or is not trainable. Please use ``force_train=True`` to retrain.'
+                'The indexer has been trained or is not trainable. Please use ``force_train=True`` to retrain.'
             )
             return
 

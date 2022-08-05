@@ -36,7 +36,7 @@ class ProjectorCodec(BaseCodec):
         super(ProjectorCodec, self).__init__(require_train=True)
         self.dim = dim
         self.n_components = n_components
-        assert self.dim > self.n_components, (
+        assert self.dim >= self.n_components, (
             f'the dimension after projector should be less than original dimension, got '
             f'original dimension: {self.dim} and projector dimension: {self.n_components}'
         )
