@@ -17,6 +17,8 @@ from .filter import Filter
 from .helper import setup_logging
 from .math import cdist, top_k
 
+MAX_TRAINING_DATA_SIZE = 10240
+
 
 class AnnLite(CellContainer):
     """:class:`AnnLite` is an approximate nearest neighbor search library.
@@ -72,7 +74,7 @@ class AnnLite(CellContainer):
             assert (
                 dim % n_subvectors == 0
             ), '"dim" needs to be divisible by "n_subvectors"'
-
+        self.dim = dim
         self.n_components = n_components
         self.n_subvectors = n_subvectors
         self.n_probe = max(n_probe, n_cells)
@@ -137,6 +139,18 @@ class AnnLite(CellContainer):
             data_path=data_path,
             **kwargs,
         )
+
+        if not self.is_trained and self.total_docs > 0:
+            # train the index from scratch based on the data in the data_path
+            logger.info(f'Train the index by reading data from {self.data_path}')
+            total_size = 0
+            # TODO: add a progress bar
+            for docs in self.documents_generator(0, batch_size=1024):
+                x = to_numpy_array(docs.embeddings)
+                total_size += x.shape[0]
+                self.partial_train(x, auto_save=True, force_train=True)
+                if total_size >= MAX_TRAINING_DATA_SIZE:
+                    break
 
         if self.total_docs > 0:
             self._rebuild_index()
@@ -434,24 +448,30 @@ class AnnLite(CellContainer):
 
     @property
     def params_hash(self):
-        model_metas = f'dim: {self.dim} n_cells: {self.n_cells} metric: {self.metric} n_components: {self.n_components} n_subvectors: {self.n_subvectors}'
+        model_metas = (
+            f'dim: {self.dim} '
+            f'metric: {self.metric} '
+            f'n_cells: {self.n_cells} '
+            f'n_components: {self.n_components} '
+            f'n_subvectors: {self.n_subvectors}'
+        )
         return hashlib.md5(f'{model_metas}'.encode()).hexdigest()
 
     @property
     def model_path(self):
-        return self.data_path / 'parameters'
+        return self.data_path / f'parameters-{self.params_hash}'
 
     @property
     def _vq_codec_path(self):
-        return self.model_path / f'vq_codec.{self.params_hash}.params'
+        return self.model_path / f'vq_codec.params'
 
     @property
     def _pq_codec_path(self):
-        return self.model_path / f'pq_codec.{self.params_hash}.params'
+        return self.model_path / f'pq_codec.params'
 
     @property
     def _projector_codec_path(self):
-        return self.model_path / f'projector_codec.{self.params_hash}.params'
+        return self.model_path / f'projector_codec.params'
 
     @property
     def index_hash(self):
@@ -464,13 +484,17 @@ class AnnLite(CellContainer):
 
     @property
     def index_path(self):
-        if self._index_hash:
-            return self.data_path / f'{self.index_hash}-SNAPSHOT'
+        if self.index_hash:
+            return (
+                self.data_path
+                / f'snapshot-{self.params_hash}'
+                / f'{self.index_hash}-SNAPSHOT'
+            )
         return None
 
     def dump_model(self):
-        logger.info(f'Save the trained parameters to {self.model_path}')
-        self.model_path.mkdir(exist_ok=True)
+        logger.info(f'Save the parameters to {self.model_path}')
+        self.model_path.mkdir(parents=True, exist_ok=True)
         if self.projector_codec:
             self.projector_codec.dump(self._projector_codec_path)
         if self.vq_codec:
@@ -479,7 +503,7 @@ class AnnLite(CellContainer):
             self.pq_codec.dump(self._pq_codec_path)
 
     def dump_index(self):
-        logger.info(f'Save the annlite indexer to {self.index_path}')
+        logger.info(f'Save the indexer to {self.index_path}')
 
         try:
             self.index_path.mkdir(parents=True)
@@ -495,37 +519,27 @@ class AnnLite(CellContainer):
 
             shutil.rmtree(self.index_path)
 
-    def snapshot(self):
+    def dump(self):
         self.dump_model()
         self.dump_index()
 
-    @property
-    def snapshot_path(self):
-        snapshots = list(self.data_path.glob('*-SNAPSHOT'))
-        if len(snapshots) > 0:
-            return snapshots[0]
-        return None
-
     def _rebuild_index(self):
-        if self.snapshot_path:
-            logger.info(f'Load the indexer from snapshot {self.snapshot_path}')
-            self.meta_table.load(self.snapshot_path / 'meta_table.db')
+        if self.index_path.exists():
+            logger.info(f'Load the indexer from snapshot {self.index_path}')
+            self.meta_table.load(self.index_path / 'meta_table.db')
             for cell_id in range(self.n_cells):
-                self.vec_index(cell_id).load(
-                    self.snapshot_path / f'cell_{cell_id}.hnsw'
-                )
-                self.cell_table(cell_id).load(self.snapshot_path / f'cell_{cell_id}.db')
+                self.vec_index(cell_id).load(self.index_path / f'cell_{cell_id}.hnsw')
+                self.cell_table(cell_id).load(self.index_path / f'cell_{cell_id}.db')
         else:
             logger.info(f'Rebuild the indexer from scratch')
-
-            to_snapshot = False
+            dump_after_building = False
             for cell_id in range(self.n_cells):
                 cell_size = self.doc_store(cell_id).size
 
                 if cell_size == 0:
                     continue  # skip empty cell
 
-                to_snapshot = True
+                dump_after_building = True
 
                 logger.debug(
                     f'Rebuild the index of cell-{cell_id} ({cell_size} docs)...'
@@ -537,8 +551,8 @@ class AnnLite(CellContainer):
                     super().insert(x, assigned_cells, docs)
                 logger.debug(f'Rebuild the index of cell-{cell_id} done')
 
-            if to_snapshot:
-                self.snapshot()
+            if dump_after_building:
+                self.dump()
 
     @property
     def is_trained(self):
