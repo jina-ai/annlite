@@ -25,7 +25,7 @@ class AnnLite(CellContainer):
 
         .. highlight:: python
         .. code-block:: python
-            pqlite = AnnLite(dim=256, metric='cosine')
+            pqlite = AnnLite(256, metric='cosine')
 
     :param dim: dimensionality of input vectors. there are 2 constraints on dim:
             (1) it needs to be divisible by n_subvectors; (2) it needs to be a multiple of 4.*
@@ -39,7 +39,7 @@ class AnnLite(CellContainer):
             ``n_cells * initial_size`` is the number of vectors that can be stored initially.
             if any cell has reached its capacity, that cell will be automatically expanded.
             If you need to add vectors frequently, a larger value for init_size is recommended.
-    :param data_path: location of directory to store the database.
+    :param data_path: path to the directory where the data is stored.
     :param create_if_missing: if False, do not create the directory path if it is missing.
     :param read_only: if True, the index is not writable.
     :param verbose: if True, will print the debug logging info.
@@ -94,7 +94,7 @@ class AnnLite(CellContainer):
         self.projector_codec = None
         if self._projector_codec_path.exists() and n_components:
             logger.info(
-                f'Load projector codec (n_components={self.n_components}) from {self.model_path}'
+                f'Load pre-trained projector codec (n_components={self.n_components}) from {self.model_path}'
             )
             self.projector_codec = ProjectorCodec.load(self._projector_codec_path)
         elif n_components:
@@ -142,8 +142,10 @@ class AnnLite(CellContainer):
             self._rebuild_index()
 
     def _sanity_check(self, x: 'np.ndarray'):
-        assert x.ndim == 2
-        assert x.shape[1] == self.dim
+        assert x.ndim == 2, 'inputs must be a 2D array'
+        assert (
+            x.shape[1] == self.dim
+        ), 'inputs must have the same dimension as the index'
 
         return x.shape
 
@@ -189,7 +191,7 @@ class AnnLite(CellContainer):
     def partial_train(
         self, x: np.ndarray, auto_save: bool = True, force_train: bool = False
     ):
-        """Train vector quantizers and product quantizers with a minibatch of  data.
+        """Train indexer parameters with a minibatch of  data.
 
         :param x: the ndarray data for training.
         :param auto_save: if False, will not dump the trained model to ``model_path``.
@@ -197,6 +199,12 @@ class AnnLite(CellContainer):
 
         """
         n_data, _ = self._sanity_check(x)
+
+        if self.is_trained and not force_train:
+            logger.warning(
+                'The annlite has been trained or is not trainable. Please use ``force_train=True`` to retrain.'
+            )
+            return
 
         if self.projector_codec:
             logging.info(
@@ -219,23 +227,14 @@ class AnnLite(CellContainer):
         if auto_save:
             self.dump_model()
 
-    def build_codebook(self):
-        """Constructs a codebooks for the vq_codec and pq_codec.
-        This step is not necessary if full KMeans is trained used calling `.fit`.
-        """
-        if self.vq_codec:
-            self.vq_codec.build_codebook()
-        if self.pq_codec:
-            self.pq_codec.build_codebook()
-
     def index(self, docs: 'DocumentArray', **kwargs):
-        """Index new documents
+        """Index new documents.
 
-        :param docs: the documents to index
+        :param docs: the document array to be indexed.
         """
 
         if self.read_only:
-            logger.warning('The annlite is readonly, cannot add new documents')
+            logger.error('The indexer is readonly, cannot add new documents')
             return
 
         x = to_numpy_array(docs.embeddings)
@@ -249,12 +248,12 @@ class AnnLite(CellContainer):
         return super(AnnLite, self).insert(x, assigned_cells, docs)
 
     def update(self, docs: 'DocumentArray', **kwargs):
-        """Update existing documents
+        """Update existing documents.
 
-        :param docs: the documents to update
+        :param docs: the document array to be updated.
         """
         if self.read_only:
-            logger.warning('The annlite is readonly, cannot update documents')
+            logger.error('The indexer is readonly, cannot update documents')
             return
 
         x = to_numpy_array(docs.embeddings)
@@ -278,8 +277,8 @@ class AnnLite(CellContainer):
     ):
         """Search the index, and attach matches to the query Documents in `docs`
 
-        :param docs: the query documents to search
-        :param filter: the filtering conditions
+        :param docs: the document array to be searched.
+        :param filter: the filter to be applied to the search.
         :param limit: the number of results to get for each query document in search
         :param include_metadata: whether to return document metadata in response.
         """
