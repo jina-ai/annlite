@@ -63,6 +63,18 @@ class PQCodec(BaseCodec):
         self.kmeans = []
         self.n_init = n_init
 
+    def __hash__(self):
+        return hash(
+            (
+                self.__class__.__name__,
+                self.dim,
+                self.n_subvectors,
+                self.n_clusters,
+                self.metric,
+                self.code_dtype,
+            )
+        )
+
     def fit(self, x: 'np.ndarray', iter: int = 100):
         """Train the K-Means for each cartesian product
 

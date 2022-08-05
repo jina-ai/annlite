@@ -1,3 +1,4 @@
+import hashlib
 from pathlib import Path
 from typing import TYPE_CHECKING, Dict, List, Optional, Tuple
 
@@ -34,10 +35,14 @@ class CellContainer:
         **kwargs,
     ):
         self.dim = dim
-        self.n_components = projector_codec.n_components if projector_codec else None
         self.metric = metric
         self.n_cells = n_cells
         self.data_path = data_path
+
+        self._pq_codec = pq_codec
+        self._projector_codec = projector_codec
+
+        self.n_components = projector_codec.n_components if projector_codec else None
 
         if pq_codec is not None:
             self._vec_indexes = [
@@ -64,8 +69,6 @@ class CellContainer:
                 )
                 for _ in range(n_cells)
             ]
-
-        self._projector_codec = projector_codec
 
         self._doc_stores = [
             DocStorage(

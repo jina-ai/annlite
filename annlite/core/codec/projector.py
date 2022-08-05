@@ -66,6 +66,17 @@ class ProjectorCodec(BaseCodec):
                 n_components=self.n_components, batch_size=self.batch_size
             )
 
+    def __hash__(self):
+        return hash(
+            (
+                self.__class__.__name__,
+                self.dim,
+                self.n_components,
+                self.whiten,
+                self.svd_solver,
+            )
+        )
+
     def fit(self, x: 'np.ndarray'):
         """Train projector model
 

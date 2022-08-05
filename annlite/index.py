@@ -92,7 +92,7 @@ class AnnLite(CellContainer):
         self.data_path = data_path
 
         self.projector_codec = None
-        if self._projector_codec_path.exists() and n_components:
+        if self._projector_codec_path.exists():
             logger.info(
                 f'Load pre-trained projector codec (n_components={self.n_components}) from {self.model_path}'
             )
@@ -104,7 +104,7 @@ class AnnLite(CellContainer):
             self.projector_codec = ProjectorCodec(self.n_components)
 
         self.vq_codec = None
-        if self._vq_codec_path.exists() and n_cells > 1:
+        if self._vq_codec_path.exists():
             logger.info(
                 f'Load trained VQ codec (K={self.n_cells}) from {self.model_path}'
             )
@@ -114,7 +114,7 @@ class AnnLite(CellContainer):
             self.vq_codec = VQCodec(self.n_cells, metric=self.metric)
 
         self.pq_codec = None
-        if self._pq_codec_path.exists() and n_subvectors:
+        if self._pq_codec_path.exists():
             logger.info(
                 f'Load trained PQ codec (n_subvectors={self.n_subvectors}) from {self.model_path}'
             )
@@ -432,6 +432,42 @@ class AnnLite(CellContainer):
         else:
             return self.pq_codec.decode(x)
 
+    @property
+    def params_hash(self):
+        model_metas = f'dim: {self.dim} n_cells: {self.n_cells} metric: {self.metric} n_components: {self.n_components} n_subvectors: {self.n_subvectors}'
+        return hashlib.md5(f'{model_metas}'.encode()).hexdigest()
+
+    @property
+    def model_path(self):
+        return self.data_path / 'parameters'
+
+    @property
+    def _vq_codec_path(self):
+        return self.model_path / f'vq_codec.{self.params_hash}.params'
+
+    @property
+    def _pq_codec_path(self):
+        return self.model_path / f'pq_codec.{self.params_hash}.params'
+
+    @property
+    def _projector_codec_path(self):
+        return self.model_path / f'projector_codec.{self.params_hash}.params'
+
+    @property
+    def index_hash(self):
+        latest_commit = self.meta_table.get_latest_commit()
+        date_time = latest_commit[-1] if latest_commit else None
+        if date_time:
+            return date_time.isoformat('#', 'seconds')
+
+        return None
+
+    @property
+    def index_path(self):
+        if self._index_hash:
+            return self.data_path / f'{self.index_hash}-SNAPSHOT'
+        return None
+
     def dump_model(self):
         logger.info(f'Save the trained parameters to {self.model_path}')
         self.model_path.mkdir(exist_ok=True)
@@ -513,41 +549,6 @@ class AnnLite(CellContainer):
         if self.pq_codec and (not self.pq_codec.is_trained):
             return False
         return True
-
-    @property
-    def _model_hash(self):
-        key = f'{self.n_components} x {self.n_cells} x {self.n_subvectors} x {self.metric.name}'
-        return hashlib.md5(key.encode()).hexdigest()
-
-    @property
-    def model_path(self):
-        return self.data_path / self._model_hash
-
-    @property
-    def _index_hash(self):
-        latest_commit = self.meta_table.get_latest_commit()
-        date_time = latest_commit[-1] if latest_commit else None
-        if date_time:
-            return date_time.isoformat('#', 'seconds')
-
-        return None
-
-    @property
-    def index_path(self):
-        if self._index_hash:
-            return self.data_path / f'{self._index_hash}-SNAPSHOT'
-
-    @property
-    def _vq_codec_path(self):
-        return self.model_path / 'vq_codec.bin'
-
-    @property
-    def _pq_codec_path(self):
-        return self.model_path / 'pq_codec.bin'
-
-    @property
-    def _projector_codec_path(self):
-        return self.model_path / 'projector_codec.bin'
 
     @property
     def use_smart_probing(self):
