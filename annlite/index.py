@@ -148,10 +148,11 @@ class AnnLite(CellContainer):
             for docs in self.documents_generator(0, batch_size=1024):
                 x = to_numpy_array(docs.embeddings)
                 total_size += x.shape[0]
-                self.train(x, auto_save=True, force_train=True)
+                self.partial_train(x, auto_save=True, force_train=True)
                 if total_size >= MAX_TRAINING_DATA_SIZE:
                     break
             logger.info(f'Total training data size: {total_size}')
+
         if self.total_docs > 0:
             self._rebuild_index()
 
