@@ -110,7 +110,7 @@ class ProjectorCodec(BaseCodec):
     def encode(self, x: 'np.ndarray'):
         """Encode input vectors using projector.
 
-        :param x: Input vectors with shape=(N, D) and dtype=np.float32.
+        :param x: Input vectors with shape=(N, D)
         :return: np.ndarray: transformed vectors using projector.
         """
         assert x.ndim == 2
@@ -123,7 +123,7 @@ class ProjectorCodec(BaseCodec):
         approximately.
 
         :param x: vectors with shape=(N, self.n_components).
-        :return: Reconstructed vectors with shape=(N, D) and dtype=np.float32
+        :return: Reconstructed vectors with shape=(N, D)
         """
         assert x.ndim == 2
         assert x.shape[1] == self.n_components
