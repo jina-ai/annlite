@@ -113,7 +113,6 @@ class ProjectorCodec(BaseCodec):
         :param x: Input vectors with shape=(N, D) and dtype=np.float32.
         :return: np.ndarray: transformed vectors using projector.
         """
-        # assert x.dtype == np.float32, f'dtype of input data must be np.float32, got {x.dtype}'
         assert x.ndim == 2
         assert x.shape[1] == self.dim, 'dimension of input data must be equal to "dim"'
 
