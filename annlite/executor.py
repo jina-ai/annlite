@@ -255,6 +255,11 @@ class AnnLiteIndexer(Executor):
         )
         return DocumentArray([status])
 
+    @requests(on='/dump')
+    def dump(self, **kwargs):
+        """dump the index to disk"""
+        self._index.dump()
+
     @requests(on='/clear')
     def clear(self, **kwargs):
         """Clear the index of all entries."""
