@@ -27,6 +27,9 @@ class VQCodec(BaseCodec):
         self.kmeans = None
         self.n_init = n_init
 
+    def __hash__(self):
+        return hash((self.__class__.__name__, self.n_clusters, self.metric))
+
     def fit(self, x: 'np.ndarray'):
         """Given training vectors, run k-means for each sub-space and create
            codewords for each sub-space.

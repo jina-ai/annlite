@@ -25,7 +25,7 @@ def build_hnsw(build_data):
 
 def test_save_and_load(tmpdir, build_hnsw):
     hnsw = build_hnsw
-    hnsw.save_index(os.path.join(tmpdir, 'hnsw.pkl'))
+    hnsw.dump(os.path.join(tmpdir, 'hnsw.pkl'))
     assert os.path.exists(os.path.join(tmpdir, 'hnsw.pkl')) is True
 
     hnsw_ = HnswIndex(dim=n_features, index_file=os.path.join(tmpdir, 'hnsw.pkl'))

@@ -1,4 +1,5 @@
 import hashlib
+import logging
 from pathlib import Path
 from typing import TYPE_CHECKING, Dict, List, Optional, Union
 
@@ -10,11 +11,13 @@ if TYPE_CHECKING:  # pragma: no cover
     from docarray import DocumentArray
 
 from .container import CellContainer
-from .core import PQCodec, VQCodec
+from .core import PQCodec, ProjectorCodec, VQCodec
 from .enums import Metric
 from .filter import Filter
 from .helper import setup_logging
 from .math import cdist, top_k
+
+MAX_TRAINING_DATA_SIZE = 10240
 
 
 class AnnLite(CellContainer):
@@ -24,7 +27,7 @@ class AnnLite(CellContainer):
 
         .. highlight:: python
         .. code-block:: python
-            pqlite = AnnLite(dim=256, metric='cosine')
+            pqlite = AnnLite(256, metric='cosine')
 
     :param dim: dimensionality of input vectors. there are 2 constraints on dim:
             (1) it needs to be divisible by n_subvectors; (2) it needs to be a multiple of 4.*
@@ -33,15 +36,15 @@ class AnnLite(CellContainer):
             each quantized vector, default is None.
     :param n_cells:  number of coarse quantizer clusters, default is 1.
     :param n_probe: number of cells to search for each query, default is 16.
+    :param n_components: number of components to keep.
     :param initial_size: initial capacity assigned to each voronoi cell of coarse quantizer.
             ``n_cells * initial_size`` is the number of vectors that can be stored initially.
             if any cell has reached its capacity, that cell will be automatically expanded.
             If you need to add vectors frequently, a larger value for init_size is recommended.
-    :param data_path: location of directory to store the database.
+    :param data_path: path to the directory where the data is stored.
     :param create_if_missing: if False, do not create the directory path if it is missing.
     :param read_only: if True, the index is not writable.
     :param verbose: if True, will print the debug logging info.
-    :param lock: if True, lock table is enabled for lmdb container.
 
     .. note::
         Remember that the shape of any tensor that contains data points has to be `[n_data, dim]`.
@@ -55,6 +58,7 @@ class AnnLite(CellContainer):
         n_subvectors: Optional[int] = None,
         n_clusters: Optional[int] = 256,
         n_probe: int = 16,
+        n_components: Optional[int] = None,
         initial_size: Optional[int] = None,
         expand_step_size: int = 10240,
         columns: Optional[List[tuple]] = None,
@@ -62,7 +66,6 @@ class AnnLite(CellContainer):
         create_if_missing: bool = True,
         read_only: bool = False,
         verbose: bool = False,
-        lock: bool = True,
         *args,
         **kwargs,
     ):
@@ -72,7 +75,8 @@ class AnnLite(CellContainer):
             assert (
                 dim % n_subvectors == 0
             ), '"dim" needs to be divisible by "n_subvectors"'
-
+        self.dim = dim
+        self.n_components = n_components
         self.n_subvectors = n_subvectors
         self.n_clusters = n_clusters
         self.n_probe = max(n_probe, n_cells)
@@ -91,8 +95,20 @@ class AnnLite(CellContainer):
             data_path.mkdir(parents=True, exist_ok=True)
         self.data_path = data_path
 
+        self.projector_codec = None
+        if self._projector_codec_path.exists():
+            logger.info(
+                f'Load pre-trained projector codec (n_components={self.n_components}) from {self.model_path}'
+            )
+            self.projector_codec = ProjectorCodec.load(self._projector_codec_path)
+        elif n_components:
+            logger.info(
+                f'Initialize Projector codec (n_components={self.n_components})'
+            )
+            self.projector_codec = ProjectorCodec(dim, n_components=self.n_components)
+
         self.vq_codec = None
-        if self._vq_codec_path.exists() and n_cells > 1:
+        if self._vq_codec_path.exists():
             logger.info(
                 f'Load trained VQ codec (K={self.n_cells}) from {self.model_path}'
             )
@@ -102,7 +118,7 @@ class AnnLite(CellContainer):
             self.vq_codec = VQCodec(self.n_cells, metric=self.metric)
 
         self.pq_codec = None
-        if self._pq_codec_path.exists() and n_subvectors:
+        if self._pq_codec_path.exists():
             logger.info(
                 f'Load trained PQ codec (n_subvectors={self.n_subvectors}) from {self.model_path}'
             )
@@ -121,42 +137,61 @@ class AnnLite(CellContainer):
         super(AnnLite, self).__init__(
             dim=dim,
             metric=metric,
+            projector_codec=self.projector_codec,
             pq_codec=self.pq_codec,
             n_cells=n_cells,
             initial_size=initial_size,
             expand_step_size=expand_step_size,
             columns=columns,
             data_path=data_path,
-            lock=lock,
             **kwargs,
         )
+
+        if not self.is_trained and self.total_docs > 0:
+            # train the index from scratch based on the data in the data_path
+            logger.info(f'Train the index by reading data from {self.data_path}')
+            total_size = 0
+            # TODO: add a progress bar
+            for docs in self.documents_generator(0, batch_size=1024):
+                x = to_numpy_array(docs.embeddings)
+                total_size += x.shape[0]
+                self.partial_train(x, auto_save=True, force_train=True)
+                if total_size >= MAX_TRAINING_DATA_SIZE:
+                    break
+            logger.info(f'Total training data size: {total_size}')
 
         if self.total_docs > 0:
             self._rebuild_index()
 
     def _sanity_check(self, x: 'np.ndarray'):
-        assert len(x.shape) == 2
-        assert x.shape[1] == self.dim
+        assert x.ndim == 2, 'inputs must be a 2D array'
+        assert (
+            x.shape[1] == self.dim
+        ), f'inputs must have the same dimension as the index , got {x.shape[1]}, expected {self.dim}'
 
         return x.shape
 
-    def train(
-        self, x: 'np.ndarray', auto_save: bool = True, force_retrain: bool = False
-    ):
+    def train(self, x: 'np.ndarray', auto_save: bool = True, force_train: bool = False):
         """Train pqlite with training data.
 
         :param x: the ndarray data for training.
         :param auto_save: if False, will not dump the trained model to ``model_path``.
-        :param force_retrain: if True, enforce to retrain the model, and overwrite the model if ``auto_save=True``.
+        :param force_train: if True, enforce to retrain the model, and overwrite the model if ``auto_save=True``.
 
         """
         n_data, _ = self._sanity_check(x)
 
-        if self.is_trained and not force_retrain:
+        if self.is_trained and not force_train:
             logger.warning(
-                'The pqlite has been trained or is not trainable. Please use ``force_retrain=True`` to retrain.'
+                'The indexer has been trained or is not trainable. Please use ``force_train=True`` to retrain.'
             )
             return
+
+        if self.projector_codec:
+            logger.info(
+                f'Start training Projector codec (n_components={self.n_components}) with {n_data} data...'
+            )
+            self.projector_codec.fit(x)
 
         if self.vq_codec:
             logger.info(
@@ -170,22 +205,34 @@ class AnnLite(CellContainer):
             )
             self.pq_codec.fit(x)
 
-        logger.info(f'The pqlite is successfully trained!')
+        logger.info(f'The annlite is successfully trained!')
 
         if auto_save:
             self.dump_model()
 
     def partial_train(
-        self, x: np.ndarray, auto_save: bool = True, force_retrain: bool = False
+        self, x: np.ndarray, auto_save: bool = True, force_train: bool = False
     ):
-        """Train vector quantizers and product quantizers with a minibatch of  data.
+        """Train indexer parameters with a minibatch of  data.
 
         :param x: the ndarray data for training.
         :param auto_save: if False, will not dump the trained model to ``model_path``.
-        :param force_retrain: if True, enforce to retrain the model, and overwrite the model if ``auto_save=True``.
+        :param force_train: if True, enforce to retrain the model, and overwrite the model if ``auto_save=True``.
 
         """
         n_data, _ = self._sanity_check(x)
+
+        if self.is_trained and not force_train:
+            logger.warning(
+                'The annlite has been trained or is not trainable. Please use ``force_train=True`` to retrain.'
+            )
+            return
+
+        if self.projector_codec:
+            logging.info(
+                f'Partial training Projector codec (n_components={self.n_components}) with {n_data} data...'
+            )
+            self.projector_codec.partial_fit(x)
 
         if self.vq_codec:
             logger.info(
@@ -199,27 +246,20 @@ class AnnLite(CellContainer):
             )
             self.pq_codec.partial_fit(x)
 
-    def build_codebook(self):
-        """Constructs a codebooks for the vq_codec and pq_codec.
-        This step is not necessary if full KMeans is trained used calling `.fit`.
-        """
-        if self.vq_codec:
-            self.vq_codec.build_codebook()
-        if self.pq_codec:
-            self.pq_codec.build_codebook()
+        if auto_save:
+            self.dump_model()
 
     def index(self, docs: 'DocumentArray', **kwargs):
-        """Index new documents
+        """Index new documents.
 
-        :param docs: the documents to index
+        :param docs: the document array to be indexed.
         """
 
         if self.read_only:
-            logger.warning('The pqlite is readonly, cannot add documents')
+            logger.error('The indexer is readonly, cannot add new documents')
             return
 
         x = to_numpy_array(docs.embeddings)
-
         n_data, _ = self._sanity_check(x)
 
         assigned_cells = (
@@ -230,12 +270,12 @@ class AnnLite(CellContainer):
         return super(AnnLite, self).insert(x, assigned_cells, docs)
 
     def update(self, docs: 'DocumentArray', **kwargs):
-        """Update existing documents
+        """Update existing documents.
 
-        :param docs: the documents to update
+        :param docs: the document array to be updated.
         """
         if self.read_only:
-            logger.warning('The pqlite is readonly, cannot update documents')
+            logger.error('The indexer is readonly, cannot update documents')
             return
 
         x = to_numpy_array(docs.embeddings)
@@ -259,8 +299,8 @@ class AnnLite(CellContainer):
     ):
         """Search the index, and attach matches to the query Documents in `docs`
 
-        :param docs: the query documents to search
-        :param filter: the filtering conditions
+        :param docs: the document array to be searched.
+        :param filter: the filter to be applied to the search.
         :param limit: the number of results to get for each query document in search
         :param include_metadata: whether to return document metadata in response.
         """
@@ -399,64 +439,149 @@ class AnnLite(CellContainer):
 
     def encode(self, x: 'np.ndarray'):
         n_data, _ = self._sanity_check(x)
+        if self.n_components:
+            x = self.projector_codec.encode(x)
+
         y = self.pq_codec.encode(x)
         return y
 
     def decode(self, x: 'np.ndarray'):
         assert len(x.shape) == 2
         assert x.shape[1] == self.n_subvectors
-        return self.pq_codec.decode(x)
 
-    def model_dir_exists(self):
-        """Check whether the model directory exists at the data path"""
-        return self.model_path.exists()
+        if self.n_components:
+            return self.projector_codec.decode(self.pq_codec.decode(x))
+        else:
+            return self.pq_codec.decode(x)
 
-    def create_model_dir(self):
-        """Create a new directory at the data path to save model."""
-        self.model_path.mkdir(exist_ok=True)
+    @property
+    def params_hash(self):
+        model_metas = (
+            f'dim: {self.dim} '
+            f'metric: {self.metric} '
+            f'n_cells: {self.n_cells} '
+            f'n_components: {self.n_components} '
+            f'n_subvectors: {self.n_subvectors}'
+        )
+        return hashlib.md5(f'{model_metas}'.encode()).hexdigest()
+
+    @property
+    def model_path(self):
+        return self.data_path / f'parameters-{self.params_hash}'
+
+    @property
+    def _vq_codec_path(self):
+        return self.model_path / f'vq_codec.params'
+
+    @property
+    def _pq_codec_path(self):
+        return self.model_path / f'pq_codec.params'
+
+    @property
+    def _projector_codec_path(self):
+        return self.model_path / f'projector_codec.params'
+
+    @property
+    def index_hash(self):
+        latest_commit = self.meta_table.get_latest_commit()
+        date_time = latest_commit[-1] if latest_commit else None
+        if date_time:
+            return date_time.isoformat('#', 'seconds')
+
+        return None
+
+    @property
+    def index_path(self):
+        if self.index_hash:
+            return (
+                self.data_path
+                / f'snapshot-{self.params_hash}'
+                / f'{self.index_hash}-SNAPSHOT'
+            )
+        return None
+
+    @property
+    def snapshot_path(self):
+        paths = list(
+            (self.data_path / f'snapshot-{self.params_hash}').glob(f'*-SNAPSHOT')
+        )
+        if paths:
+            return paths[0]
+        return None
 
     def dump_model(self):
-        logger.info(f'Save the trained parameters to {self.model_path}')
-        self.create_model_dir()
+        logger.info(f'Save the parameters to {self.model_path}')
+        self.model_path.mkdir(parents=True, exist_ok=True)
+        if self.projector_codec:
+            self.projector_codec.dump(self._projector_codec_path)
         if self.vq_codec:
             self.vq_codec.dump(self._vq_codec_path)
         if self.pq_codec:
             self.pq_codec.dump(self._pq_codec_path)
 
+    def dump_index(self):
+        logger.info(f'Save the indexer to {self.index_path}')
+
+        try:
+            self.index_path.mkdir(parents=True)
+
+            self.meta_table.dump(self.index_path / 'meta_table.db')
+
+            for cell_id in range(self.n_cells):
+                self.vec_index(cell_id).dump(self.index_path / f'cell_{cell_id}.hnsw')
+                self.cell_table(cell_id).dump(self.index_path / f'cell_{cell_id}.db')
+        except Exception as ex:
+            logger.error(f'Failed to dump the indexer, {ex!r}')
+            import shutil
+
+            shutil.rmtree(self.index_path)
+
+    def dump(self):
+        self.dump_model()
+        self.dump_index()
+
     def _rebuild_index(self):
-        for cell_id in range(self.n_cells):
-            cell_size = self.doc_store(cell_id).size
-            logger.debug(f'Rebuild the index of cell-{cell_id} ({cell_size} docs)...')
-            self.vec_index(cell_id).reset(capacity=cell_size)
-            for docs in self.documents_generator(cell_id, batch_size=10240):
-                x = docs.embeddings
-                assigned_cells = np.ones(len(docs), dtype=np.int64) * cell_id
-                super().insert(x, assigned_cells, docs)
+        if self.snapshot_path:
+            logger.info(f'Load the indexer from snapshot {self.snapshot_path}')
+            self.meta_table.load(self.snapshot_path / 'meta_table.db')
+            for cell_id in range(self.n_cells):
+                self.vec_index(cell_id).load(
+                    self.snapshot_path / f'cell_{cell_id}.hnsw'
+                )
+                self.cell_table(cell_id).load(self.snapshot_path / f'cell_{cell_id}.db')
+        else:
+            logger.info(f'Rebuild the indexer from scratch')
+            dump_after_building = False
+            for cell_id in range(self.n_cells):
+                cell_size = self.doc_store(cell_id).size
+
+                if cell_size == 0:
+                    continue  # skip empty cell
+
+                dump_after_building = True
+
+                logger.debug(
+                    f'Rebuild the index of cell-{cell_id} ({cell_size} docs)...'
+                )
+                for docs in self.documents_generator(cell_id, batch_size=10240):
+                    x = to_numpy_array(docs.embeddings)
+
+                    assigned_cells = np.ones(len(docs), dtype=np.int64) * cell_id
+                    super().insert(x, assigned_cells, docs)
+                logger.debug(f'Rebuild the index of cell-{cell_id} done')
+
+            if dump_after_building:
+                self.dump()
 
     @property
     def is_trained(self):
+        if self.projector_codec and (not self.projector_codec.is_trained):
+            return False
         if self.vq_codec and (not self.vq_codec.is_trained):
             return False
         if self.pq_codec and (not self.pq_codec.is_trained):
             return False
         return True
-
-    @property
-    def _model_hash(self):
-        key = f'{self.n_cells} x {self.n_subvectors} x {self.metric.name}'
-        return hashlib.md5(key.encode()).hexdigest()
-
-    @property
-    def model_path(self):
-        return self.data_path / self._model_hash
-
-    @property
-    def _vq_codec_path(self):
-        return self.model_path / 'vq_codec.bin'
-
-    @property
-    def _pq_codec_path(self):
-        return self.model_path / 'pq_codec.bin'
 
     @property
     def use_smart_probing(self):
@@ -475,6 +600,7 @@ class AnnLite(CellContainer):
             'index_size': self.index_size,
             'n_cells': self.n_cells,
             'dim': self.dim,
+            'n_components': self.n_components,
             'metric': self.metric.name,
             'is_trained': self.is_trained,
         }
