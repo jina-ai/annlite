@@ -24,9 +24,6 @@ class ProjectorCodec(BaseCodec):
 
             If arpack: run SVD truncated to n_components calling ARPACK solver via
             scipy.sparse.linalg.svds. It requires strictly 0 < n_components < min(X.shape).
-    :param is_incremental: whether to use incremental projector, especially useful when
-            data size is too large to be loaded into memory at once.
-    :param batch_size: batch size used for incremental projector.
     """
 
     def __init__(
@@ -35,13 +32,11 @@ class ProjectorCodec(BaseCodec):
         n_components: int = 128,
         whiten: Optional[bool] = False,
         svd_solver: Optional[str] = 'auto',
-        is_incremental: Optional[bool] = False,
-        batch_size: Optional[int] = 512,
     ):
         super(ProjectorCodec, self).__init__(require_train=True)
         self.dim = dim
         self.n_components = n_components
-        assert self.dim > self.n_components, (
+        assert self.dim >= self.n_components, (
             f'the dimension after projector should be less than original dimension, got '
             f'original dimension: {self.dim} and projector dimension: {self.n_components}'
         )
@@ -50,28 +45,24 @@ class ProjectorCodec(BaseCodec):
         self.svd_solver = svd_solver
 
         self._is_trained = False
+        self.pca = None
 
-        self.is_incremental = is_incremental
-        if not self.is_incremental:
-            from sklearn.decomposition import PCA
-
-            # fix the random seed to make sure that we can get the same result in each
-            # function call
-            self.pca = PCA(n_components=self.n_components, random_state=1234)
-        else:
-            from sklearn.decomposition import IncrementalPCA
-
-            self.batch_size = batch_size
-            self.pca = IncrementalPCA(
-                n_components=self.n_components, batch_size=self.batch_size
+    def __hash__(self):
+        return hash(
+            (
+                self.__class__.__name__,
+                self.dim,
+                self.n_components,
+                self.whiten,
+                self.svd_solver,
             )
+        )
 
     def fit(self, x: 'np.ndarray'):
         """Train projector model
 
         :param x: Training vectors with shape=(N, D)
         """
-        assert x.dtype == np.float32
         assert x.ndim == 2
         assert (
             x.shape[1] == self.dim,
@@ -79,6 +70,15 @@ class ProjectorCodec(BaseCodec):
         assert (
             x.shape[0] > self.n_components
         ), 'number of input data must be larger than or equal to n_components'
+
+        if self.pca is None:
+            from sklearn.decomposition import PCA
+
+            self.pca = PCA(
+                n_components=self.n_components,
+                whiten=self.whiten,
+                svd_solver=self.svd_solver,
+            )
 
         self.pca.fit(x)
         self._is_trained = True
@@ -89,27 +89,30 @@ class ProjectorCodec(BaseCodec):
 
         :param x: Training vectors with shape=(N, D)
         """
-        assert x.dtype == np.float32
+
         assert x.ndim == 2
         assert x.shape[1] == self.dim, 'dimension of input data must be equal to "dim"'
         assert (
             x.shape[0] > self.n_components
         ), 'number of input data must be larger than or equal to n_components'
-        assert (
-            len(x) % self.batch_size == 0
-        ), 'number of input data must be divided by batch size'
 
-        for i in range(0, len(x), self.batch_size):
-            self.pca.partial_fit(x[i : i + self.batch_size])
+        if self.pca is None:
+            from sklearn.decomposition import IncrementalPCA
+
+            self.pca = IncrementalPCA(
+                n_components=self.n_components,
+                whiten=self.whiten,
+            )
+
+        self.pca.partial_fit(x)
         self._is_trained = True
 
     def encode(self, x: 'np.ndarray'):
         """Encode input vectors using projector.
 
-        :param x: Input vectors with shape=(N, D) and dtype=np.float32.
+        :param x: Input vectors with shape=(N, D)
         :return: np.ndarray: transformed vectors using projector.
         """
-        assert x.dtype == np.float32
         assert x.ndim == 2
         assert x.shape[1] == self.dim, 'dimension of input data must be equal to "dim"'
 
@@ -120,7 +123,7 @@ class ProjectorCodec(BaseCodec):
         approximately.
 
         :param x: vectors with shape=(N, self.n_components).
-        :return: Reconstructed vectors with shape=(N, D) and dtype=np.float32
+        :return: Reconstructed vectors with shape=(N, D)
         """
         assert x.ndim == 2
         assert x.shape[1] == self.n_components
@@ -150,9 +153,5 @@ class ProjectorCodec(BaseCodec):
     @property
     def var(self):
         """Per-feature empirical variance"""
-        assert self.is_incremental is True, (
-            'Per-feature empirical variance only be available when incremental '
-            'project is used'
-        )
         self._check_trained()
         return self.pca.var_

@@ -9,6 +9,24 @@ import numpy as np
 if TYPE_CHECKING:
     from docarray import DocumentArray
 
+# # Adapt datetime.date to ISO 8601 date.
+# sqlite3.register_adapter(datetime.date, lambda d: d.isoformat())
+#
+# # Adapt datetime.datetime to timezone-naive ISO 8601 date.
+# sqlite3.register_adapter(datetime.datetime, lambda d: d.isoformat())
+#
+# # Adapt datetime.datetime to Unix timestamp.
+# sqlite3.register_adapter(datetime.datetime, lambda d: int(d.timestamp()))
+#
+# # Convert ISO 8601 date to datetime.date object.
+# sqlite3.register_converter("date", datetime.date.fromisoformat)
+#
+# # Convert ISO 8601 datetime to datetime.datetime object.
+# sqlite3.register_converter("datetime", datetime.datetime.fromisoformat)
+#
+# # Convert Unix epoch timestamp to datetime.datetime object.
+# sqlite3.register_converter("timestamp", datetime.datetime.fromtimestamp)
+
 sqlite3.register_adapter(np.int64, lambda x: int(x))
 sqlite3.register_adapter(np.int32, lambda x: int(x))
 
@@ -20,9 +38,9 @@ COLUMN_TYPE_MAPPING = {
     bytes.__class__: 'BLOB',
     bytes: 'BLOB',
     memoryview: 'BLOB',
-    datetime.datetime: 'TEXT',
-    datetime.date: 'TEXT',
-    datetime.time: 'TEXT',
+    # datetime.datetime: 'TEXT',
+    # datetime.date: 'TEXT',
+    # datetime.time: 'TEXT',
     None.__class__: 'TEXT',
     # SQLite explicit types
     'TEXT': 'TEXT',
@@ -64,6 +82,10 @@ def _converting(value: Any) -> str:
     return str(value)
 
 
+def time_now():
+    return datetime.datetime.utcnow()
+
+
 def _get_table_names(
     conn: 'sqlite3.Connection', fts4: bool = False, fts5: bool = False
 ) -> List[str]:
@@ -82,6 +104,7 @@ class Table:
         self,
         name: str,
         data_path: Optional[Union[Path, str]] = None,
+        detect_types: int = 0,
         in_memory: bool = True,
     ):
         if in_memory:
@@ -92,7 +115,11 @@ class Table:
             self._conn_name = data_path / f'{name}.db'
         self._name = name
 
-        self._conn = sqlite3.connect(self._conn_name, check_same_thread=False)
+        self.detect_types = detect_types
+
+        self._conn = sqlite3.connect(
+            self._conn_name, detect_types=detect_types, check_same_thread=False
+        )
         self._conn_lock = threading.Lock()
 
     def execute(self, sql: str, commit: bool = True):
@@ -119,6 +146,16 @@ class Table:
         """Drop the table and create a new one"""
         self.drop_table()
         self.create_table()
+
+    def load(self, data_file: Union[str, Path]):
+        disk_db = sqlite3.connect(data_file, detect_types=self.detect_types)
+        disk_db.backup(self._conn)
+        disk_db.close()
+
+    def dump(self, data_file: Union[str, Path]):
+        backup_db = sqlite3.connect(data_file, detect_types=self.detect_types)
+        self._conn.backup(backup_db)
+        backup_db.close()
 
     @property
     def name(self):
@@ -353,33 +390,69 @@ class MetaTable(Table):
         data_path: Optional[Path] = None,
         in_memory: bool = False,
     ):
-        super().__init__(name, data_path=data_path, in_memory=in_memory)
+        super().__init__(
+            name,
+            data_path=data_path,
+            detect_types=sqlite3.PARSE_DECLTYPES | sqlite3.PARSE_COLNAMES,
+            in_memory=in_memory,
+        )
         self.create_table()
 
     def create_table(self):
         sql = f'''CREATE TABLE {self.name}
                         (_doc_id TEXT NOT NULL PRIMARY KEY,
                          cell_id INTEGER NOT NULL,
-                         offset INTEGER NOT NULL)'''
+                         offset INTEGER NOT NULL,
+                         time_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                         _deleted NUMERIC DEFAULT 0)'''
 
         self._conn.execute(sql)
+
+        self._conn.execute(f'CREATE INDEX idx_time_at_ ON {self.name}(time_at)')
+        self._conn.execute(f'CREATE INDEX idx__delete_ ON {self.name}(_deleted)')
+
         self._conn.commit()
 
+    def iter_addresses(
+        self, time_since: 'datetime.datetime' = datetime.datetime(2020, 2, 2, 0, 0)
+    ):
+        sql = f'SELECT _doc_id, cell_id, offset from {self.name} WHERE time_at > ? AND _deleted = 0 ORDER BY time_at ASC;'
+
+        cursor = self._conn.cursor()
+        for doc_id, cell_id, offset in cursor.execute(sql, (time_since,)):
+            yield doc_id, cell_id, offset
+
+    def get_latest_commit(self):
+        sql = f'SELECT _doc_id, cell_id, offset, time_at from {self.name} ORDER BY time_at DESC LIMIT 1;'
+
+        cursor = self._conn.execute(sql)
+        row = cursor.fetchone()
+        return row
+
     def get_address(self, doc_id: str):
-        sql = f'SELECT cell_id, offset from {self.name} WHERE _doc_id = ?;'
+        sql = f'SELECT cell_id, offset from {self.name} WHERE _doc_id = ? AND _deleted = 0 LIMIT 1;'
         cursor = self._conn.execute(sql, (doc_id,))
         row = cursor.fetchone()
         return (row[0], row[1]) if row else (None, None)
 
-    def add_address(self, doc_id: str, cell_id: int, offset: int, commit: bool = True):
-        sql = f'INSERT OR REPLACE INTO {self.name}(_doc_id, cell_id, offset) VALUES (?, ?, ?);'
+    def delete_address(self, doc_id: str, commit: bool = True):
+        sql = f'UPDATE {self.name} SET _deleted = 1, time_at = ? WHERE _doc_id = ?'
         self._conn.execute(
             sql,
             (
+                time_now(),
                 doc_id,
-                cell_id,
-                offset,
             ),
+        )
+        print(f'Deleted {doc_id} at: {time_now()}')
+        if commit:
+            self._conn.commit()
+
+    def add_address(self, doc_id: str, cell_id: int, offset: int, commit: bool = True):
+        sql = f'INSERT OR REPLACE INTO {self.name}(_doc_id, cell_id, offset, time_at, _deleted) VALUES (?, ?, ?, ?, ?);'
+        self._conn.execute(
+            sql,
+            (doc_id, cell_id, offset, time_now(), 0),
         )
         if commit:
             self._conn.commit()
@@ -391,11 +464,11 @@ class MetaTable(Table):
         offsets: Union[List[int], np.ndarray],
         commit: bool = True,
     ):
-        sql = f'INSERT OR REPLACE INTO {self.name}(_doc_id, cell_id, offset) VALUES (?, ?, ?);'
+        sql = f'INSERT OR REPLACE INTO {self.name}(_doc_id, cell_id, offset, time_at, _deleted) VALUES (?, ?, ?, ?, ?);'
         self._conn.executemany(
             sql,
             [
-                (doc_id, cell_id, offset)
+                (doc_id, cell_id, offset, time_now(), 0)
                 for doc_id, cell_id, offset in zip(doc_ids, cell_ids, offsets)
             ],
         )

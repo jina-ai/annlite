@@ -48,7 +48,7 @@ class HnswIndex(BaseIndex):
             logger.info(
                 f'indexer will be loaded from {self.index_file}',
             )
-            self.load_index(self.index_file)
+            self.load(self.index_file)
         else:
             if self.index_file:
                 raise FileNotFoundError(
@@ -61,11 +61,11 @@ class HnswIndex(BaseIndex):
             )
             self._index.set_ef(self.ef_search)
 
-    def load_index(self, index_file: Union[str, Path]):
-        self._index.load_index(index_file)
+    def load(self, index_file: Union[str, Path]):
+        self._index.load_index(str(index_file))
 
-    def save_index(self, index_file: Union[str, Path]):
-        self._index.save_index(index_file)
+    def dump(self, index_file: Union[str, Path]):
+        self._index.save_index(str(index_file))
 
     def add_with_ids(self, x: 'np.ndarray', ids: List[int]):
         max_id = max(ids) + 1
@@ -103,9 +103,8 @@ class HnswIndex(BaseIndex):
         return dists[0], ids[0]
 
     def delete(self, ids: List[int]):
-        raise RuntimeError(
-            f'the deletion operation is not allowed for {self.__class__.__name__}!'
-        )
+        for i in ids:
+            self._index.mark_deleted(i)
 
     def update_with_ids(self, x: 'np.ndarray', ids: List[int], **kwargs):
         raise RuntimeError(

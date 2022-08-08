@@ -107,11 +107,33 @@ def test_count(table_with_data):
 
 
 def test_create_meta_table(tmpdir):
+    import datetime
+
     table = MetaTable('meta_test', data_path=tmpdir)
+    addr = table.get_latest_commit()
+    assert addr is None
 
     table.add_address('0', 0, 1)
     table.add_address('2', 1, 5)
+
+    time_since = datetime.datetime.utcnow()
     table.add_address('0', 1, 2)
 
     assert table.get_address('0') == (1, 2)
     assert table.get_address('2') == (1, 5)
+
+    assert len(list(table.iter_addresses())) == 2
+    addresses = list(table.iter_addresses(time_since=time_since))
+    assert addresses == [('0', 1, 2)]
+
+    addr = table.get_latest_commit()
+    assert addr[:3] == ('0', 1, 2)
+    assert addr[-1] > time_since
+
+    time_since = datetime.datetime.utcnow()
+    table.delete_address('0')
+    addresses = list(table.iter_addresses(time_since=time_since))
+    assert addresses == []
+
+    addr = table.get_latest_commit()
+    assert addr[-1] > time_since

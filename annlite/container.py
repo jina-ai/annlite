@@ -1,3 +1,4 @@
+import hashlib
 from pathlib import Path
 from typing import TYPE_CHECKING, Dict, List, Optional, Tuple
 
@@ -27,18 +28,21 @@ class CellContainer:
         n_cells: int = 1,
         initial_size: Optional[int] = None,
         expand_step_size: int = 50000,
-        expand_mode: ExpandMode = ExpandMode.STEP,
+        expand_mode: 'ExpandMode' = ExpandMode.STEP,
         columns: Optional[List[tuple]] = None,
         serialize_config: Optional[Dict] = None,
-        data_path: Path = Path('./data'),
-        lock: bool = True,
+        data_path: 'Path' = Path('./data'),
         **kwargs,
     ):
         self.dim = dim
-        self.n_components = projector_codec.n_components if projector_codec else None
         self.metric = metric
         self.n_cells = n_cells
         self.data_path = data_path
+
+        self._pq_codec = pq_codec
+        self._projector_codec = projector_codec
+
+        self.n_components = projector_codec.n_components if projector_codec else None
 
         if pq_codec is not None:
             self._vec_indexes = [
@@ -66,13 +70,11 @@ class CellContainer:
                 for _ in range(n_cells)
             ]
 
-        self._projector_codec = projector_codec
-
         self._doc_stores = [
             DocStorage(
                 data_path / f'cell_{_}',
                 serialize_config=serialize_config or {},
-                lock=lock,
+                lock=True,
             )
             for _ in range(n_cells)
         ]
@@ -325,13 +327,15 @@ class CellContainer:
                 self.vec_index(cell_id).add_with_ids(x.reshape(1, -1), [_offset])
                 self.cell_table(cell_id).undo_delete_by_offset(_offset)
                 self.doc_store(cell_id).update([doc])
+                self.meta_table.add_address(doc.id, cell_id, _offset)
 
             elif _cell_id is None:
                 new_data.append(x)
                 new_cells.append(cell_id)
                 new_docs.append(doc)
             else:
-                # relpace
+                # DELETE and INSERT
+                self.vec_index(_cell_id).delete(_offset)
                 self.cell_table(_cell_id).delete_by_offset(_offset)
                 self.doc_store(_cell_id).delete([doc.id])
 
@@ -350,9 +354,12 @@ class CellContainer:
     def delete(self, ids: List[str]):
         for doc_id in ids:
             cell_id, offset = self._meta_table.get_address(doc_id)
+            print(f'{doc_id} {cell_id} {offset}')
             if cell_id is not None:
+                self.vec_index(cell_id).delete([offset])
                 self.cell_table(cell_id).delete_by_offset(offset)
                 self.doc_store(cell_id).delete([doc_id])
+                self.meta_table.delete_address(doc_id)
 
         logger.debug(f'{len(ids)} items deleted')
 
@@ -364,13 +371,17 @@ class CellContainer:
         da = self.doc_store(cell_id).get([doc_id])
         return da[0] if len(da) > 0 else None
 
-    def documents_generator(self, cell_id: int, batch_size: int = 256):
+    def documents_generator(self, cell_id: int, batch_size: int = 1000):
         for docs in self.doc_store(cell_id).batched_iterator(batch_size=batch_size):
             yield docs
 
     @property
     def cell_tables(self):
         return self._cell_tables
+
+    @property
+    def cell_indexes(self):
+        return self._vec_indexes
 
     def cell_table(self, cell_id: int):
         return self._cell_tables[cell_id]

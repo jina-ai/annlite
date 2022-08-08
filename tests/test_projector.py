@@ -24,8 +24,6 @@ def build_projector(build_data):
         projector = ProjectorCodec(
             dim=n_features,
             n_components=n_components,
-            is_incremental=is_incremental,
-            batch_size=batch_size,
         )
         if is_incremental:
             for i in range(0, len(Xt), batch_size):
@@ -48,20 +46,6 @@ def test_encode_decode(build_data, build_projector):
 
         original_vecs = projector.decode(transformed_vecs)
         assert original_vecs.shape == Xt.shape
-
-
-@pytest.mark.parametrize('insert_size', [10, 190, 390])
-def test_wrong_insert_size(build_data, insert_size):
-    Xt = build_data[:insert_size]
-
-    projector = ProjectorCodec(
-        dim=n_features,
-        n_components=n_components,
-        is_incremental=True,
-        batch_size=batch_size,
-    )
-    with pytest.raises(Exception):
-        projector.partial_fit(Xt)
 
 
 def test_save_and_load(tmpdir, build_data, build_projector):
