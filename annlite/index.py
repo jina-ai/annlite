@@ -7,7 +7,7 @@ import numpy as np
 from docarray.math.ndarray import to_numpy_array
 from loguru import logger
 
-if TYPE_CHECKING:  # pragma: no cover
+if TYPE_CHECKING:
     from docarray import DocumentArray
 
 from .container import CellContainer
@@ -124,13 +124,13 @@ class AnnLite(CellContainer):
             )
             self.pq_codec = PQCodec.load(self._pq_codec_path)
         elif n_subvectors:
-            logger.info(
-                f'Initialize PQ codec (n_subvectors={self.n_subvectors}, n_clusters={self.n_clusters})'
-            )
+            logger.info(f'Initialize PQ codec (n_subvectors={self.n_subvectors})')
             self.pq_codec = PQCodec(
-                dim,
+                dim=dim
+                if not self.projector_codec
+                else self.projector_codec.n_components,
                 n_subvectors=self.n_subvectors,
-                n_clusters=self.n_clusters,
+                n_clusters=256,
                 metric=self.metric,
             )
 

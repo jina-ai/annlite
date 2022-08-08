@@ -6,12 +6,11 @@ import numpy as np
 from docarray import Document, DocumentArray
 from loguru import logger
 
-if TYPE_CHECKING:  # pragma: no cover
+if TYPE_CHECKING:
     from .core.codec.pq import PQCodec
     from .core.codec.projector import ProjectorCodec
 
 from .core.index.hnsw import HnswIndex
-from .core.index.pq_index import PQIndex
 from .enums import Metric
 from .storage.base import ExpandMode
 from .storage.kv import DocStorage
@@ -23,9 +22,9 @@ class CellContainer:
         self,
         dim: int,
         metric: Metric = Metric.COSINE,
+        n_cells: int = 1,
         projector_codec: Optional['ProjectorCodec'] = None,
         pq_codec: Optional['PQCodec'] = None,
-        n_cells: int = 1,
         initial_size: Optional[int] = None,
         expand_step_size: int = 50000,
         expand_mode: 'ExpandMode' = ExpandMode.STEP,
@@ -37,16 +36,15 @@ class CellContainer:
         self.dim = dim
         self.metric = metric
         self.n_cells = n_cells
+        self.n_components = projector_codec.n_components if projector_codec else None
         self.data_path = data_path
-        
+
         self._pq_codec = pq_codec
         self._projector_codec = projector_codec
 
-        self.n_components = projector_codec.n_components if projector_codec else None
-
         self._vec_indexes = [
             HnswIndex(
-                dim,
+                dim=self.n_components or dim,
                 metric=metric,
                 initial_size=initial_size,
                 expand_step_size=expand_step_size,
