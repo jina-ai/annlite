@@ -6,7 +6,7 @@ import numpy as np
 from docarray import Document, DocumentArray
 from loguru import logger
 
-if TYPE_CHECKING:
+if TYPE_CHECKING:  # pragma: no cover
     from .core.codec.pq import PQCodec
     from .core.codec.projector import ProjectorCodec
 
@@ -38,37 +38,24 @@ class CellContainer:
         self.metric = metric
         self.n_cells = n_cells
         self.data_path = data_path
-
+        
         self._pq_codec = pq_codec
         self._projector_codec = projector_codec
 
         self.n_components = projector_codec.n_components if projector_codec else None
 
-        if pq_codec is not None:
-            self._vec_indexes = [
-                PQIndex(
-                    self.n_components or dim,
-                    pq_codec,
-                    metric=metric,
-                    initial_size=initial_size,
-                    expand_step_size=expand_step_size,
-                    expand_mode=expand_mode,
-                    **kwargs,
-                )
-                for _ in range(n_cells)
-            ]
-        else:
-            self._vec_indexes = [
-                HnswIndex(
-                    dim=self.n_components or dim,
-                    metric=metric,
-                    initial_size=initial_size,
-                    expand_step_size=expand_step_size,
-                    expand_mode=expand_mode,
-                    **kwargs,
-                )
-                for _ in range(n_cells)
-            ]
+        self._vec_indexes = [
+            HnswIndex(
+                dim,
+                metric=metric,
+                initial_size=initial_size,
+                expand_step_size=expand_step_size,
+                expand_mode=expand_mode,
+                pq_codec=pq_codec,
+                **kwargs,
+            )
+            for _ in range(n_cells)
+        ]
 
         self._doc_stores = [
             DocStorage(

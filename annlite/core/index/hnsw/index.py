@@ -1,7 +1,9 @@
 import math
 import os.path
+from argparse import ArgumentError
+from functools import wraps
 from pathlib import Path
-from typing import List, Optional, Union
+from typing import TYPE_CHECKING, List, Optional, Union
 
 import numpy as np
 from loguru import logger
@@ -9,7 +11,46 @@ from loguru import logger
 from annlite.hnsw_bind import Index
 
 from ....enums import Metric
+from ....math import EPS
 from ..base import BaseIndex
+
+if TYPE_CHECKING:  # pragma: no cover
+    from ...codec.base import BaseCodec
+
+
+def pre_process(f):
+    def dim_check_reshape(x: np.ndarray, dim):
+        _dim = x.shape[-1]
+        assert (
+            _dim == dim
+        ), f'the query embedding dimension does not match with index dimension: {_dim} vs {dim}'
+        if len(x.shape) not in [1, 2]:
+            raise ArgumentError('data embedding must be a 1d/2d array')
+        elif len(x.shape) == 1:
+            return x.reshape(1, -1)
+        else:
+            return x
+
+    def l2_normalize(x: np.ndarray):
+        return x / (np.sum(x**2, 1) ** 0.5 + EPS).reshape(-1, 1)
+
+    @wraps(f)
+    def pre_processed(self: 'HnswIndex', x: np.ndarray, *args, **kwargs):
+        x = dim_check_reshape(x, self.dim)
+        if self.normalization_enable and not self.pq_enable:
+            x = l2_normalize(x)
+        elif self.pq_enable:
+            if not self.pq_codec.is_trained:
+                raise RuntimeError(
+                    'Please train the PQ before using HNSW quantization backend'
+                )
+            elif not self._set_backend_pq:
+                self._index.loadPQ(self.pq_codec)
+                self._set_backend_pq = True
+            x = self.pq_codec.encode(x)
+        return f(self, x, *args, **kwargs)
+
+    return pre_processed
 
 
 class HnswIndex(BaseIndex):
@@ -21,6 +62,7 @@ class HnswIndex(BaseIndex):
         ef_construction: int = 200,
         ef_search: int = 50,
         max_connection: int = 16,
+        pq_codec: Optional['BaseCodec'] = None,
         index_file: Optional[Union[str, Path]] = None,
         **kwargs,
     ):
@@ -38,6 +80,8 @@ class HnswIndex(BaseIndex):
         self.ef_construction = ef_construction
         self.ef_search = ef_search
         self.max_connection = max_connection
+        self.pq_codec = pq_codec
+        self._set_backend_pq = False
         self.index_file = index_file
 
         self._init_hnsw_index()
@@ -54,12 +98,23 @@ class HnswIndex(BaseIndex):
                 raise FileNotFoundError(
                     f'index path: {self.index_file} does not exist',
                 )
-            self._index.init_index(
-                max_elements=self.capacity,
-                ef_construction=self.ef_construction,
-                M=self.max_connection,
-            )
-            self._index.set_ef(self.ef_search)
+            if self.pq_codec is not None and self.pq_codec.is_trained:
+                self._index.init_index(
+                    max_elements=self.capacity,
+                    ef_construction=self.ef_construction,
+                    M=self.max_connection,
+                    pq_codec=self.pq_codec,
+                )
+                self._set_backend_pq = True
+            else:
+                self._index.init_index(
+                    max_elements=self.capacity,
+                    ef_construction=self.ef_construction,
+                    M=self.max_connection,
+                    pq_codec=None,
+                )
+                self._set_backend_pq = False
+        self._index.set_ef(self.ef_search)
 
     def load(self, index_file: Union[str, Path]):
         self._index.load_index(str(index_file))
@@ -67,6 +122,7 @@ class HnswIndex(BaseIndex):
     def dump(self, index_file: Union[str, Path]):
         self._index.save_index(str(index_file))
 
+    @pre_process
     def add_with_ids(self, x: 'np.ndarray', ids: List[int]):
         max_id = max(ids) + 1
         if max_id > self.capacity:
@@ -75,19 +131,13 @@ class HnswIndex(BaseIndex):
 
         self._index.add_items(x, ids=ids)
 
+    @pre_process
     def search(
         self,
         query: 'np.ndarray',
         limit: int = 10,
         indices: Optional['np.ndarray'] = None,
     ):
-        _dim = query.shape[-1]
-        assert (
-            _dim == self.dim
-        ), f'the query embedding dimension does not match with index dimension: {_dim} vs {self.dim}'
-
-        query = query.reshape((-1, self.dim))
-
         ef_search = max(self.ef_search, limit)
         self._index.set_ef(ef_search)
 
@@ -133,3 +183,11 @@ class HnswIndex(BaseIndex):
         elif self.metric == Metric.INNER_PRODUCT:
             return 'ip'
         return 'cosine'
+
+    @property
+    def pq_enable(self):
+        return self.pq_codec is not None
+
+    @property
+    def normalization_enable(self):
+        return self.metric == Metric.COSINE

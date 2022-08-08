@@ -7,7 +7,7 @@ import numpy as np
 from docarray.math.ndarray import to_numpy_array
 from loguru import logger
 
-if TYPE_CHECKING:
+if TYPE_CHECKING:  # pragma: no cover
     from docarray import DocumentArray
 
 from .container import CellContainer
@@ -56,6 +56,7 @@ class AnnLite(CellContainer):
         metric: Union[str, Metric] = 'cosine',
         n_cells: int = 1,
         n_subvectors: Optional[int] = None,
+        n_clusters: Optional[int] = 256,
         n_probe: int = 16,
         n_components: Optional[int] = None,
         initial_size: Optional[int] = None,
@@ -77,6 +78,7 @@ class AnnLite(CellContainer):
         self.dim = dim
         self.n_components = n_components
         self.n_subvectors = n_subvectors
+        self.n_clusters = n_clusters
         self.n_probe = max(n_probe, n_cells)
         self.n_cells = n_cells
 
@@ -122,9 +124,14 @@ class AnnLite(CellContainer):
             )
             self.pq_codec = PQCodec.load(self._pq_codec_path)
         elif n_subvectors:
-            logger.info(f'Initialize PQ codec (n_subvectors={self.n_subvectors})')
+            logger.info(
+                f'Initialize PQ codec (n_subvectors={self.n_subvectors}, n_clusters={self.n_clusters})'
+            )
             self.pq_codec = PQCodec(
-                dim, n_subvectors=n_subvectors, n_clusters=256, metric=self.metric
+                dim,
+                n_subvectors=self.n_subvectors,
+                n_clusters=self.n_clusters,
+                metric=self.metric,
             )
 
         super(AnnLite, self).__init__(

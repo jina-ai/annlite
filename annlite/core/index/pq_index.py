@@ -7,7 +7,8 @@ from ..codec.pq import PQCodec
 from .flat_index import FlatIndex
 
 
-class PQIndex(FlatIndex):
+# PQIndex is no longer used for index backend, hence remove from coverage
+class PQIndex(FlatIndex):  # pragma: no cover
     def __init__(
         self,
         dim: int,
