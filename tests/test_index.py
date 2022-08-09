@@ -294,9 +294,11 @@ def test_annlite_hnsw_pq_load_empty(tmpdir, random_docs):
         data_path=tmpdir / 'annlite_pq_test',
         n_subvectors=n_subvectors,
     )
+
     with pytest.raises(RuntimeError):
         # unable to add or search before a actual training of PQ
         pq_index.index(random_docs)
+
     with pytest.raises(RuntimeError):
         # unable to add or search before a actual training of PQ
         pq_index.search(random_docs)

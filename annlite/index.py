@@ -259,6 +259,9 @@ class AnnLite(CellContainer):
             logger.error('The indexer is readonly, cannot add new documents')
             return
 
+        if not self.is_trained:
+            raise RuntimeError(f'The indexer is not trained, cannot add new documents')
+
         x = to_numpy_array(docs.embeddings)
         n_data, _ = self._sanity_check(x)
 
@@ -277,6 +280,9 @@ class AnnLite(CellContainer):
         if self.read_only:
             logger.error('The indexer is readonly, cannot update documents')
             return
+
+        if not self.is_trained:
+            raise RuntimeError(f'The indexer is not trained, cannot add new documents')
 
         x = to_numpy_array(docs.embeddings)
         n_data, _ = self._sanity_check(x)
@@ -304,6 +310,9 @@ class AnnLite(CellContainer):
         :param limit: the number of results to get for each query document in search
         :param include_metadata: whether to return document metadata in response.
         """
+        if not self.is_trained:
+            raise RuntimeError(f'The indexer is not trained, cannot add new documents')
+
         query_np = to_numpy_array(docs.embeddings)
 
         match_dists, match_docs = self._search_documents(
@@ -394,6 +403,9 @@ class AnnLite(CellContainer):
         :param limit: the number of results to get for each query document in search
         """
 
+        if not self.is_trained:
+            raise RuntimeError(f'The indexer is not trained, cannot add new documents')
+
         dists, doc_ids = self._search_numpy(query_np, filter, limit)
         return dists, doc_ids
 
@@ -427,7 +439,7 @@ class AnnLite(CellContainer):
     def clear(self):
         """Clear the whole database"""
         for cell_id in range(self.n_cells):
-            logger.debug(f'Clear the index of cell-{cell_id}')
+            logger.debug(f'Clearing cell {cell_id}')
             self.vec_index(cell_id).reset()
             self.cell_table(cell_id).clear()
             self.doc_store(cell_id).clear()
@@ -439,20 +451,26 @@ class AnnLite(CellContainer):
 
     def encode(self, x: 'np.ndarray'):
         n_data, _ = self._sanity_check(x)
-        if self.n_components:
+
+        if self.projector_codec:
             x = self.projector_codec.encode(x)
 
-        y = self.pq_codec.encode(x)
-        return y
+        if self.vq_codec:
+            x = self.pq_codec.encode(x)
+
+        return x
 
     def decode(self, x: 'np.ndarray'):
         assert len(x.shape) == 2
         assert x.shape[1] == self.n_subvectors
 
-        if self.n_components:
-            return self.projector_codec.decode(self.pq_codec.decode(x))
-        else:
-            return self.pq_codec.decode(x)
+        if self.pq_codec:
+            x = self.pq_codec.decode(x)
+
+        if self.projector_codec:
+            x = self.projector_codec.decode(x)
+
+        return x
 
     @property
     def params_hash(self):
