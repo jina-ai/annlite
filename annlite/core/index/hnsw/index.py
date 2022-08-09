@@ -13,7 +13,7 @@ from ....enums import Metric
 from ....math import l2_normalize
 from ..base import BaseIndex
 
-if TYPE_CHECKING:  # pragma: no cover
+if TYPE_CHECKING:
     from ...codec.base import BaseCodec
 
 
