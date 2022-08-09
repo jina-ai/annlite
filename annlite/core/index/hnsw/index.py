@@ -1,6 +1,5 @@
 import math
 import os.path
-from argparse import ArgumentError
 from functools import wraps
 from pathlib import Path
 from typing import TYPE_CHECKING, List, Optional, Union
