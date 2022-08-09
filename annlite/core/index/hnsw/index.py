@@ -20,6 +20,9 @@ if TYPE_CHECKING:
 def pre_process(f):
     @wraps(f)
     def pre_processed(self: 'HnswIndex', x: np.ndarray, *args, **kwargs):
+        if x.ndim == 1:
+            x = x.reshape((1, -1))
+
         if self.normalization_enable:
             x = l2_normalize(x)
 
