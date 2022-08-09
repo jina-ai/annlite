@@ -38,7 +38,7 @@ class CellContainer:
         self.metric = metric
         self.n_cells = n_cells
         self.data_path = data_path
-        
+
         self._pq_codec = pq_codec
         self._projector_codec = projector_codec
 
@@ -300,6 +300,8 @@ class CellContainer:
         cells: 'np.ndarray',
         docs: 'DocumentArray',
     ):
+        update_success = 0
+
         new_data = []
         new_cells = []
         new_docs = []
@@ -315,11 +317,10 @@ class CellContainer:
                 self.cell_table(cell_id).undo_delete_by_offset(_offset)
                 self.doc_store(cell_id).update([doc])
                 self.meta_table.add_address(doc.id, cell_id, _offset)
+                update_success += 1
 
             elif _cell_id is None:
-                new_data.append(x)
-                new_cells.append(cell_id)
-                new_docs.append(doc)
+                continue
             else:
                 # DELETE and INSERT
                 self.vec_index(_cell_id).delete(_offset)
@@ -329,6 +330,7 @@ class CellContainer:
                 new_data.append(x)
                 new_cells.append(cell_id)
                 new_docs.append(doc)
+                update_success += 1
 
         if len(new_data) > 0:
             new_data = np.stack(new_data)
@@ -336,9 +338,13 @@ class CellContainer:
 
             self.insert(new_data, new_cells, new_docs)
 
-        logger.debug(f'{len(docs)} items updated')
+        logger.debug(
+            f'total items for updating: {len(docs)}, ' f'success: {update_success}'
+        )
 
     def delete(self, ids: List[str]):
+        delete_success = 0
+
         for doc_id in ids:
             cell_id, offset = self._meta_table.get_address(doc_id)
             print(f'{doc_id} {cell_id} {offset}')
@@ -347,8 +353,13 @@ class CellContainer:
                 self.cell_table(cell_id).delete_by_offset(offset)
                 self.doc_store(cell_id).delete([doc_id])
                 self.meta_table.delete_address(doc_id)
+                delete_success += 1
+            else:
+                continue
 
-        logger.debug(f'{len(ids)} items deleted')
+        logger.debug(
+            f'total items for updating: {len(ids)}, ' f'success: {delete_success}'
+        )
 
     def get_doc_by_id(self, doc_id: str):
         cell_id = 0
