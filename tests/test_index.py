@@ -1,18 +1,13 @@
-import enum
 import operator
 import random
-from collections import namedtuple
-from distutils.command.build import build
 from pathlib import Path
 
 import numpy as np
 import pytest
 from docarray import Document, DocumentArray
 
-import annlite
 from annlite import AnnLite
 from annlite.core.codec.pq import PQCodec
-from annlite.core.index import hnsw
 
 N = 1000  # number of data points
 Nq = 5

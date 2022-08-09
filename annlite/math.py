@@ -3,8 +3,23 @@ from typing import Tuple
 import numpy as np
 
 
+def l2_normalize(x: 'np.ndarray', eps: float = np.finfo(np.float32).eps):
+    """Scale input vectors individually to unit norm.
+
+    :param x: The data to normalize
+    :param eps: a small jitter to avoid divde by zero
+    :return: Normalized input X
+    """
+
+    norms = np.einsum('ij,ij->i', x, x)
+    np.sqrt(norms, norms)
+    constant_mask = norms < 10 * eps
+    norms[constant_mask] = 1.0
+    return x / norms[:, np.newaxis]
+
+
 def cosine(
-    x_mat: 'np.ndarray', y_mat: 'np.ndarray', eps: float = 1e-30
+    x_mat: 'np.ndarray', y_mat: 'np.ndarray', eps: float = np.finfo(np.float32).eps
 ) -> 'np.ndarray':
     """Cosine distance between each row in x_mat and each row in y_mat.
 

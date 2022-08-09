@@ -130,7 +130,7 @@ class AnnLite(CellContainer):
                 if not self.projector_codec
                 else self.projector_codec.n_components,
                 n_subvectors=self.n_subvectors,
-                n_clusters=256,
+                n_clusters=self.n_clusters,
                 metric=self.metric,
             )
 
