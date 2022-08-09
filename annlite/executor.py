@@ -258,6 +258,8 @@ class AnnLiteIndexer(Executor):
     @requests(on='/dump')
     def dump(self, **kwargs):
         """dump the index to disk"""
+        while len(self._data_buffer) > 0:
+            time.sleep(0.01)
         self._index.dump()
 
     @requests(on='/clear')
