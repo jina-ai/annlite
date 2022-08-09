@@ -299,6 +299,7 @@ class CellContainer:
         data: 'np.ndarray',
         cells: 'np.ndarray',
         docs: 'DocumentArray',
+        raise_errors_on_not_found: bool = True,
     ):
         update_success = 0
 
@@ -320,7 +321,13 @@ class CellContainer:
                 update_success += 1
 
             elif _cell_id is None:
-                continue
+                if raise_errors_on_not_found:
+                    raise Exception(
+                        f'doc id={doc.id} is not found in existing indexer,'
+                        f' will be ignore.'
+                    )
+                else:
+                    continue
             else:
                 # DELETE and INSERT
                 self.vec_index(_cell_id).delete(_offset)
@@ -342,7 +349,7 @@ class CellContainer:
             f'total items for updating: {len(docs)}, ' f'success: {update_success}'
         )
 
-    def delete(self, ids: List[str]):
+    def delete(self, ids: List[str], raise_errors_on_not_found: bool = True):
         delete_success = 0
 
         for doc_id in ids:
@@ -355,7 +362,13 @@ class CellContainer:
                 self.meta_table.delete_address(doc_id)
                 delete_success += 1
             else:
-                continue
+                if raise_errors_on_not_found:
+                    raise Exception(
+                        f'doc id={doc_id} is not found in existing indexer,'
+                        f' will be ignore.'
+                    )
+                else:
+                    continue
 
         logger.debug(
             f'total items for updating: {len(ids)}, ' f'success: {delete_success}'

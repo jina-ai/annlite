@@ -165,11 +165,12 @@ class AnnLiteIndexer(Executor):
             return
 
         traversal_paths = parameters.get('traversal_paths', self.index_traversal_paths)
+        raise_errors_on_not_found = parameters.get('raise_errors_on_not_found', True)
         flat_docs = docs[traversal_paths]
         if len(flat_docs) == 0:
             return
 
-        self._index.update(flat_docs)
+        self._index.update(flat_docs, raise_errors_on_not_found)
 
     @requests(on='/delete')
     def delete(
@@ -193,11 +194,12 @@ class AnnLiteIndexer(Executor):
             return
 
         traversal_paths = parameters.get('traversal_paths', self.index_traversal_paths)
+        raise_errors_on_not_found = parameters.get('raise_errors_on_not_found', True)
         flat_docs = docs[traversal_paths]
         if len(flat_docs) == 0:
             return
 
-        self._index.delete(flat_docs)
+        self._index.delete(flat_docs, raise_errors_on_not_found)
 
     @requests(on='/search')
     def search(

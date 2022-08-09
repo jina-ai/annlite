@@ -269,9 +269,12 @@ class AnnLite(CellContainer):
         )
         return super(AnnLite, self).insert(x, assigned_cells, docs)
 
-    def update(self, docs: 'DocumentArray', **kwargs):
+    def update(
+        self, docs: 'DocumentArray', raise_errors_on_not_found: bool = True, **kwargs
+    ):
         """Update existing documents.
 
+        :param raise_errors_on_not_found: whether to raise exception when id not found.
         :param docs: the document array to be updated.
         """
         if self.read_only:
@@ -287,7 +290,9 @@ class AnnLite(CellContainer):
             else np.zeros(n_data, dtype=np.int64)
         )
 
-        return super(AnnLite, self).update(x, assigned_cells, docs)
+        return super(AnnLite, self).update(
+            x, assigned_cells, docs, raise_errors_on_not_found
+        )
 
     def search(
         self,
@@ -416,13 +421,20 @@ class AnnLite(CellContainer):
         )
         return dists, ids
 
-    def delete(self, docs: Union['DocumentArray', List[str]]):
+    def delete(
+        self,
+        docs: Union['DocumentArray', List[str]],
+        raise_errors_on_not_found: bool = True,
+    ):
         """Delete entries from the index by id
 
+        :param raise_errors_on_not_found: whether to raise exception when id not found.
         :param docs: the documents to delete
         """
 
-        super().delete(docs if isinstance(docs, list) else docs[:, 'id'])
+        super().delete(
+            docs if isinstance(docs, list) else docs[:, 'id'], raise_errors_on_not_found
+        )
 
     def clear(self):
         """Clear the whole database"""
