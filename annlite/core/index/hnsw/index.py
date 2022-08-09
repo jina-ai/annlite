@@ -59,10 +59,9 @@ class HnswIndex(BaseIndex):
         self.ef_search = ef_search
         self.max_connection = max_connection
         self.pq_codec = pq_codec
+        self.index_file = index_file
 
         self._init_hnsw_index()
-
-        self.index_file = index_file
 
     def _init_hnsw_index(self):
         self._index = Index(space=self.space_name, dim=self.dim)
