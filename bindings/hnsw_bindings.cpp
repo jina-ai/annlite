@@ -126,6 +126,7 @@ public:
   hnswlib::labeltype cur_l;
   hnswlib::HierarchicalNSW<dist_t> *appr_alg;
   hnswlib::SpaceInterface<float> *l2space;
+
   // quantization setting
   bool pq_enable;
   size_t pq_n_subvectors;
@@ -137,6 +138,7 @@ public:
     delete l2space;
     if (appr_alg)
       delete appr_alg;
+    // WARNING: will python release the pq_codec?
   }
 
   void init_new_index(const size_t maxElements, const size_t M,
@@ -628,14 +630,8 @@ public:
                                     const py::object &input) {
     py::array_t<T, py::array::c_style | py::array::forcecast> items(input);
     auto buffer = items.request();
-
-    // for (int I = 0; I < 8; I++) {
-    //   std::cout << "from index " << (float)((T *)items.data(0))[I] << ',';
-    // }
-
     hnswlib::labeltype *data_numpy_l;
     dist_t *data_numpy_d;
-
     size_t rows, features;
     {
       py::gil_scoped_release l;
@@ -645,6 +641,7 @@ public:
 
       if (num_threads <= 0)
         num_threads = num_threads_default;
+
       // avoid using threads when the number of searches is small:
       if (rows <= num_threads * 4) {
         num_threads = 1;

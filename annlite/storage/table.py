@@ -6,26 +6,8 @@ from typing import TYPE_CHECKING, Any, List, Optional, Tuple, Union
 
 import numpy as np
 
-if TYPE_CHECKING:  # pragma: no cover
+if TYPE_CHECKING:
     from docarray import DocumentArray
-
-# # Adapt datetime.date to ISO 8601 date.
-# sqlite3.register_adapter(datetime.date, lambda d: d.isoformat())
-#
-# # Adapt datetime.datetime to timezone-naive ISO 8601 date.
-# sqlite3.register_adapter(datetime.datetime, lambda d: d.isoformat())
-#
-# # Adapt datetime.datetime to Unix timestamp.
-# sqlite3.register_adapter(datetime.datetime, lambda d: int(d.timestamp()))
-#
-# # Convert ISO 8601 date to datetime.date object.
-# sqlite3.register_converter("date", datetime.date.fromisoformat)
-#
-# # Convert ISO 8601 datetime to datetime.datetime object.
-# sqlite3.register_converter("datetime", datetime.datetime.fromisoformat)
-#
-# # Convert Unix epoch timestamp to datetime.datetime object.
-# sqlite3.register_converter("timestamp", datetime.datetime.fromtimestamp)
 
 sqlite3.register_adapter(np.int64, lambda x: int(x))
 sqlite3.register_adapter(np.int32, lambda x: int(x))
