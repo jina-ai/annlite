@@ -105,6 +105,7 @@ class AnnLiteIndexer(Executor):
         Keys accepted:
             - 'traversal_paths' (str): traversal path for the docs
         """
+
         if not docs:
             return
 
@@ -114,7 +115,7 @@ class AnnLiteIndexer(Executor):
             return
 
         while len(self._data_buffer) >= self._max_length_queue:
-            time.sleep(0.01)
+            time.sleep(0.001)
 
         with self._index_lock:
             self._data_buffer.extend(flat_docs)
@@ -125,9 +126,9 @@ class AnnLiteIndexer(Executor):
 
     def _index_task(self):
         try:
-            self.logger.info(f'started index thread')
             while True:
                 if len(self._data_buffer) == 0:
+                    time.sleep(0.01)
                     continue
                 with self._index_lock:
                     batch_docs = self._data_buffer.pop(
@@ -165,7 +166,7 @@ class AnnLiteIndexer(Executor):
             return
 
         traversal_paths = parameters.get('traversal_paths', self.index_traversal_paths)
-        raise_errors_on_not_found = parameters.get('raise_errors_on_not_found', True)
+        raise_errors_on_not_found = parameters.get('raise_errors_on_not_found', False)
         flat_docs = docs[traversal_paths]
         if len(flat_docs) == 0:
             return
@@ -194,7 +195,7 @@ class AnnLiteIndexer(Executor):
             return
 
         traversal_paths = parameters.get('traversal_paths', self.index_traversal_paths)
-        raise_errors_on_not_found = parameters.get('raise_errors_on_not_found', True)
+        raise_errors_on_not_found = parameters.get('raise_errors_on_not_found', False)
         flat_docs = docs[traversal_paths]
         if len(flat_docs) == 0:
             return
@@ -223,6 +224,7 @@ class AnnLiteIndexer(Executor):
             - 'traversal_paths' (str): traversal paths for the docs
             - 'limit' (int): nr of matches to get per Document
         """
+
         if not docs:
             return
 

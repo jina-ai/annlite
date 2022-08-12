@@ -323,8 +323,8 @@ class CellContainer:
             elif _cell_id is None:
                 if raise_errors_on_not_found:
                     raise Exception(
-                        f'doc id={doc.id} is not found in existing indexer,'
-                        f' will be ignore.'
+                        f'The document (id={doc.id}) cannot be updated as'
+                        f'it is not found in the index'
                     )
                 else:
                     continue
@@ -364,8 +364,8 @@ class CellContainer:
             else:
                 if raise_errors_on_not_found:
                     raise Exception(
-                        f'doc id={doc_id} is not found in existing indexer,'
-                        f' will be ignore.'
+                        f'The document (id={doc_id}) cannot be updated as'
+                        f'it is not found in the index'
                     )
                 else:
                     continue
