@@ -297,7 +297,7 @@ class CellContainer:
         data: 'np.ndarray',
         cells: 'np.ndarray',
         docs: 'DocumentArray',
-        raise_errors_on_not_found: bool = True,
+        raise_errors_on_not_found: bool = False,
     ):
         update_success = 0
 
@@ -347,7 +347,7 @@ class CellContainer:
             f'total items for updating: {len(docs)}, ' f'success: {update_success}'
         )
 
-    def delete(self, ids: List[str], raise_errors_on_not_found: bool = True):
+    def delete(self, ids: List[str], raise_errors_on_not_found: bool = False):
         delete_success = 0
 
         for doc_id in ids:
