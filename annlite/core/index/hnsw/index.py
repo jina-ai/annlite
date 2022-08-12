@@ -1,6 +1,5 @@
 import math
 import os.path
-from argparse import ArgumentError
 from functools import wraps
 from pathlib import Path
 from typing import TYPE_CHECKING, List, Optional, Union
@@ -11,42 +10,23 @@ from loguru import logger
 from annlite.hnsw_bind import Index
 
 from ....enums import Metric
-from ....math import EPS
+from ....math import l2_normalize
 from ..base import BaseIndex
 
-if TYPE_CHECKING:  # pragma: no cover
+if TYPE_CHECKING:
     from ...codec.base import BaseCodec
 
 
 def pre_process(f):
-    def dim_check_reshape(x: np.ndarray, dim):
-        _dim = x.shape[-1]
-        assert (
-            _dim == dim
-        ), f'the query embedding dimension does not match with index dimension: {_dim} vs {dim}'
-        if len(x.shape) not in [1, 2]:
-            raise ArgumentError('data embedding must be a 1d/2d array')
-        elif len(x.shape) == 1:
-            return x.reshape(1, -1)
-        else:
-            return x
-
-    def l2_normalize(x: np.ndarray):
-        return x / (np.sum(x**2, 1) ** 0.5 + EPS).reshape(-1, 1)
-
     @wraps(f)
     def pre_processed(self: 'HnswIndex', x: np.ndarray, *args, **kwargs):
-        x = dim_check_reshape(x, self.dim)
-        if self.normalization_enable and not self.pq_enable:
+        if x.ndim == 1:
+            x = x.reshape((1, -1))
+
+        if self.normalization_enable:
             x = l2_normalize(x)
-        elif self.pq_enable:
-            if not self.pq_codec.is_trained:
-                raise RuntimeError(
-                    'Please train the PQ before using HNSW quantization backend'
-                )
-            elif not self._set_backend_pq:
-                self._index.loadPQ(self.pq_codec)
-                self._set_backend_pq = True
+
+        if self.pq_codec:
             x = self.pq_codec.encode(x)
         return f(self, x, *args, **kwargs)
 
@@ -81,43 +61,36 @@ class HnswIndex(BaseIndex):
         self.ef_search = ef_search
         self.max_connection = max_connection
         self.pq_codec = pq_codec
-        self._set_backend_pq = False
         self.index_file = index_file
 
         self._init_hnsw_index()
 
     def _init_hnsw_index(self):
         self._index = Index(space=self.space_name, dim=self.dim)
-        if self.index_file and os.path.exists(self.index_file):
-            logger.info(
-                f'indexer will be loaded from {self.index_file}',
-            )
-            self.load(self.index_file)
-        else:
-            if self.index_file:
+        if self.index_file:
+            if os.path.exists(self.index_file):
+                logger.info(
+                    f'indexer will be loaded from {self.index_file}',
+                )
+                self.load(self.index_file)
+            else:
                 raise FileNotFoundError(
                     f'index path: {self.index_file} does not exist',
                 )
-            if self.pq_codec is not None and self.pq_codec.is_trained:
-                self._index.init_index(
-                    max_elements=self.capacity,
-                    ef_construction=self.ef_construction,
-                    M=self.max_connection,
-                    pq_codec=self.pq_codec,
-                )
-                self._set_backend_pq = True
-            else:
-                self._index.init_index(
-                    max_elements=self.capacity,
-                    ef_construction=self.ef_construction,
-                    M=self.max_connection,
-                    pq_codec=None,
-                )
-                self._set_backend_pq = False
+        else:
+            self._index.init_index(
+                max_elements=self.capacity,
+                ef_construction=self.ef_construction,
+                M=self.max_connection,
+                pq_codec=self.pq_codec,
+            )
+
         self._index.set_ef(self.ef_search)
 
     def load(self, index_file: Union[str, Path]):
         self._index.load_index(str(index_file))
+        if self.pq_codec:
+            self._index.loadPQ(self.pq_codec)
 
     def dump(self, index_file: Union[str, Path]):
         self._index.save_index(str(index_file))
