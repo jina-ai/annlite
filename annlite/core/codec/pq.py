@@ -59,7 +59,9 @@ class PQCodec(BaseCodec):
         #    metric == Metric.EUCLIDEAN
         # ), f'The distance metric `{metric.name}` is not supported yet!'
         self.metric = metric
-        self._codebooks = None
+        self._codebooks = np.zeros(
+            (self.n_subvectors, self.n_clusters, self.d_subvector), dtype=np.float32
+        )
         self.kmeans = []
         self.n_init = n_init
 
