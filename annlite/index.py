@@ -273,7 +273,7 @@ class AnnLite(CellContainer):
         return super(AnnLite, self).insert(x, assigned_cells, docs)
 
     def update(
-        self, docs: 'DocumentArray', raise_errors_on_not_found: bool = True, **kwargs
+        self, docs: 'DocumentArray', raise_errors_on_not_found: bool = False, **kwargs
     ):
         """Update existing documents.
 
@@ -436,7 +436,7 @@ class AnnLite(CellContainer):
     def delete(
         self,
         docs: Union['DocumentArray', List[str]],
-        raise_errors_on_not_found: bool = True,
+        raise_errors_on_not_found: bool = False,
     ):
         """Delete entries from the index by id
 
