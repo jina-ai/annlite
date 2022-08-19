@@ -25,10 +25,17 @@ def pre_process(f):
         if x.dtype != self.dtype:
             x = x.astype(self.dtype)
 
-        if self.normalization_enable:
+        if self.normalization_enable and not self.pq_enable:
             x = l2_normalize(x)
 
-        if self.pq_codec:
+        if self.pq_enable:
+            if not self.pq_codec.is_trained:
+                raise RuntimeError(
+                    'Please train the PQ before using HNSW quantization backend'
+                )
+            elif not self._set_backend_pq:
+                self._index.loadPQ(self.pq_codec)
+                self._set_backend_pq = True
             x = self.pq_codec.encode(x)
         return f(self, x, *args, **kwargs)
 
@@ -63,6 +70,7 @@ class HnswIndex(BaseIndex):
         self.ef_search = ef_search
         self.max_connection = max_connection
         self.pq_codec = pq_codec
+        self._set_backend_pq = False
         self.index_file = index_file
 
         self._init_hnsw_index()
@@ -80,12 +88,22 @@ class HnswIndex(BaseIndex):
                     f'index path: {self.index_file} does not exist',
                 )
         else:
-            self._index.init_index(
-                max_elements=self.capacity,
-                ef_construction=self.ef_construction,
-                M=self.max_connection,
-                pq_codec=self.pq_codec,
-            )
+            if self.pq_codec is not None and self.pq_codec.is_trained:
+                self._index.init_index(
+                    max_elements=self.capacity,
+                    ef_construction=self.ef_construction,
+                    M=self.max_connection,
+                    pq_codec=self.pq_codec,
+                )
+                self._set_backend_pq = True
+            else:
+                self._index.init_index(
+                    max_elements=self.capacity,
+                    ef_construction=self.ef_construction,
+                    M=self.max_connection,
+                    pq_codec=None,
+                )
+                self._set_backend_pq = False
 
         self._index.set_ef(self.ef_search)
 
