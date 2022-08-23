@@ -183,3 +183,61 @@ def test_clear(tmpdir):
         status = f.post(on='/status', return_results=True)[0]
         assert int(status.tags['total_docs']) == 0
         assert int(status.tags['index_size']) == 0
+
+
+def test_filter(tmpdir):
+    metas = {'workspace': str(tmpdir)}
+
+    docs = DocumentArray(
+        [
+            Document(
+                id="parent",
+                blob=b"gif...",
+                embedding=np.ones(5),
+                chunks=[
+                    Document(
+                        id="chunk1",
+                        blob=b"jpg...",
+                        embedding=np.ones(5),
+                        tags={'color': 'red'},
+                    ),
+                    Document(
+                        id="chunk1",
+                        blob=b"jpg...",
+                        embedding=np.ones(5),
+                        tags={'color': 'blue'},
+                    ),
+                ],
+            ),
+            Document(
+                id="doc1",
+                blob=b"jpg...",
+                embedding=np.ones(5),
+                tags={'color': 'red', 'length': 18},
+            ),
+            Document(
+                id="doc2", blob=b"jpg...", embedding=np.ones(5), tags={'color': 'blue'}
+            ),
+        ]
+    )
+    f = Flow().add(
+        uses=AnnLiteIndexer,
+        uses_with={
+            'dim': D,
+        },
+        uses_metas=metas,
+    )
+    with f:
+        f.post(on='/index', inputs=docs)
+        res = f.post(
+            on='/filter', parameters={'conditions': {'color': 'red', 'length': 18}}
+        )
+        assert len(res) == 1
+        res = f.post(
+            on='/filter', parameters={'conditions': {'color': 'red', 'length': 19}}
+        )
+        assert len(res) == 0
+        res = f.post(on='/filter', parameters={'conditions': {'kind': 'something'}})
+        assert len(res) == 0
+        res = f.post(on='/filter', parameters={'conditions': {'color': 'red'}})
+        assert len(res) == 2

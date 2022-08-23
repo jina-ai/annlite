@@ -123,6 +123,33 @@ class AnnLiteIndexer(Executor):
 
         self._index.update(flat_docs)
 
+    @requests(on='/filter')
+    def filter(
+        self, docs: Optional[DocumentArray] = None, parameters: dict = {}, **kwargs
+    ):
+        """
+        Filter documents from the index or from docs if given by using conditions
+        dictionary e.g. {"codition1":value1, "condition2": value2}
+        in case of multiple conditions "and" is used
+
+        :param docs: the Documents to update
+        :param parameters: dictionary with filetring conditions
+
+        :returns: filtered documents at root, chunks and matches level
+        """
+        query = []
+        filtering_conditions = parameters.get("conditions", {})
+
+        for key, value in filtering_conditions.items():
+            query.append({f'tags__{key}': {'$eq': value}})
+
+        if docs:
+            docs = docs['@r,c,m']
+            result = docs.find({'$and': query})
+        else:
+            result = self.index['@r,c,m'].find({'$and': query})
+        return result
+
     @requests(on='/delete')
     def delete(
         self, docs: Optional[DocumentArray] = None, parameters: dict = {}, **kwargs
