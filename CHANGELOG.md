@@ -6,6 +6,7 @@
 
 
 
+
 <a name=release-note-0-3-0></a>
 ## Release Note (`0.3.0`)
 
@@ -151,4 +152,32 @@
 
  - [[```1f76fb5d```](https://github.com/jina-ai/docarray/commit/1f76fb5dedc79d331dc655d6409718457c6c05d7)] __-__ Feat task queue (#131) (*Jie Fu*)
  - [[```103b5bf3```](https://github.com/jina-ai/docarray/commit/103b5bf31b59ca041d7ca70b8e0442421bcdf279)] __-__ __version__: the next version will be 0.3.5 (*Jina Dev Bot*)
+
+<a name=release-note-0-3-6></a>
+## Release Note (`0.3.6`)
+
+> Release time: 2022-08-23 10:45:36
+
+
+
+🙇 We'd like to thank all contributors for this new release! In particular,
+ felix-wang,  Jie Fu,  Gustavo Ye,  Jina Dev Bot,  🙇
+
+
+### 🆕 New Features
+
+ - [[```690098be```](https://github.com/jina-ai/docarray/commit/690098be576fd5d6149e0502b9d2bf100b726f27)] __-__ add pq support for hnsw searching (#122) (*Gustavo Ye*)
+ - [[```ad5a5fe3```](https://github.com/jina-ai/docarray/commit/ad5a5fe39293f771b9945102b45f05bebfaf3ad6)] __-__ indexer dumploader (#137) (*felix-wang*)
+ - [[```29019e3d```](https://github.com/jina-ai/docarray/commit/29019e3da94d0a6025c91919a8978966f073b608)] __-__ integrate annlite with projector (#136) (*Jie Fu*)
+ - [[```14c95986```](https://github.com/jina-ai/docarray/commit/14c9598602741a5558c02a98bd123b34cddc32b8)] __-__ implement pca (#135) (*Jie Fu*)
+
+### 🐞 Bug fixes
+
+ - [[```9f74de8f```](https://github.com/jina-ai/docarray/commit/9f74de8f34bc51ab740a05e9bfabf0be4ec77b87)] __-__ reload duplicate storage (#143) (*felix-wang*)
+ - [[```7010d778```](https://github.com/jina-ai/docarray/commit/7010d77869dfd2a44ebaeb4a697bbac3e01d6970)] __-__ fix update/delete (#140) (*Jie Fu*)
+ - [[```8a05887d```](https://github.com/jina-ai/docarray/commit/8a05887dc68d4219190de8767c98fc5a1740e3a2)] __-__ composite pca and pq (#139) (*felix-wang*)
+
+### 🍹 Other Improvements
+
+ - [[```157a1a9c```](https://github.com/jina-ai/docarray/commit/157a1a9c189f73f5757d2ec60c4427e41cd130bd)] __-__ __version__: the next version will be 0.3.6 (*Jina Dev Bot*)
 
