@@ -237,6 +237,7 @@ class CellContainer:
         data: 'np.ndarray',
         cells: 'np.ndarray',
         docs: 'DocumentArray',
+        only_index: bool = False,
     ):
         assert len(docs) == len(data)
 
@@ -248,7 +249,8 @@ class CellContainer:
         if len(unique_cells) == 1:
             cell_id = unique_cells[0]
 
-            self.doc_store(cell_id).insert(docs)
+            if not only_index:
+                self.doc_store(cell_id).insert(docs)
 
             offsets = self.cell_table(cell_id).insert(docs)
             offsets = np.array(offsets, dtype=np.int64)
@@ -264,7 +266,8 @@ class CellContainer:
                 indices = np.where(cells == cell_id)[0]
                 cell_docs = docs[indices.tolist()]
 
-                self.doc_store(cell_id).insert(cell_docs)
+                if not only_index:
+                    self.doc_store(cell_id).insert(cell_docs)
 
                 cell_offsets = self.cell_table(cell_id).insert(cell_docs)
                 cell_offsets = np.array(cell_offsets, dtype=np.int64)
