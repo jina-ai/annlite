@@ -31,7 +31,6 @@ class AnnLiteIndexer(Executor):
         search_traversal_paths: str = '@r',
         columns: Optional[List[Tuple[str, str]]] = None,
         serialize_config: Optional[Dict] = None,
-        data_path: Optional[str] = None,
         *args,
         **kwargs,
     ):
@@ -51,7 +50,6 @@ class AnnLiteIndexer(Executor):
         :param columns: List of tuples of the form (column_name, str_type). Here str_type must be a string that can be
                 parsed as a valid Python type.
         :param serialize_config: The configurations used for serializing documents, e.g., {'protocol': 'pickle'}
-        :param data_path: location of directory to store the database.
         """
         super().__init__(*args, **kwargs)
         self.logger = JinaLogger(self.__class__.__name__)
@@ -87,7 +85,7 @@ class AnnLiteIndexer(Executor):
             ef_construction=ef_construction,
             ef_query=ef_query,
             max_connection=max_connection,
-            data_path=data_path or self.workspace,
+            data_path=self.workspace,
             serialize_config=serialize_config or {},
             **kwargs,
         )
