@@ -597,7 +597,7 @@ class AnnLite(CellContainer):
                     x = to_numpy_array(docs.embeddings)
 
                     assigned_cells = np.ones(len(docs), dtype=np.int64) * cell_id
-                    super().insert(x, assigned_cells, docs)
+                    super().insert(x, assigned_cells, docs, only_index=True)
                 logger.debug(f'Rebuild the index of cell-{cell_id} done')
 
             if dump_after_building:

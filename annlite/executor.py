@@ -31,7 +31,6 @@ class AnnLiteIndexer(Executor):
         search_traversal_paths: str = '@r',
         columns: Optional[List[Tuple[str, str]]] = None,
         serialize_config: Optional[Dict] = None,
-        data_path: Optional[str] = None,
         *args,
         **kwargs,
     ):
@@ -51,7 +50,6 @@ class AnnLiteIndexer(Executor):
         :param columns: List of tuples of the form (column_name, str_type). Here str_type must be a string that can be
                 parsed as a valid Python type.
         :param serialize_config: The configurations used for serializing documents, e.g., {'protocol': 'pickle'}
-        :param data_path: location of directory to store the database.
         """
         super().__init__(*args, **kwargs)
         self.logger = JinaLogger(self.__class__.__name__)
@@ -63,6 +61,7 @@ class AnnLiteIndexer(Executor):
         self.include_metadata = include_metadata
         self.index_traversal_paths = index_traversal_paths
         self.search_traversal_paths = search_traversal_paths
+
         self._valid_input_columns = ['str', 'float', 'int']
         self._data_buffer = DocumentArray()
         self._index_batch_size = 1024
@@ -87,12 +86,12 @@ class AnnLiteIndexer(Executor):
             ef_construction=ef_construction,
             ef_query=ef_query,
             max_connection=max_connection,
-            data_path=data_path or self.workspace,
+            data_path=self.workspace or './workspace',
             serialize_config=serialize_config or {},
             **kwargs,
         )
 
-        self._start_index()
+        self._start_index_loop()
 
     @requests(on='/index')
     def index(
@@ -120,29 +119,30 @@ class AnnLiteIndexer(Executor):
         with self._index_lock:
             self._data_buffer.extend(flat_docs)
 
-    def _start_index(self):
-        self._index_thread = Thread(target=self._index_task, daemon=False)
-        self._index_thread.start()
+    def _start_index_loop(self):
+        def _index_loop():
+            try:
+                while True:
+                    if len(self._data_buffer) == 0:
+                        time.sleep(0.01)
+                        continue
 
-    def _index_task(self):
-        try:
-            while True:
-                if len(self._data_buffer) == 0:
-                    time.sleep(0.01)
-                    continue
-                with self._index_lock:
-                    batch_docs = self._data_buffer.pop(
-                        range(
-                            self._index_batch_size
-                            if len(self._data_buffer) > self._index_batch_size
-                            else len(self._data_buffer)
+                    with self._index_lock:
+                        batch_docs = self._data_buffer.pop(
+                            range(
+                                self._index_batch_size
+                                if len(self._data_buffer) > self._index_batch_size
+                                else len(self._data_buffer)
+                            )
                         )
-                    )
-                self._index.index(batch_docs)
-                self.logger.info(f'indexing {len(batch_docs)} docs done...')
-        except Exception as e:
-            self.logger.error(f'index thread failed: {e}')
-            self.logger.error(traceback.format_exc())
+                    self._index.index(batch_docs)
+                    self.logger.debug(f'indexing {len(batch_docs)} docs done...')
+            except Exception as e:
+                self.logger.error(traceback.format_exc())
+                raise e
+
+        self._index_thread = Thread(target=_index_loop, daemon=False)
+        self._index_thread.start()
 
     @requests(on='/update')
     def update(
