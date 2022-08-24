@@ -102,6 +102,14 @@ def test_index(annlite_index):
     annlite_index.index(docs)
 
 
+@pytest.mark.parametrize('dtype', [np.int64, np.float32, np.float64])
+def test_dtype(annlite_index, dtype):
+    X = np.random.random((N, D)).astype(dtype)  # 10,000 128-dim vectors to be indexed
+
+    docs = DocumentArray([Document(id=f'{i}', embedding=X[i]) for i in range(N)])
+    annlite_index.index(docs)
+
+
 def test_delete(annlite_with_data):
     annlite_with_data.delete(['0', '1'])
 

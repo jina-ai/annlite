@@ -22,6 +22,8 @@ def pre_process(f):
     def pre_processed(self: 'HnswIndex', x: np.ndarray, *args, **kwargs):
         if x.ndim == 1:
             x = x.reshape((1, -1))
+        if x.dtype != self.dtype:
+            x = x.astype(self.dtype)
 
         if self.normalization_enable:
             x = l2_normalize(x)
