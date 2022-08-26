@@ -4,6 +4,7 @@ from scipy.cluster.vq import vq
 from annlite import pq_bind
 
 from ...enums import Metric
+from ...math import l2_normalize
 from .base import BaseCodec
 
 # from pqlite.pq_bind import precompute_adc_table, dist_pqcodes_to_codebooks
@@ -59,6 +60,11 @@ class PQCodec(BaseCodec):
         #    metric == Metric.EUCLIDEAN
         # ), f'The distance metric `{metric.name}` is not supported yet!'
         self.metric = metric
+
+        self.normalize_input = False
+        if self.metric == Metric.COSINE:
+            self.normalize_input = True
+
         self._codebooks = np.zeros(
             (self.n_subvectors, self.n_clusters, self.d_subvector), dtype=np.float32
         )
@@ -88,6 +94,9 @@ class PQCodec(BaseCodec):
         assert x.dtype == np.float32
         assert x.ndim == 2
 
+        if self.normalize_input:
+            x = l2_normalize(x)
+
         # [m][ks][ds]: m-th subspace, ks-the codeword, ds-th dim
         self._codebooks = np.zeros(
             (self.n_subvectors, self.n_clusters, self.d_subvector), dtype=np.float32
@@ -109,6 +118,10 @@ class PQCodec(BaseCodec):
         :param x: Training vectors with shape=(N, D)
         """
         assert x.ndim == 2
+
+        if self.normalize_input:
+            x = l2_normalize(x)
+
         if len(self.kmeans) > 0:
             for m in range(self.n_subvectors):
                 self.kmeans[m].partial_fit(
