@@ -8,6 +8,7 @@
 
 
 
+
 <a name=release-note-0-3-0></a>
 ## Release Note (`0.3.0`)
 
@@ -200,4 +201,24 @@
 ### 🍹 Other Improvements
 
  - [[```b602acce```](https://github.com/jina-ai/docarray/commit/b602acce8f7f2ac085f9cbccae6fadeee1ebcb85)] __-__ __version__: the next version will be 0.3.7 (*Jina Dev Bot*)
+
+<a name=release-note-0-3-8></a>
+## Release Note (`0.3.8`)
+
+> Release time: 2022-08-26 11:12:19
+
+
+
+🙇 We'd like to thank all contributors for this new release! In particular,
+ felix-wang,  Jina Dev Bot,  🙇
+
+
+### 🐞 Bug fixes
+
+ - [[```a5eaa53e```](https://github.com/jina-ai/docarray/commit/a5eaa53e84aa374e061ca0bfddc7797fe369f8ec)] __-__ insert when not found at update (#151) (*felix-wang*)
+ - [[```18af2d4c```](https://github.com/jina-ai/docarray/commit/18af2d4c42ced2ca9d393456ba9722953edce383)] __-__ normalize training data for cosine metric (#150) (*felix-wang*)
+
+### 🍹 Other Improvements
+
+ - [[```f0fb1c4b```](https://github.com/jina-ai/docarray/commit/f0fb1c4b37c89fea31fc24fb47b60181f0cd3218)] __-__ __version__: the next version will be 0.3.8 (*Jina Dev Bot*)
 
