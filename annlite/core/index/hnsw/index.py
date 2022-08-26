@@ -25,7 +25,7 @@ def pre_process(f):
         if x.dtype != self.dtype:
             x = x.astype(self.dtype)
 
-        if self.normalization_enable and not self.pq_enable:
+        if self.normalization_enable:
             x = l2_normalize(x)
 
         if self.pq_enable:
