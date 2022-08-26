@@ -301,6 +301,7 @@ class CellContainer:
         cells: 'np.ndarray',
         docs: 'DocumentArray',
         raise_errors_on_not_found: bool = False,
+        insert_if_not_found: bool = True,
     ):
         update_success = 0
 
@@ -322,11 +323,16 @@ class CellContainer:
                 update_success += 1
 
             elif _cell_id is None:
-                if raise_errors_on_not_found:
+                if raise_errors_on_not_found and not insert_if_not_found:
                     raise Exception(
                         f'The document (id={doc.id}) cannot be updated as'
                         f'it is not found in the index'
                     )
+                elif insert_if_not_found:
+                    new_data.append(x)
+                    new_cells.append(cell_id)
+                    new_docs.append(doc)
+                    update_success += 1
                 else:
                     continue
             else:
