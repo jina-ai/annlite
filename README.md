@@ -58,14 +58,41 @@ python -m annlite.cli --dataset_path data/dataset.csv --query_point [1, 2, 3] --
 
 We can also use the `--help` option to see the available options.
 
-To support search with filters, we can use the `conditions` argument to filter the indexed dataset during search.
+To support search with filters, the annlite must be created with `fields` parameter, which is a series of fields you want to filter by.
+At the query time, the annlite will filter the dataset by providing `conditions` for certain fields.
 
 ```python
 import annlite
 
-ann = annlite.AnnLite(dataset_path='data/dataset.csv', filter_fields=['city'])
+ann = annlite.AnnLite(dataset_path='data/dataset.csv', fields=['city'])
 ann.search(query_point=[1, 2, 3], k=3, conditions={'distance': {'$lt': 1}})
 ```
+
+The `conditions` parameter is a dictionary of conditions. The key is the field name, and the value is a dictionary of conditions.
+The query language is the same as MongoDB. The following is an example of a query:
+
+```python
+{
+    'distance': {'$lt': 1},
+    'city': {'$eq': 'Beijing'}
+}
+```
+We also support boolean operators:
+
+```python
+{
+    'city': {'$eq': 'Beijing'},
+    '$or': [
+        {'city': {'$eq': 'Beijing'}},
+        {'city': {'$eq': 'Shanghai'}}
+    ]
+}
+```
+For more information, please refer to [MongoDB Query Language](https://docs.mongodb.com/manual/reference/operator/query/).
+
+
+The query will be performed on the field if the condition is satisfied.
+
 
 ## FAQ
 
