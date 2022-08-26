@@ -171,7 +171,11 @@ class AnnLiteIndexer(Executor):
         if len(flat_docs) == 0:
             return
 
-        self._index.update(flat_docs, raise_errors_on_not_found)
+        self._index.update(
+            flat_docs,
+            raise_errors_on_not_found=raise_errors_on_not_found,
+            insert_if_not_found=False,
+        )
 
     @requests(on='/delete')
     def delete(
