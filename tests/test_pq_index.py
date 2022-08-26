@@ -1,6 +1,7 @@
 import numpy as np
 import pytest
 from docarray import Document, DocumentArray
+from loguru import logger
 
 from annlite import AnnLite
 
@@ -78,6 +79,8 @@ def test_hnsw_pq_search_multi_clusters(n_clusters, tmpdir, random_docs):
         ground_truth = set([m.id for m in query[i].matches])
         pq_result = set([m.id for m in test_query[i].matches])
         precision.append(len(ground_truth & pq_result) / topk)
-
+    logger.info(
+        f'PQ backend(cluster={n_clusters}) top-{topk} precision: {np.mean(precision)}'
+    )
     # TODO: fix the precision issue
     # assert np.mean(precision) > 0.9
