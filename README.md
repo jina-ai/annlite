@@ -1,5 +1,8 @@
 # AnnLite
 
+
+## What is AnnLite?
+
 `AnnLite` is a lightweight library for **fast** and **memory efficient** *approximate nearest neighbor search* (ANNS).
 It allows to search for nearest neighbors in a dataset of millions of points with a Pythonic API.
 
@@ -20,7 +23,13 @@ Read more on why should you use `AnnLite`: [here](), and compare to alternatives
 pip install annlite
 ```
 
-## Usage
+or install from source:
+
+```bash
+python setup.py install
+```
+
+## Quick start
 
 In this example, we will search for nearest neighbors in the dataset [Totally looks like]()
 
@@ -57,8 +66,6 @@ import annlite
 ann = annlite.AnnLite(dataset_path='data/dataset.csv', filter_fields=['city'])
 ann.search(query_point=[1, 2, 3], k=3, conditions={'distance': {'$lt': 1}})
 ```
-
-## Benchmark
 
 ## FAQ
 
