@@ -281,6 +281,7 @@ class AnnLite(CellContainer):
     ):
         """Update existing documents.
 
+        :param insert_if_not_found: whether to raise error when updated id is not found.
         :param raise_errors_on_not_found: whether to raise exception when id not found.
         :param docs: the document array to be updated.
         """

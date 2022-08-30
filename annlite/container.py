@@ -301,8 +301,8 @@ class CellContainer:
         data: 'np.ndarray',
         cells: 'np.ndarray',
         docs: 'DocumentArray',
-        raise_errors_on_not_found: bool = False,
         insert_if_not_found: bool = True,
+        raise_errors_on_not_found: bool = False,
     ):
         update_success = 0
 
@@ -322,7 +322,6 @@ class CellContainer:
                 self.doc_store(cell_id).update([doc])
                 self.meta_table.add_address(doc.id, cell_id, _offset)
                 update_success += 1
-
             elif _cell_id is None:
                 if raise_errors_on_not_found and not insert_if_not_found:
                     raise Exception(
