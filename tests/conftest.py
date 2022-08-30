@@ -24,3 +24,24 @@ def update_docs():
             Document(id='doc1', embedding=np.array([0, 0, 0, 1])),
         ]
     )
+
+
+@pytest.fixture(scope='module')
+def start_storage():
+    import os
+
+    os.system(
+        f'docker-compose -f {compose_yml} --project-directory . up  --build -d '
+        f'--remove-orphans'
+    )
+    from elasticsearch import Elasticsearch
+
+    es = Elasticsearch(hosts='http://localhost:9200/')
+    while not es.ping():
+        time.sleep(0.5)
+
+    yield
+    os.system(
+        f'docker-compose -f {compose_yml} --project-directory . down '
+        f'--remove-orphans'
+    )
