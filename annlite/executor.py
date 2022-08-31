@@ -123,6 +123,9 @@ class AnnLiteIndexer(Executor):
         def _index_loop():
             try:
                 while True:
+                    if self._data_buffer is None:
+                        break
+
                     if len(self._data_buffer) == 0:
                         time.sleep(0.01)
                         continue
@@ -266,11 +269,16 @@ class AnnLiteIndexer(Executor):
     @requests(on='/clear')
     def clear(self, **kwargs):
         """Clear the index of all entries."""
-        self._data_buffer = DocumentArray()
+        with self._index_lock:
+            print('')
+            self._data_buffer = DocumentArray()
         self._index.clear()
 
     def close(self, **kwargs):
         """Close the index."""
         while len(self._data_buffer) > 0:
             time.sleep(0.01)
-        self._index.close()
+        with self._index_lock:
+            self._data_buffer = None
+            self._index_thread.join()
+            self._index.close()

@@ -1,8 +1,10 @@
+import time
+
 import numpy as np
 import pytest
 from jina import Document, DocumentArray, Executor, Flow
 
-from ..executor import AnnLiteIndexer
+from annlite.executor import AnnLiteIndexer
 
 N = 1000  # number of data points
 Nt = 2000
@@ -68,6 +70,9 @@ def test_update(tmpdir):
     )
     with f:
         f.post(on='/index', inputs=docs)
+
+        time.sleep(2)
+
         update_res = f.post(on='/update', inputs=docs_update, return_results=True)
         assert len(update_res) == Nu
 
@@ -90,6 +95,8 @@ def test_search(tmpdir):
     )
     with f:
         f.post(on='/index', inputs=docs)
+
+        time.sleep(2)
 
         query_res = f.post(on='/search', inputs=docs_query, return_results=True)
         assert len(query_res) == Nq
@@ -116,6 +123,8 @@ def test_search_with_filtering(tmpdir):
 
     with f:
         f.post(on='/index', inputs=docs)
+        time.sleep(2)
+
         query_res = f.post(
             on='/search',
             inputs=docs_query,
@@ -137,6 +146,8 @@ def test_delete(tmpdir):
     )
     with f:
         f.post(on='/index', inputs=docs)
+        time.sleep(2)
+
         status = f.post(on='/status', return_results=True)[0]
         assert int(status.tags['total_docs']) == N
         assert int(status.tags['index_size']) == N
