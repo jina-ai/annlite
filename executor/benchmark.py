@@ -10,7 +10,7 @@ R = 5
 B = 4096
 n_cells = 1
 
-from executor import AnnLiteIndexer
+from annlite.executor import AnnLiteIndexer
 
 times = {}
 
