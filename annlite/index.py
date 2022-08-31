@@ -581,14 +581,11 @@ class AnnLite(CellContainer):
                 self.cell_table(cell_id).load(self.snapshot_path / f'cell_{cell_id}.db')
         else:
             logger.info(f'Rebuild the indexer from scratch')
-            dump_after_building = False
             for cell_id in range(self.n_cells):
                 cell_size = self.doc_store(cell_id).size
 
                 if cell_size == 0:
                     continue  # skip empty cell
-
-                dump_after_building = True
 
                 logger.debug(
                     f'Rebuild the index of cell-{cell_id} ({cell_size} docs)...'
@@ -599,9 +596,6 @@ class AnnLite(CellContainer):
                     assigned_cells = np.ones(len(docs), dtype=np.int64) * cell_id
                     super().insert(x, assigned_cells, docs, only_index=True)
                 logger.debug(f'Rebuild the index of cell-{cell_id} done')
-
-            if dump_after_building:
-                self.dump()
 
     @property
     def is_trained(self):
