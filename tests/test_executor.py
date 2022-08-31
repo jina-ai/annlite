@@ -173,6 +173,7 @@ def test_status(tmpdir):
     )
     with f:
         f.post(on='/index', inputs=docs)
+        time.sleep(2)
         status = f.post(on='/status', return_results=True)[0]
         assert int(status.tags['total_docs']) == N
         assert int(status.tags['index_size']) == N
