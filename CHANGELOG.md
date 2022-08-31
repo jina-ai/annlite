@@ -9,6 +9,7 @@
 
 
 
+
 <a name=release-note-0-3-0></a>
 ## Release Note (`0.3.0`)
 
@@ -221,4 +222,24 @@
 ### 🍹 Other Improvements
 
  - [[```f0fb1c4b```](https://github.com/jina-ai/docarray/commit/f0fb1c4b37c89fea31fc24fb47b60181f0cd3218)] __-__ __version__: the next version will be 0.3.8 (*Jina Dev Bot*)
+
+<a name=release-note-0-3-9></a>
+## Release Note (`0.3.9`)
+
+> Release time: 2022-08-31 03:46:53
+
+
+
+🙇 We'd like to thank all contributors for this new release! In particular,
+ felix-wang,  Gustavo Ye,  Jina Dev Bot,  🙇
+
+
+### 🐞 Bug fixes
+
+ - [[```27589456```](https://github.com/jina-ai/docarray/commit/27589456fe72c3e9a1fe7d6c8d198e0e71fd9a89)] __-__ reload indexer (#154) (*felix-wang*)
+ - [[```cdbe7256```](https://github.com/jina-ai/docarray/commit/cdbe725691cf5cc19db5df250d6d9d384bc94437)] __-__ __py__: roll back the original decorator (#142) (*Gustavo Ye*)
+
+### 🍹 Other Improvements
+
+ - [[```f34062b2```](https://github.com/jina-ai/docarray/commit/f34062b2249a3fce8cb51dc9e8b8497d33a54a2f)] __-__ __version__: the next version will be 0.3.9 (*Jina Dev Bot*)
 
