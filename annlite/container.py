@@ -1,4 +1,5 @@
 import hashlib
+import warnings
 from pathlib import Path
 from typing import TYPE_CHECKING, Dict, List, Optional, Tuple
 
@@ -327,6 +328,12 @@ class CellContainer:
                     raise Exception(
                         f'The document (id={doc.id}) cannot be updated as'
                         f'it is not found in the index'
+                    )
+                elif not (raise_errors_on_not_found or insert_if_not_found):
+                    warnings.warn(
+                        f'The document (id={doc.id}) cannot be updated as '
+                        f'it is not found in the index',
+                        RuntimeWarning,
                     )
                 elif insert_if_not_found:
                     new_data.append(x)
