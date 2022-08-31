@@ -165,6 +165,7 @@ extras['test'] = [
     'pytest-repeat',
     'pytest-reraise',
     'pytest-custom_exit_code',
+    'jina',
 ]
 
 # for e in ext_modules:
