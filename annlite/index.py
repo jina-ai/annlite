@@ -273,7 +273,11 @@ class AnnLite(CellContainer):
         return super(AnnLite, self).insert(x, assigned_cells, docs)
 
     def update(
-        self, docs: 'DocumentArray', raise_errors_on_not_found: bool = False, **kwargs
+        self,
+        docs: 'DocumentArray',
+        raise_errors_on_not_found: bool = False,
+        insert_if_not_found: bool = True,
+        **kwargs,
     ):
         """Update existing documents.
 
@@ -297,7 +301,11 @@ class AnnLite(CellContainer):
         )
 
         return super(AnnLite, self).update(
-            x, assigned_cells, docs, raise_errors_on_not_found
+            x,
+            assigned_cells,
+            docs,
+            raise_errors_on_not_found=raise_errors_on_not_found,
+            insert_if_not_found=insert_if_not_found,
         )
 
     def search(

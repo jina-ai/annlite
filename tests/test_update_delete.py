@@ -61,7 +61,14 @@ def test_update_illegal(annlite_with_data):
     )
 
     with pytest.raises(Exception):
-        index.update(updated_docs, raise_errors_on_not_found=True)
+        index.update(
+            updated_docs, raise_errors_on_not_found=True, insert_if_not_found=False
+        )
+    with pytest.warns(RuntimeWarning):
+        index.update(
+            updated_docs, raise_errors_on_not_found=False, insert_if_not_found=False
+        )
+    index.update(updated_docs, raise_errors_on_not_found=True, insert_if_not_found=True)
 
 
 def test_delete_legal(annlite_with_data):
