@@ -19,7 +19,6 @@ for n_i in n_index:
         dim=D,
         initial_size=n_i,
         n_cells=n_cells,
-        metas={'workspace': './workspace'},
     )
 
     # build index docs

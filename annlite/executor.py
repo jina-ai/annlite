@@ -13,9 +13,7 @@ from .index import AnnLite
 
 class AnnLiteIndexer(Executor):
     """
-    A simple Indexer based on PQLite that stores all the Document data together in a local LMDB store.
-
-    To be used as a hybrid indexer, supporting pre-filtering searching.
+    A simple indexer that wraps the AnnLite indexer and adds a simple interface for indexing and searching.
     """
 
     def __init__(
@@ -138,8 +136,8 @@ class AnnLiteIndexer(Executor):
                                 else len(self._data_buffer)
                             )
                         )
-                    self._index.index(batch_docs)
-                    self.logger.debug(f'indexing {len(batch_docs)} docs done...')
+                        self._index.index(batch_docs)
+                        self.logger.debug(f'indexing {len(batch_docs)} docs done...')
             except Exception as e:
                 self.logger.error(traceback.format_exc())
                 raise e
