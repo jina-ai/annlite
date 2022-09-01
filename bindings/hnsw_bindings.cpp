@@ -212,23 +212,6 @@ public:
       norm_array[i] = data[i] * norm;
   }
 
-  // py::object unsqueeze_head(const py::object & input) {
-  //   return input.attr("reshape")(1, *input.attr("shape"));
-  // }
-
-  // py::object unsqueeze_tail(const py::object & input) {
-  //   return input.attr("reshape")(*input.attr("shape"), 1);
-  // }
-
-  // py::object py_power(const py::object & input, float pow) {
-  //   return input.attr("__pow__")(pow);
-  // }
-
-  // py::object l2_normalize(py::object input) {
-  //   return input.attr("__truediv__")(
-  //       unsqueeze_tail(py_power(py_power(input, 2).attr("sum")(1), 0.5)) +
-  //       py::float_(1e-30f));
-  // }
   template <typename T>
   void addRows_(int dim, int num_threads, const py::object &ids_,
                 const py::object &input) {
@@ -284,9 +267,9 @@ public:
       cur_l += rows;
     }
   }
-  void addItems(py::object input, py::object ids_ = py::none(),
-                int num_threads = -1) {
-    // remove dim check and normalization to python
+  void addItems(const py::object &input, py::object ids_ = py::none(),
+                int num_threads = -1, py::object dtables = py::none()) {
+    // move dim check and normalization to python
     if (!pq_enable) {
       addRows_<float>(this->dim, num_threads, ids_, input);
     } else {
@@ -684,9 +667,10 @@ public:
             data_numpy_d,     // the data pointer
             free_when_done_d));
   }
-  py::object knnQuery_return_numpy(py::object input, size_t k = 1,
-                                   int num_threads = -1) {
-    // remove dim check and normalization to python
+  py::object knnQuery_return_numpy(const py::object &input, size_t k = 1,
+                                   int num_threads = -1,
+                                   py::object dtables = py::none()) {
+    // move dim check and normalization to python
     if (!pq_enable) {
       return knnQuery_return_numpy_<float>(k, num_threads, input);
     } else {
@@ -800,8 +784,9 @@ public:
   }
   py::object knnQuery_with_filter(py::object input,
                                   py::object candidate_ids_ = py::none(),
-                                  size_t k = 1, int num_threads = -1) {
-    // remove dim check and normalization to python
+                                  size_t k = 1, int num_threads = -1,
+                                  py::object dtables = py::none()) {
+    // move dim check and normalization to python
     if (!pq_enable) {
       return knnQuery_with_filter_<float>(k, num_threads, candidate_ids_,
                                           input);
@@ -921,12 +906,14 @@ PYBIND11_PLUGIN(hnsw_bind) {
            py::arg("M") = 16, py::arg("ef_construction") = 200,
            py::arg("random_seed") = 100, py::arg("pq_codec") = py::none())
       .def("knn_query", &Index<float>::knnQuery_return_numpy, py::arg("data"),
-           py::arg("k") = 1, py::arg("num_threads") = -1)
+           py::arg("k") = 1, py::arg("num_threads") = -1,
+           py::arg("dtables") = py::none())
       .def("knn_query_with_filter", &Index<float>::knnQuery_with_filter,
            py::arg("data"), py::arg("filters") = py::none(), py::arg("k") = 1,
-           py::arg("num_threads") = -1)
+           py::arg("num_threads") = -1, py::arg("dtables") = py::none())
       .def("add_items", &Index<float>::addItems, py::arg("data"),
-           py::arg("ids") = py::none(), py::arg("num_threads") = -1)
+           py::arg("ids") = py::none(), py::arg("num_threads") = -1,
+           py::arg("dtables") = py::none())
       .def("get_items", &Index<float, float>::getDataReturnList,
            py::arg("ids") = py::none())
       .def("get_ids_list", &Index<float>::getIdsList)
