@@ -2,4 +2,3 @@ jtype: AnnLiteIndexer
 metas:
   py_modules:
     - annlite.executor
-  workspace: workspace/
