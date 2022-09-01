@@ -1,5 +1,5 @@
 jtype: AnnLiteIndexer
 metas:
   py_modules:
-    - annlite.executor
+    - __init__.py
   workspace: workspace/
