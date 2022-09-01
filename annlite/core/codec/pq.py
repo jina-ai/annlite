@@ -240,6 +240,41 @@ class PQCodec(BaseCodec):
         """
         return (self.n_subvectors, self.n_clusters, self.d_subvector)
 
+    def get_dist_mat(self, x: np.ndarray):
+        """Return the distance tables in form of matrix for multiple queries
+
+        :param query: shape('N', 'D'),
+
+        :return: ndarray with shape('N', `n_subvectors`, `n_clusters`)
+
+        .. note::
+            _description_
+        """
+        assert x.dtype == np.float32
+        assert x.ndim == 2
+        N, D = x.shape
+        assert (
+            D == self.d_subvector * self.n_subvectors
+        ), 'input dimension must be Ds * M'
+
+        x = x.reshape(
+            N,
+            self.n_subvectors,
+            1,
+            self.d_subvector,
+        )
+
+        # (1, n_subvectors, n_clusters, d_subvector)
+        codebook = self.codebooks[np.newaxis, ...]
+
+        # broadcast to (N, n_subvectors, n_clusters, d_subvector)
+        dist_vector = (x - codebook) ** 2
+
+        # reduce to (N, n_subvectors, n_clusters)
+        dist_mat = np.sum(dist_vector, axis=3)
+
+        return dist_mat
+
     # -------------------------------------
 
 
