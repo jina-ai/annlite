@@ -1,6 +1,7 @@
 import threading
 import time
 import traceback
+import warnings
 from threading import Thread
 from typing import Dict, List, Optional, Tuple
 
@@ -25,8 +26,8 @@ class AnnLiteIndexer(Executor):
         ef_query: int = 50,
         max_connection: int = 16,
         include_metadata: bool = True,
-        index_traversal_paths: str = '@r',
-        search_traversal_paths: str = '@r',
+        index_access_paths: str = '@r',
+        search_access_paths: str = '@r',
         columns: Optional[List[Tuple[str, str]]] = None,
         serialize_config: Optional[Dict] = None,
         *args,
@@ -41,9 +42,9 @@ class AnnLiteIndexer(Executor):
         :param ef_query: The query time accuracy/speed trade-off
         :param max_connection: The maximum number of outgoing connections in the
             graph (the "M" parameter)
-        :param index_traversal_paths: Default traversal paths on docs
+        :param index_access_paths: Default traversal paths on docs
                 (used for indexing, delete and update), e.g. '@r', '@c', '@r,c'
-        :param search_traversal_paths: Default traversal paths on docs
+        :param search_access_paths: Default traversal paths on docs
         (used for search), e.g. '@r', '@c', '@r,c'
         :param columns: List of tuples of the form (column_name, str_type). Here str_type must be a string that can be
                 parsed as a valid Python type.
@@ -52,13 +53,26 @@ class AnnLiteIndexer(Executor):
         super().__init__(*args, **kwargs)
         self.logger = JinaLogger(self.__class__.__name__)
 
-        assert dim > 0, 'Please specify the dimension of the vectors to index!'
+        if not dim:
+            raise ValueError('Please specify the dimension of the vectors to index!')
 
         self.metric = metric
         self.limit = limit
         self.include_metadata = include_metadata
-        self.index_traversal_paths = index_traversal_paths
-        self.search_traversal_paths = search_traversal_paths
+
+        self.index_access_paths = index_access_paths
+        if 'index_traversal_paths' in kwargs:
+            warnings.warn(
+                f'`index_traversal_paths` is deprecated. Use `index_access_paths` instead.'
+            )
+            self.index_access_paths = kwargs['index_traversal_paths']
+
+        self.search_access_paths = search_access_paths
+        if 'search_traversal_paths' in kwargs:
+            warnings.warn(
+                f'`search_traversal_paths` is deprecated. Use `search_access_paths` instead.'
+            )
+            self.search_access_paths = kwargs['search_traversal_paths']
 
         self._valid_input_columns = ['str', 'float', 'int']
         self._data_buffer = DocumentArray()
@@ -71,9 +85,10 @@ class AnnLiteIndexer(Executor):
         if columns:
             cols = []
             for n, t in columns:
-                assert (
-                    t in self._valid_input_columns
-                ), f'column of type={t} is not supported. Supported types are {self._valid_input_columns}'
+                if t not in self._valid_input_columns:
+                    raise ValueError(
+                        f'column of type={t} is not supported. Supported types are {self._valid_input_columns}'
+                    )
                 cols.append((n, eval(t)))
             columns = cols
 
@@ -89,6 +104,8 @@ class AnnLiteIndexer(Executor):
             **kwargs,
         )
 
+        # start indexing thread in background to group indexing requests
+        # together and perform batch indexing at once
         self._start_index_loop()
 
     @requests(on='/index')
@@ -100,14 +117,14 @@ class AnnLiteIndexer(Executor):
         :param docs: the Documents to index
         :param parameters: dictionary with options for indexing
         Keys accepted:
-            - 'traversal_paths' (str): traversal path for the docs
+            - 'access_paths': traversal paths on docs, e.g. '@r', '@c', '@r,c'
         """
 
         if not docs:
             return
 
-        traversal_paths = parameters.get('traversal_paths', self.index_traversal_paths)
-        flat_docs = docs[traversal_paths]
+        access_paths = parameters.get('access_paths', self.index_access_paths)
+        flat_docs = docs[access_paths]
         if len(flat_docs) == 0:
             return
 
@@ -118,16 +135,24 @@ class AnnLiteIndexer(Executor):
             self._data_buffer.extend(flat_docs)
 
     def _start_index_loop(self):
+        """Start the indexing loop in background.
+
+        This loop is responsible for batch indexing the documents in the buffer.
+        """
+
         def _index_loop():
             try:
                 while True:
+                    # if the buffer is none, will break the loop
                     if self._data_buffer is None:
                         break
 
+                    # if the buffer is empty, will wait for new documents to be added
                     if len(self._data_buffer) == 0:
-                        time.sleep(0.01)
+                        time.sleep(0.1)  # sleep for 100ms
                         continue
 
+                    # acquire the lock to prevent threading issues
                     with self._index_lock:
                         batch_docs = self._data_buffer.pop(
                             range(
@@ -154,24 +179,24 @@ class AnnLiteIndexer(Executor):
         :param docs: the Documents to update
         :param parameters: dictionary with options for updating
         Keys accepted:
-
-            - 'traversal_paths' (str): traversal path for the docs
+            - 'access_paths': traversal paths on docs, e.g. '@r', '@c', '@r,c'
+            - 'raise_errors_on_not_found': if True, raise an error if a document is not found. Default is False.
         """
 
         if not docs:
             return
 
-        traversal_paths = parameters.get('traversal_paths', self.index_traversal_paths)
+        access_paths = parameters.get('access_paths', self.index_access_paths)
         raise_errors_on_not_found = parameters.get('raise_errors_on_not_found', False)
-        flat_docs = docs[traversal_paths]
+        flat_docs = docs[access_paths]
         if len(flat_docs) == 0:
             return
 
         with self._index_lock:
             if len(self._data_buffer) > 0:
-                raise Exception(
-                    'updating operation is not allowed when length of data buffer '
-                    'is bigger than 0'
+                raise RuntimeError(
+                    f'Cannot update documents while the pending documents in the buffer are not indexed yet. '
+                    'Please wait for the pending documents to be indexed.'
                 )
             self._index.update(
                 flat_docs,
@@ -189,26 +214,28 @@ class AnnLiteIndexer(Executor):
         :param parameters: dictionary with options for deletion
 
         Keys accepted:
-            - 'traversal_paths' (str): traversal path for the docs
+            - 'access_paths': traversal paths on docs, e.g. '@r', '@c', '@r,c'
         """
 
         if not docs:
             return
 
-        traversal_paths = parameters.get('traversal_paths', self.index_traversal_paths)
+        access_paths = parameters.get('access_paths', self.index_access_paths)
         raise_errors_on_not_found = parameters.get('raise_errors_on_not_found', False)
-        flat_docs = docs[traversal_paths]
+        flat_docs = docs[access_paths]
         if len(flat_docs) == 0:
             return
 
         with self._index_lock:
             if len(self._data_buffer) > 0:
-                raise Exception(
-                    'deleting operation is not allowed when length of data buffer '
-                    'is bigger than 0'
+                raise RuntimeError(
+                    f'Cannot delete documents while the pending documents in the buffer are not indexed yet. '
+                    'Please wait for the pending documents to be indexed.'
                 )
 
-            self._index.delete(flat_docs, raise_errors_on_not_found)
+            self._index.delete(
+                flat_docs, raise_errors_on_not_found=raise_errors_on_not_found
+            )
 
     @requests(on='/search')
     def search(
@@ -227,9 +254,8 @@ class AnnLiteIndexer(Executor):
         :param docs: the Documents to search with
         :param parameters: dictionary for parameters for the search operation
         Keys accepted:
-
+            - 'access_paths' (str): traversal paths on docs, e.g. '@r', '@c', '@r,c'
             - 'filter' (dict): the filtering conditions on document tags
-            - 'traversal_paths' (str): traversal paths for the docs
             - 'limit' (int): nr of matches to get per Document
         """
 
@@ -242,8 +268,8 @@ class AnnLiteIndexer(Executor):
             parameters.get('include_metadata', self.include_metadata)
         )
 
-        traversal_paths = parameters.get('traversal_paths', self.search_traversal_paths)
-        flat_docs = docs[traversal_paths]
+        access_paths = parameters.get('access_paths', self.search_access_paths)
+        flat_docs = docs[access_paths]
         if len(flat_docs) == 0:
             return
         with self._index_lock:
@@ -271,7 +297,6 @@ class AnnLiteIndexer(Executor):
     def clear(self, **kwargs):
         """Clear the index of all entries."""
         with self._index_lock:
-            print('')
             self._data_buffer = DocumentArray()
         self._index.clear()
 
