@@ -159,11 +159,6 @@ class AnnLiteIndexer(Executor):
 
             - 'traversal_paths' (str): traversal path for the docs
         """
-        if len(self._data_buffer) > 0:
-            raise Exception(
-                'updating operation is not allowed when length of data buffer '
-                'is bigger than 0'
-            )
 
         if not docs:
             return
@@ -174,11 +169,17 @@ class AnnLiteIndexer(Executor):
         if len(flat_docs) == 0:
             return
 
-        self._index.update(
-            flat_docs,
-            raise_errors_on_not_found=raise_errors_on_not_found,
-            insert_if_not_found=False,
-        )
+        with self._index_lock:
+            if len(self._data_buffer) > 0:
+                raise Exception(
+                    'updating operation is not allowed when length of data buffer '
+                    'is bigger than 0'
+                )
+            self._index.update(
+                flat_docs,
+                raise_errors_on_not_found=raise_errors_on_not_found,
+                insert_if_not_found=False,
+            )
 
     @requests(on='/delete')
     def delete(
@@ -192,11 +193,6 @@ class AnnLiteIndexer(Executor):
         Keys accepted:
             - 'traversal_paths' (str): traversal path for the docs
         """
-        if len(self._data_buffer) > 0:
-            raise Exception(
-                'deleting operation is not allowed when length of data buffer '
-                'is bigger than 0'
-            )
 
         if not docs:
             return
@@ -207,7 +203,14 @@ class AnnLiteIndexer(Executor):
         if len(flat_docs) == 0:
             return
 
-        self._index.delete(flat_docs, raise_errors_on_not_found)
+        with self._index_lock:
+            if len(self._data_buffer) > 0:
+                raise Exception(
+                    'deleting operation is not allowed when length of data buffer '
+                    'is bigger than 0'
+                )
+
+            self._index.delete(flat_docs, raise_errors_on_not_found)
 
     @requests(on='/search')
     def search(
@@ -245,13 +248,13 @@ class AnnLiteIndexer(Executor):
         flat_docs = docs[traversal_paths]
         if len(flat_docs) == 0:
             return
-
-        self._index.search(
-            flat_docs,
-            filter=search_filter,
-            limit=limit,
-            include_metadata=include_metadata,
-        )
+        with self._index_lock:
+            self._index.search(
+                flat_docs,
+                filter=search_filter,
+                limit=limit,
+                include_metadata=include_metadata,
+            )
 
     @requests(on='/status')
     def status(self, **kwargs) -> DocumentArray:
@@ -277,7 +280,8 @@ class AnnLiteIndexer(Executor):
     def close(self, **kwargs):
         """Close the index."""
         while len(self._data_buffer) > 0:
-            time.sleep(0.01)
+            time.sleep(0.1)
+
         with self._index_lock:
             self._data_buffer = None
             self._index_thread.join()
