@@ -6,16 +6,16 @@
 `AnnLite` is a lightweight library for **fast** and **memory efficient** *approximate nearest neighbor search* (ANNS).
 It allows to search for nearest neighbors in a dataset of millions of points with a Pythonic API.
 
+**Highlighted features:**
+
 - 🐥 **Easy-to-use**: a simple API is designed to be used with Python. It is easy to use and intuitive to set up to production.
 
-- 🐎 **Fast**: the library uses a highly optimized approximate nearest neighbor search algorithm. It allows you to
-    search for nearest neighbors in a dataset of millions of points in a fraction of a second.
+- 🐎 **Fast**: the library uses a highly optimized approximate nearest neighbor search algorithm (*HNSW*) to search for nearest neighbors.
 
-- 🦅 **Filterable**: the library allows you to constrain the search to a subset of the dataset. This allows you to
-    search for nearest neighbors within a subset of the dataset.
+- 🔎 **Filterable**: the library allows you to search for nearest neighbors within a subset of the dataset.
 
-- 🍱 **Integration**: Smooth integration with neural search ecosystem including Jina and DocArray, so that users can easily
-    expose search API with **gRPC** and/or **HTTP**.
+- 🍱 **Integration**: Smooth integration with neural search ecosystem including [Jina](https://github.com/jina-ai/jina) and [DocArray](https://github.com/jina-ai/docarray),
+    so that users can easily expose search API with **gRPC** and/or **HTTP**.
 
 Read more on why should you use `AnnLite`: [here](), and compare to alternatives: [here]().
 
@@ -23,7 +23,7 @@ Read more on why should you use `AnnLite`: [here](), and compare to alternatives
 ## Installation
 
 ```bash
-pip install annlite
+pip install -U annlite
 ```
 
 or install from source:
