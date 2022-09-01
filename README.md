@@ -96,6 +96,12 @@ For more information, please refer to [MongoDB Query Language](https://docs.mong
 
 The query will be performed on the field if the condition is satisfied.
 
+## Next steps
+
+If you already have experience with Jina and DocArray, you can start using `AnnLite` right away.
+
+Otherwise, you can check out this advanced tutorial to learn how to use `AnnLite`: [here]() in practice.
+
 
 ## FAQ
 
