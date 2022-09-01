@@ -3,7 +3,9 @@ import pytest
 from docarray import Document, DocumentArray
 from loguru import logger
 
-from annlite import AnnLite
+from annlite import AnnLite, pq_bind
+from annlite.core.codec.pq import PQCodec
+from annlite.math import cosine
 
 N = 1000  # number of data points
 Nq = 5
@@ -20,6 +22,28 @@ def random_docs():
         [Document(id=f'{i}', embedding=X[i], tags={'x': str(i)}) for i in range(N)]
     )
     return docs
+
+
+def test_pq_index_dist_mat(random_docs):
+    X = random_docs.embeddings
+    N, D = X.shape
+    pq_class = PQCodec(dim=D)
+    pq_class.fit(X)
+
+    test_cases = X[:10]
+    # -------------- true
+    pq_bind_re = []
+    for i in range(len(test_cases)):
+        query = test_cases[i]
+        dtable = pq_bind.precompute_adc_table(
+            query, pq_class.d_subvector, pq_class.n_clusters, pq_class.codebooks
+        )
+        pq_bind_re.append(dtable)
+    pq_bind_re = np.stack(pq_bind_re)
+    # -------------- test
+    pq_dist_mat = pq_class.get_dist_mat(test_cases)
+
+    assert np.allclose(pq_bind_re, pq_dist_mat)
 
 
 def test_hnsw_pq_load_empty(tmpfile, random_docs):
@@ -56,6 +80,9 @@ def test_hnsw_pq_search_multi_clusters(n_clusters, tmpfile, random_docs):
     topk = 50
 
     X = random_docs.embeddings
+    computed_dist = cosine(X, X)
+    computed_labels = np.argsort(computed_dist, axis=1)[:, :topk]
+
     no_pq_index = AnnLite(D, data_path=tmpfile + '_no_pq')
 
     query = DocumentArray([Document(embedding=X[i]) for i in range(total_test)])
@@ -75,12 +102,23 @@ def test_hnsw_pq_search_multi_clusters(n_clusters, tmpfile, random_docs):
     pq_index.search(test_query, limit=topk)
 
     precision = []
+    original_precision = []
+    pq_precision = []
     for i in range(total_test):
+        real_ground_truth = set([str(i) for i in computed_labels[i]])
         ground_truth = set([m.id for m in query[i].matches])
         pq_result = set([m.id for m in test_query[i].matches])
+        original_precision.append(len(real_ground_truth & ground_truth) / topk)
+        pq_precision.append(len(real_ground_truth & pq_result) / topk)
         precision.append(len(ground_truth & pq_result) / topk)
     logger.info(
         f'PQ backend(cluster={n_clusters}) top-{topk} precision: {np.mean(precision)}'
+    )
+    logger.info(
+        f'PQ backend(cluster={n_clusters}) top-{topk} precision with real labels: {np.mean(pq_precision)}'
+    )
+    logger.info(
+        f'HNSW backend top-{topk} precision with real labels: {np.mean(original_precision)}'
     )
     # TODO: fix the precision issue
     # assert np.mean(precision) > 0.9
