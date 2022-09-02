@@ -2,7 +2,7 @@
 <br>
 <br>
 <br>
-<img src="https://github.com/jina-ai/annlite/blob/main/.github/assets/logo.svg?raw=true" alt="AnnLite logo: A fast and efficient ann libray" width="200px">
+<img src="https://raw.githubusercontent.com/jina-ai/annlite/chore-readme/.github/assets/logo.svg?raw=true" alt="AnnLite logo: A fast and efficient ann libray" width="200px">
 <br>
 <br>
 <br>
