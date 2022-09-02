@@ -156,9 +156,9 @@ If you already have experience with Jina and DocArray, you can start using `AnnL
 Otherwise, you can check out this advanced tutorial to learn how to use `AnnLite`: [here]() in practice.
 
 
-## FAQ
+## 🙋 FAQ
 
-1. Why should I use `AnnLite`?
+**1. Why should I use `AnnLite`?**
 
     `AnnLite` is easy to use and intuitive to set up in production. It is also very fast and memory efficient, making it a great choice for approximate nearest neighbor search.
 
@@ -203,10 +203,14 @@ Yes.
 
 You can find the documentation on [Github]() and [ReadTheDocs]()
 
-## Contributing
+## 🤝 Contribute and spread the word
 
-We are also looking for contributors who want to help us improve the library.
-Please open an issue or pull request on [Github]().
+We are also looking for contributors who want to help us improve: code, documentation, issues, feedback! Here is how you can get started:
+
+- Have a look through GitHub issues labeled "Good first issue".
+- Read our Contributor Covenant Code of Conduct
+- Open an issue or submit your pull request!
+
 
 ## License
 
