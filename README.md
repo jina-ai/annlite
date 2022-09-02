@@ -242,8 +242,6 @@ The query will be performed on the field if the condition is satisfied. The foll
 
 ## Benchmark
 
-## Benchmark
-
 One can run `executor/benchmark.py` to get a quick performance overview.
 
 |Stored data| Indexing time | Query size=1 | Query size=8 | Query size=64|
