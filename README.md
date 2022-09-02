@@ -5,7 +5,6 @@
 <img src="https://github.com/jina-ai/annlite/blob/main/.github/assets/logo.svg?raw=true" alt="AnnLite logo: A fast and efficient ann libray" width="200px">
 <br>
 <br>
-<br>
 <b>A fast embedded library for approximate nearest neighbor search</b>
 </p>
 
