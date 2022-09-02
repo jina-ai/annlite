@@ -252,39 +252,20 @@ Otherwise, you can check out this advanced tutorial to learn how to use `AnnLite
 
 **1. Why should I use `AnnLite`?**
 
-    `AnnLite` is easy to use and intuitive to set up in production. It is also very fast and memory efficient, making it a great choice for approximate nearest neighbor search.
+`AnnLite` is easy to use and intuitive to set up in production. It is also very fast and memory efficient, making it a great choice for approximate nearest neighbor search.
 
-2. How do I use `AnnLite` with Jina?
+**2. How do I use `AnnLite` with Jina?**
 
-```python
-```
-
-2. How do I use `AnnLite` with DocArray?
+We have implemented an executor for `AnnLite` that can be used with Jina.
 
 ```python
+from jina import Flow
+
+with Flow().add(uses='jinahub://AnnLiteIndexer', uses_with={'n_dim': 128}) as f:
+    f.post('/index', inputs=docs)
 ```
 
-3. How do I use `AnnLite` with other search engines?
-
-```python
-```
-
-4. How to reduce the memory footprint of `AnnLite`?
-
-```python
-```
-
-5. What's the difference between `AnnLite` and other alternatives?
-
-```python
-```
-
-6. How to expose search API with gRPC and/or HTTP?
-
-```python
-```
-
-7. Does `AnnLite` support search with filters?
+3. Does `AnnLite` support search with filters?
 
 ```text
 Yes.
