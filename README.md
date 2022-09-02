@@ -53,6 +53,9 @@ docs = DocumentArray.empty(1000)
 docs.embeddings = np.random.random([1000, 128]).astype(np.float32)
 ```
 
+
+### Index
+
 Then you can create an `AnnIndexer` to index the created `docs` and search for nearest neighbors:
 
 ```python
@@ -61,6 +64,8 @@ from annlite import AnnLite
 ann = AnnLite(128, metric='cosine', data_path="/tmp/annlite_index")
 ann.index(docs)
 ```
+
+### Search
 
 Then you can search for nearest neighbors for some query docs with `ann.search()`:
 
@@ -90,6 +95,21 @@ Or shorten the loop as one-liner using the element & attribute selector:
 
 ```python
 print(query['@m', ('id', 'scores__cosine')])
+```
+
+### Update
+
+After you have indexed the docs, you can update the docs by calling `ann.update()`:
+
+```python
+```
+
+
+### Delete
+
+And finally, you can delete the docs by calling `ann.delete()`:
+
+```python
 ```
 
 ## Search with filters
