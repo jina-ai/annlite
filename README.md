@@ -1,4 +1,21 @@
-# AnnLite
+<p align="center">
+<br>
+<br>
+<br>
+<img src="https://github.com/jina-ai/annlite/blob/main/.github/assets/logo.svg?raw=true" alt="AnnLite logo: A fast and efficient ann libray" width="200px">
+<br>
+<br>
+<br>
+<b>A fast embedded library for approximate nearest neighbor search</b>
+</p>
+
+<p align=center>
+<a href="https://pypi.org/project/annlite/"><img alt="PyPI" src="https://img.shields.io/pypi/v/annlite?label=Release&style=flat-square"></a>
+<a href="https://slack.jina.ai"><img src="https://img.shields.io/badge/Slack-3.1k-blueviolet?logo=slack&amp;logoColor=white&style=flat-square"></a>
+<a href="https://codecov.io/gh/jina-ai/annlite"><img alt="Codecov branch" src="https://img.shields.io/codecov/c/github/jina-ai/annlite/main?logo=Codecov&logoColor=white&style=flat-square"></a>
+</p>
+
+<!-- start elevator-pitch -->
 
 
 ## What is AnnLite?
