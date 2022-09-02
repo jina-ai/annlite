@@ -254,7 +254,7 @@ public:
       int start = 0;
       if (!ep_added) {
         size_t id = ids.size() ? ids.at(0) : (cur_l);
-        appr_alg->addPoint((void *)items.data(0), (size_t)id);
+        appr_alg->addPoint((void *)items.data(0), (size_t)id, 0);
         start = 1;
         ep_added = true;
       }
@@ -262,7 +262,7 @@ public:
       py::gil_scoped_release l;
       ParallelFor(start, rows, num_threads, [&](size_t row, size_t threadId) {
         size_t id = ids.size() ? ids.at(row) : (cur_l + row);
-        appr_alg->addPoint((void *)items.data(row), (size_t)id);
+        appr_alg->addPoint((void *)items.data(row), (size_t)id, row);
       });
       cur_l += rows;
     }
