@@ -10,9 +10,10 @@
 </p>
 
 <p align=center>
+<a href="hhttps://github.com/jina-ai/annlite"><img alt="GitHub" src="https://img.shields.io/github/license/jina-ai/annlite?style=flat-square"></a>
 <a href="https://pypi.org/project/annlite/"><img alt="PyPI" src="https://img.shields.io/pypi/v/annlite?label=Release&style=flat-square"></a>
-<a href="https://slack.jina.ai"><img src="https://img.shields.io/badge/Slack-3.1k-blueviolet?logo=slack&amp;logoColor=white&style=flat-square"></a>
 <a href="https://codecov.io/gh/jina-ai/annlite"><img alt="Codecov branch" src="https://img.shields.io/codecov/c/github/jina-ai/annlite/main?logo=Codecov&logoColor=white&style=flat-square"></a>
+<a href="https://slack.jina.ai"><img src="https://img.shields.io/badge/Slack-3.1k-blueviolet?logo=slack&amp;logoColor=white&style=flat-square"></a>
 </p>
 
 <!-- start elevator-pitch -->
