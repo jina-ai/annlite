@@ -4,7 +4,7 @@
 namespace hnswlib {
 
 static float InnerProduct(const void *pVect1, const void *pVect2,
-                          const void *qty_ptr) {
+                          const void *qty_ptr, const void *local_state) {
   size_t qty = *((size_t *)qty_ptr);
   float res = 0;
   for (unsigned i = 0; i < qty; i++) {
@@ -17,7 +17,8 @@ static float InnerProduct(const void *pVect1, const void *pVect2,
 
 // Favor using AVX if available.
 static float InnerProductSIMD4Ext(const void *pVect1v, const void *pVect2v,
-                                  const void *qty_ptr) {
+                                  const void *qty_ptr,
+                                  const void *local_state) {
   float PORTABLE_ALIGN32 TmpRes[8];
   float *pVect1 = (float *)pVect1v;
   float *pVect2 = (float *)pVect2v;
@@ -68,7 +69,8 @@ static float InnerProductSIMD4Ext(const void *pVect1v, const void *pVect2v,
 #elif defined(USE_SSE)
 
 static float InnerProductSIMD4Ext(const void *pVect1v, const void *pVect2v,
-                                  const void *qty_ptr) {
+                                  const void *qty_ptr, ,
+                                  const void *local_state) {
   float PORTABLE_ALIGN32 TmpRes[8];
   float *pVect1 = (float *)pVect1v;
   float *pVect2 = (float *)pVect2v;
@@ -128,7 +130,8 @@ static float InnerProductSIMD4Ext(const void *pVect1v, const void *pVect2v,
 #if defined(USE_AVX)
 
 static float InnerProductSIMD16Ext(const void *pVect1v, const void *pVect2v,
-                                   const void *qty_ptr) {
+                                   const void *qty_ptr,
+                                   const void *local_state) {
   float PORTABLE_ALIGN32 TmpRes[8];
   float *pVect1 = (float *)pVect1v;
   float *pVect2 = (float *)pVect2v;
@@ -166,7 +169,8 @@ static float InnerProductSIMD16Ext(const void *pVect1v, const void *pVect2v,
 #elif defined(USE_SSE)
 
 static float InnerProductSIMD16Ext(const void *pVect1v, const void *pVect2v,
-                                   const void *qty_ptr) {
+                                   const void *qty_ptr,
+                                   const void *local_state) {
   float PORTABLE_ALIGN32 TmpRes[8];
   float *pVect1 = (float *)pVect1v;
   float *pVect2 = (float *)pVect2v;
@@ -215,30 +219,32 @@ static float InnerProductSIMD16Ext(const void *pVect1v, const void *pVect2v,
 #if defined(USE_SSE) || defined(USE_AVX)
 static float InnerProductSIMD16ExtResiduals(const void *pVect1v,
                                             const void *pVect2v,
-                                            const void *qty_ptr) {
+                                            const void *qty_ptr,
+                                            const void *local_state) {
   size_t qty = *((size_t *)qty_ptr);
   size_t qty16 = qty >> 4 << 4;
-  float res = InnerProductSIMD16Ext(pVect1v, pVect2v, &qty16);
+  float res = InnerProductSIMD16Ext(pVect1v, pVect2v, &qty16, local_state);
   float *pVect1 = (float *)pVect1v + qty16;
   float *pVect2 = (float *)pVect2v + qty16;
 
   size_t qty_left = qty - qty16;
-  float res_tail = InnerProduct(pVect1, pVect2, &qty_left);
+  float res_tail = InnerProduct(pVect1, pVect2, &qty_left, local_state);
   return res + res_tail - 1.0f;
 }
 
 static float InnerProductSIMD4ExtResiduals(const void *pVect1v,
                                            const void *pVect2v,
-                                           const void *qty_ptr) {
+                                           const void *qty_ptr,
+                                           const void *local_state) {
   size_t qty = *((size_t *)qty_ptr);
   size_t qty4 = qty >> 2 << 2;
 
-  float res = InnerProductSIMD4Ext(pVect1v, pVect2v, &qty4);
+  float res = InnerProductSIMD4Ext(pVect1v, pVect2v, &qty4, local_state);
   size_t qty_left = qty - qty4;
 
   float *pVect1 = (float *)pVect1v + qty4;
   float *pVect2 = (float *)pVect2v + qty4;
-  float res_tail = InnerProduct(pVect1, pVect2, &qty_left);
+  float res_tail = InnerProduct(pVect1, pVect2, &qty_left, local_state);
 
   return res + res_tail - 1.0f;
 }

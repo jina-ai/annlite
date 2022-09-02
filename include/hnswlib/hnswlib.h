@@ -46,7 +46,8 @@ template <typename T> static void readBinaryPOD(std::istream &in, T &podRef) {
 }
 
 template <typename MTYPE>
-using DISTFUNC = MTYPE (*)(const void *, const void *, const void *);
+using DISTFUNC = MTYPE (*)(const void *, const void *, const void *,
+                           const void *);
 
 template <typename MTYPE> class SpaceInterface {
 public:
@@ -62,7 +63,8 @@ public:
 
 template <typename dist_t> class AlgorithmInterface {
 public:
-  virtual void addPoint(const void *datapoint, labeltype label) = 0;
+  virtual void addPoint(const void *datapoint, labeltype label,
+                        size_t batch_index) = 0;
   virtual std::priority_queue<std::pair<dist_t, labeltype>>
   searchKnn(const void *, size_t) const = 0;
 

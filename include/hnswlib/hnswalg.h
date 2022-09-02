@@ -187,7 +187,7 @@ public:
     dist_t lowerBound;
     if (!isMarkedDeleted(ep_id)) {
       dist_t dist = fstdistfunc_(data_point, getDataByInternalId(ep_id),
-                                 dist_func_param_);
+                                 dist_func_param_, nullptr);
       top_candidates.emplace(dist, ep_id);
       lowerBound = dist;
       candidateSet.emplace(-dist, ep_id);
@@ -238,7 +238,8 @@ public:
         visited_array[candidate_id] = visited_array_tag;
         char *currObj1 = (getDataByInternalId(candidate_id));
 
-        dist_t dist1 = fstdistfunc_(data_point, currObj1, dist_func_param_);
+        dist_t dist1 =
+            fstdistfunc_(data_point, currObj1, dist_func_param_, nullptr);
         if (top_candidates.size() < ef_construction_ || lowerBound > dist1) {
           candidateSet.emplace(-dist1, candidate_id);
 #ifdef USE_SSE
@@ -285,7 +286,7 @@ public:
     dist_t lowerBound;
     if (!has_deletions || !isMarkedDeleted(ep_id)) {
       dist_t dist = fstdistfunc_(data_point, getDataByInternalId(ep_id),
-                                 dist_func_param_);
+                                 dist_func_param_, nullptr);
       lowerBound = dist;
       top_candidates.emplace(dist, ep_id);
       candidate_set.emplace(-dist, ep_id);
@@ -339,7 +340,8 @@ public:
           visited_array[candidate_id] = visited_array_tag;
 
           char *currObj1 = (getDataByInternalId(candidate_id));
-          dist_t dist = fstdistfunc_(data_point, currObj1, dist_func_param_);
+          dist_t dist =
+              fstdistfunc_(data_point, currObj1, dist_func_param_, nullptr);
 
           if (top_candidates.size() < ef || lowerBound > dist) {
             candidate_set.emplace(-dist, candidate_id);
@@ -391,7 +393,7 @@ public:
     uint64_t label = getExternalLabel(ep_id);
     if (binary_fuse16_contain(label, filter)) {
       dist_t dist = fstdistfunc_(data_point, getDataByInternalId(ep_id),
-                                 dist_func_param_);
+                                 dist_func_param_, nullptr);
       lowerBound = dist;
       top_candidates.emplace(dist, ep_id);
       candidate_set.emplace(-dist, ep_id);
@@ -445,7 +447,8 @@ public:
           visited_array[candidate_id] = visited_array_tag;
 
           char *currObj1 = (getDataByInternalId(candidate_id));
-          dist_t dist = fstdistfunc_(data_point, currObj1, dist_func_param_);
+          dist_t dist =
+              fstdistfunc_(data_point, currObj1, dist_func_param_, nullptr);
 
           if (top_candidates.size() < ef || lowerBound > dist) {
             candidate_set.emplace(-dist, candidate_id);
@@ -504,7 +507,7 @@ public:
       for (std::pair<dist_t, tableint> second_pair : return_list) {
         dist_t curdist = fstdistfunc_(getDataByInternalId(second_pair.second),
                                       getDataByInternalId(curent_pair.second),
-                                      dist_func_param_);
+                                      dist_func_param_, nullptr);
         ;
         if (curdist < dist_to_query) {
           good = false;
@@ -632,9 +635,10 @@ public:
           setListCount(ll_other, sz_link_list_other + 1);
         } else {
           // finding the "weakest" element to replace it with the new one
-          dist_t d_max = fstdistfunc_(
-              getDataByInternalId(cur_c),
-              getDataByInternalId(selectedNeighbors[idx]), dist_func_param_);
+          dist_t d_max =
+              fstdistfunc_(getDataByInternalId(cur_c),
+                           getDataByInternalId(selectedNeighbors[idx]),
+                           dist_func_param_, nullptr);
           // Heuristic:
           std::priority_queue<std::pair<dist_t, tableint>,
                               std::vector<std::pair<dist_t, tableint>>,
@@ -646,7 +650,7 @@ public:
             candidates.emplace(
                 fstdistfunc_(getDataByInternalId(data[j]),
                              getDataByInternalId(selectedNeighbors[idx]),
-                             dist_func_param_),
+                             dist_func_param_, nullptr),
                 data[j]);
           }
 
@@ -664,9 +668,8 @@ public:
           /*int indx = -1;
           for (int j = 0; j < sz_link_list_other; j++) {
               dist_t d = fstdistfunc_(getDataByInternalId(data[j]),
-          getDataByInternalId(rez[idx]), dist_func_param_); if (d > d_max) {
-                  indx = j;
-                  d_max = d;
+          getDataByInternalId(rez[idx]), dist_func_param_, nullptr); if (d >
+          d_max) { indx = j; d_max = d;
               }
           }
           if (indx >= 0) {
@@ -690,8 +693,9 @@ public:
     if (cur_element_count == 0)
       return top_candidates;
     tableint currObj = enterpoint_node_;
-    dist_t curdist = fstdistfunc_(
-        query_data, getDataByInternalId(enterpoint_node_), dist_func_param_);
+    dist_t curdist =
+        fstdistfunc_(query_data, getDataByInternalId(enterpoint_node_),
+                     dist_func_param_, nullptr);
 
     for (size_t level = maxlevel_; level > 0; level--) {
       bool changed = true;
@@ -706,7 +710,7 @@ public:
           if (cand < 0 || cand > max_elements_)
             throw std::runtime_error("cand error");
           dist_t d = fstdistfunc_(query_data, getDataByInternalId(cand),
-                                  dist_func_param_);
+                                  dist_func_param_, nullptr);
 
           if (d < curdist) {
             curdist = d;
@@ -989,8 +993,8 @@ public:
     *((unsigned short int *)(ptr)) = *((unsigned short int *)&size);
   }
 
-  void addPoint(const void *data_point, labeltype label) {
-    addPoint(data_point, label, -1);
+  void addPoint(const void *data_point, labeltype label, size_t batch_index) {
+    addPoint(data_point, label, -1, batch_index);
   }
 
   void updatePoint(const void *dataPoint, tableint internalId,
@@ -1050,9 +1054,9 @@ public:
           if (cand == neigh)
             continue;
 
-          dist_t distance =
-              fstdistfunc_(getDataByInternalId(neigh),
-                           getDataByInternalId(cand), dist_func_param_);
+          dist_t distance = fstdistfunc_(getDataByInternalId(neigh),
+                                         getDataByInternalId(cand),
+                                         dist_func_param_, nullptr);
           if (candidates.size() < elementsToKeep) {
             candidates.emplace(distance, cand);
           } else {
@@ -1092,7 +1096,7 @@ public:
     tableint currObj = entryPointInternalId;
     if (dataPointLevel < maxLevel) {
       dist_t curdist = fstdistfunc_(dataPoint, getDataByInternalId(currObj),
-                                    dist_func_param_);
+                                    dist_func_param_, nullptr);
       for (int level = maxLevel; level > dataPointLevel; level--) {
         bool changed = true;
         while (changed) {
@@ -1111,7 +1115,7 @@ public:
 #endif
             tableint cand = datal[i];
             dist_t d = fstdistfunc_(dataPoint, getDataByInternalId(cand),
-                                    dist_func_param_);
+                                    dist_func_param_, nullptr);
             if (d < curdist) {
               curdist = d;
               currObj = cand;
@@ -1152,7 +1156,7 @@ public:
         if (epDeleted) {
           filteredTopCandidates.emplace(
               fstdistfunc_(dataPoint, getDataByInternalId(entryPointInternalId),
-                           dist_func_param_),
+                           dist_func_param_, nullptr),
               entryPointInternalId);
           if (filteredTopCandidates.size() > ef_construction_)
             filteredTopCandidates.pop();
@@ -1174,7 +1178,8 @@ public:
     return result;
   };
 
-  tableint addPoint(const void *data_point, labeltype label, int level) {
+  tableint addPoint(const void *data_point, labeltype label, int level,
+                    size_t batch_index) {
 
     tableint cur_c = 0;
     {
@@ -1246,7 +1251,7 @@ public:
       if (curlevel < maxlevelcopy) {
 
         dist_t curdist = fstdistfunc_(data_point, getDataByInternalId(currObj),
-                                      dist_func_param_);
+                                      dist_func_param_, nullptr);
         for (int level = maxlevelcopy; level > curlevel; level--) {
 
           bool changed = true;
@@ -1263,7 +1268,7 @@ public:
               if (cand < 0 || cand > max_elements_)
                 throw std::runtime_error("cand error");
               dist_t d = fstdistfunc_(data_point, getDataByInternalId(cand),
-                                      dist_func_param_);
+                                      dist_func_param_, nullptr);
               if (d < curdist) {
                 curdist = d;
                 currObj = cand;
@@ -1286,7 +1291,7 @@ public:
         if (epDeleted) {
           top_candidates.emplace(
               fstdistfunc_(data_point, getDataByInternalId(enterpoint_copy),
-                           dist_func_param_),
+                           dist_func_param_, nullptr),
               enterpoint_copy);
           if (top_candidates.size() > ef_construction_)
             top_candidates.pop();
@@ -1316,8 +1321,9 @@ public:
       return result;
 
     tableint currObj = enterpoint_node_;
-    dist_t curdist = fstdistfunc_(
-        query_data, getDataByInternalId(enterpoint_node_), dist_func_param_);
+    dist_t curdist =
+        fstdistfunc_(query_data, getDataByInternalId(enterpoint_node_),
+                     dist_func_param_, nullptr);
 
     for (int level = maxlevel_; level > 0; level--) {
       bool changed = true;
@@ -1336,7 +1342,7 @@ public:
           if (cand < 0 || cand > max_elements_)
             throw std::runtime_error("cand error");
           dist_t d = fstdistfunc_(query_data, getDataByInternalId(cand),
-                                  dist_func_param_);
+                                  dist_func_param_, nullptr);
 
           if (d < curdist) {
             curdist = d;
@@ -1379,8 +1385,9 @@ public:
       return result;
 
     tableint currObj = enterpoint_node_;
-    dist_t curdist = fstdistfunc_(
-        query_data, getDataByInternalId(enterpoint_node_), dist_func_param_);
+    dist_t curdist =
+        fstdistfunc_(query_data, getDataByInternalId(enterpoint_node_),
+                     dist_func_param_, nullptr);
 
     for (int level = maxlevel_; level > 0; level--) {
       bool changed = true;
@@ -1399,7 +1406,7 @@ public:
           if (cand < 0 || cand > max_elements_)
             throw std::runtime_error("cand error");
           dist_t d = fstdistfunc_(query_data, getDataByInternalId(cand),
-                                  dist_func_param_);
+                                  dist_func_param_, nullptr);
 
           if (d < curdist) {
             curdist = d;

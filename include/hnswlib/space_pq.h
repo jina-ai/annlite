@@ -8,12 +8,13 @@ namespace hnswlib {
 typedef struct pq_dist_param_s {
   size_t n_subvectors;
   size_t n_clusters;
+  size_t batch_len;
   float *dist_mat;
 } pq_dist_param_t;
 
 template <typename CODETYPE>
 static float PQLookup_IP(const void *pVect1v, const void *pVect2v,
-                         const void *qty_ptr) {
+                         const void *qty_ptr, const void *local_state) {
   CODETYPE *pVect1 = (CODETYPE *)pVect1v;
   CODETYPE *pVect2 = (CODETYPE *)pVect2v;
   pq_dist_param_t *qty = (pq_dist_param_t *)qty_ptr;
@@ -32,7 +33,7 @@ static float PQLookup_IP(const void *pVect1v, const void *pVect2v,
 
 template <typename CODETYPE>
 static float PQLookup_L2(const void *pVect1v, const void *pVect2v,
-                         const void *qty_ptr) {
+                         const void *qty_ptr, const void *local_state) {
   CODETYPE *pVect1 = (CODETYPE *)pVect1v;
   CODETYPE *pVect2 = (CODETYPE *)pVect2v;
   pq_dist_param_t *qty = (pq_dist_param_t *)qty_ptr;
