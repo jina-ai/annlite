@@ -2,7 +2,7 @@
 <br>
 <br>
 <br>
-<img src="https://raw.githubusercontent.com/jina-ai/annlite/chore-readme/.github/assets/logo.svg?raw=true" alt="AnnLite logo: A fast and efficient ann libray" width="200px">
+<img src="https://github.com/jina-ai/annlite/blob/main/.github/assets/logo.svg?raw=true" alt="AnnLite logo: A fast and efficient ann libray" width="200px">
 <br>
 <br>
 <br>
@@ -20,7 +20,7 @@
 
 ## What is AnnLite?
 
-`AnnLite` is a lightweight library for **fast** and **memory efficient** *approximate nearest neighbor search* (ANNS).
+`AnnLite` is a lightweight library for **fast** and **filterable** *approximate nearest neighbor search* (ANNS).
 It allows to search for nearest neighbors in a dataset of millions of points with a Pythonic API.
 
 
@@ -78,9 +78,13 @@ Then you can create an `AnnIndexer` to index the created `docs` and search for n
 ```python
 from annlite import AnnLite
 
-ann = AnnLite(128, metric='cosine', data_path="/tmp/annlite_index")
+ann = AnnLite(128, metric='cosine', data_path="/tmp/annlite_data")
 ann.index(docs)
 ```
+
+Note that this will create a directory `/tmp/annlite_data` to persist the documents indexed.
+If this directory already exists, the index will be loaded from the directory.
+And if you want to create a new index, you can delete the directory first.
 
 ### Search
 
@@ -91,10 +95,15 @@ query = DocumentArray.empty(5)
 query.embeddings = np.random.random([5, 128]).astype(np.float32)
 
 result = ann.search(query)
-print(result['@m', ('id', 'scores__cosine')])
 ```
 
 Then, you can inspect the retrieved docs for each query doc inside `query` matches:
+```python
+for q in query:
+    print(f'Query {q.id}')
+    for k, m in enumerate(q.matches):
+        print(f'{k}: {m.id} {m.scores["cosine"]}')
+```
 
 ```bash
 Query ddbae2073416527bad66ff186543eff8
@@ -116,55 +125,121 @@ print(query['@m', ('id', 'scores__cosine')])
 
 ### Update
 
-After you have indexed the docs, you can update the docs by calling `ann.update()`:
+After you have indexed the `docs`, you can update the docs in the index by calling `ann.update()`:
 
 ```python
+updated_docs = docs.sample(10)
+updated_docs.embeddings = np.random.random([10, 128]).astype(np.float32)
+
+ann.update(updated_docs)
 ```
 
 
 ### Delete
 
-And finally, you can delete the docs by calling `ann.delete()`:
+And finally, you can delete the docs from the index by calling `ann.delete()`:
 
 ```python
+to_delete = docs.sample(10)
+ann.delete(to_delete)
 ```
 
 ## Search with filters
 
-To support search with filters, the annlite must be created with `fields` parameter, which is a series of fields you want to filter by.
+To support search with filters, the annlite must be created with `colums` parameter, which is a series of fields you want to filter by.
 At the query time, the annlite will filter the dataset by providing `conditions` for certain fields.
 
 ```python
 import annlite
 
-ann = annlite.AnnLite(dataset_path='data/dataset.csv', fields=['city'])
-ann.search(query_point=[1, 2, 3], k=3, conditions={'distance': {'$lt': 1}})
+# the column schema: (name:str, dtype:type, create_index: bool)
+ann = annlite.AnnLite(128, columns=[('price', float)], data_path="/tmp/annlite_data")
+```
+
+Then you can insert the docs, in which each doc has a field `price` with a float value contained in the `tags`:
+
+
+```python
+import random
+
+docs = DocumentArray.empty(1000)
+docs = DocumentArray(
+    [
+        Document(id=f'{i}', tags={'price': random.random()})
+        for i in range(1000)
+    ]
+)
+
+docs.embeddings = np.random.random([1000, 128]).astype(np.float32)
+
+ann.index(docs)
+```
+
+Then you can search for nearest neighbors with filtering conditions as:
+
+```python
+query = DocumentArray.empty(5)
+query.embeddings = np.random.random([5, 128]).astype(np.float32)
+
+ann.search(query, filter={"price": {"$lte": 50}}, limit=10)
+print(f'the result with filtering:')
+for i, q in enumerate(query):
+    print(f'query [{i}]:')
+    for m in q.matches:
+        print(f'\t{m.id} {m.scores["euclidean"].value} (price={m.tags["x"]})')
 ```
 
 The `conditions` parameter is a dictionary of conditions. The key is the field name, and the value is a dictionary of conditions.
-The query language is the same as MongoDB. The following is an example of a query:
+The query language is the same as  [MongoDB Query Language](https://docs.mongodb.com/manual/reference/operator/query/).
+We currently support a subset of those selectors.
 
-```python
-{
-    'distance': {'$lt': 1},
-    'city': {'$eq': 'Beijing'}
-}
-```
-We also support boolean operators:
-
-```python
-{
-    'city': {'$eq': 'Beijing'},
-    '$or': [
-        {'city': {'$eq': 'Beijing'}},
-        {'city': {'$eq': 'Shanghai'}}
-    ]
-}
-```
-For more information, please refer to [MongoDB Query Language](https://docs.mongodb.com/manual/reference/operator/query/).
+- `$eq` - Equal to (number, string)
+- `$ne` - Not equal to (number, string)
+- `$gt` - Greater than (number)
+- `$gte` - Greater than or equal to (number)
+- `$lt` - Less than (number)
+- `$lte` - Less than or equal to (number)
+- `$in` - Included in an array
+- `$nin` - Not included in an array
 
 
-The query will be performed on the field if the condition is satisfied.
+The query will be performed on the field if the condition is satisfied. The following is an example of a query:
+
+1. A Nike shoes with white color
+
+    ```python
+    {
+      "brand": {"$eq": "Nike"},
+      "category": {"$eq": "Shoes"},
+      "color": {"$eq": "White"}
+    }
+    ```
+
+    We also support boolean operators `$or` and `$and`:
+
+    ```python
+    {
+      "$and":
+        {
+          "brand": {"$eq": "Nike"},
+          "category": {"$eq": "Shoes"},
+          "color": {"$eq": "White"}
+        }
+    }
+    ```
+
+2. A Nike shoes or price less than `100$`:
+
+        ```python
+        {
+        "$or":
+            {
+            "brand": {"$eq": "Nike"},
+            "price": {"$lte": 100}
+            }
+        }
+        ```
+
 
 ## Next steps
 
