@@ -240,6 +240,54 @@ The query will be performed on the field if the condition is satisfied. The foll
         }
         ```
 
+## Benchmark
+
+## Benchmark
+
+One can run `executor/benchmark.py` to get a quick performance overview.
+
+|Stored data| Indexing time | Query size=1 | Query size=8 | Query size=64|
+|---|---|---|---|---|
+|10000 | 2.970 | 0.002 | 0.013 | 0.100|
+|100000 | 76.474 | 0.011 | 0.078 | 0.649|
+|500000 | 467.936 | 0.046 | 0.356 | 2.823|
+|1000000 | 1025.506 | 0.091 | 0.695 | 5.778|
+
+Results with filtering can be generated from `examples/benchmark_with_filtering.py`. This script should produce a table similar to:
+
+| Stored data |% same filter| Indexing time | Query size=1 | Query size=8 | Query size=64|
+|-----|-----|-----|-----|-----|-----|
+| 10000 | 5  | 2.869 | 0.004 | 0.030 | 0.270 |
+| 10000 | 15 | 2.869 | 0.004 | 0.035 | 0.294 |
+| 10000 | 20 | 3.506 | 0.005 | 0.038 | 0.287 |
+| 10000 | 30 | 3.506 | 0.005 | 0.044 | 0.356 |
+| 10000 | 50 | 3.506 | 0.008 | 0.064 | 0.484 |
+| 10000 | 80 | 2.869 | 0.013 | 0.098 | 0.910 |
+| 100000 | 5 | 75.960 | 0.018 | 0.134 | 1.092 |
+| 100000 | 15 | 75.960 | 0.026 | 0.211 | 1.736 |
+| 100000 | 20 | 78.475 | 0.034 | 0.265 | 2.097 |
+| 100000 | 30 | 78.475 | 0.044 | 0.357 | 2.887 |
+| 100000 | 50 | 78.475 | 0.068 | 0.565 | 4.383 |
+| 100000 | 80 | 75.960 | 0.111 | 0.878 | 6.815 |
+| 500000 | 5 | 497.744 | 0.069 | 0.561 | 4.439 |
+| 500000 | 15 | 497.744 | 0.134 | 1.064 | 8.469 |
+| 500000 | 20 | 440.108 | 0.152 | 1.199 | 9.472 |
+| 500000 | 30 | 440.108 | 0.212 | 1.650 | 13.267 |
+| 500000 | 50 | 440.108 | 0.328 | 2.637 | 21.961 |
+| 500000 | 80 | 497.744 | 0.580 | 4.602 | 36.986 |
+| 1000000 | 5 | 1052.388 | 0.131 | 1.031 | 8.212 |
+| 1000000 | 15 | 1052.388 | 0.263 | 2.191 | 16.643 |
+| 1000000 | 20 | 980.598 | 0.351 | 2.659 | 21.193 |
+| 1000000 | 30 | 980.598 | 0.461 | 3.713 | 29.794 |
+| 1000000 | 50 | 980.598 | 0.732 | 5.975 | 47.356 |
+| 1000000 | 80 | 1052.388 | 1.151 | 9.255 | 73.552 |
+
+
+Note that:
+- query times presented are represented in seconds.
+- `% same filter`  indicates the amount of data that verifies a filter in the database.
+    - For example, if `% same filter = 10` and `Stored data = 1_000_000` then it means `100_000` example verify the filter.
+
 
 ## Next steps
 
