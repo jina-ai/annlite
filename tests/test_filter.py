@@ -135,7 +135,7 @@ def test_filter_without_query_vector():
     with tempfile.TemporaryDirectory() as tmpdirname:
         index = AnnLite(
             D,
-            filterable_attrs={'x', 'float'},
+            filterable_attrs={'x', float},
             data_path=tmpdirname,
             include_metadata=True,
         )
