@@ -34,14 +34,14 @@ def annlite_index(tmpdir):
         np.float32
     )  # 2,000 128-dim vectors for training
 
-    index = AnnLite(dim=D, data_path=tmpdir / 'annlite_test')
+    index = AnnLite(n_dim=D, data_path=tmpdir / 'annlite_test')
     return index
 
 
 @pytest.fixture
 def annlite_with_data(tmpdir):
     columns = [('x', float)]
-    index = AnnLite(dim=D, columns=columns, data_path=tmpdir / 'annlite_test')
+    index = AnnLite(n_dim=D, columns=columns, data_path=tmpdir / 'annlite_test')
 
     X = np.random.random((N, D)).astype(
         np.float32
@@ -63,7 +63,7 @@ def heterogenenous_da(tmpdir):
     categories = ['comics', 'movies', 'audiobook']
 
     columns = [('price', float), ('category', str)]
-    index = AnnLite(dim=D, columns=columns, data_path=tmpdir / 'annlite_test')
+    index = AnnLite(n_dim=D, columns=columns, data_path=tmpdir / 'annlite_test')
 
     X = np.random.random((N, D)).astype(
         np.float32
@@ -88,7 +88,7 @@ def heterogenenous_da(tmpdir):
 def annlite_with_heterogeneous_tags(tmpdir, heterogenenous_da):
 
     columns = [('price', float), ('category', str)]
-    index = AnnLite(dim=D, columns=columns, data_path=tmpdir / 'annlite_test')
+    index = AnnLite(n_dim=D, columns=columns, data_path=tmpdir / 'annlite_test')
     index.index(heterogenenous_da)
     return index
 

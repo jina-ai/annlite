@@ -81,7 +81,7 @@ for n_cells in [1, 8, 16, 32, 64, 128]:
     with tempfile.TemporaryDirectory() as tmpdirname:
 
         pq = AnnLite(
-            dim=D,
+            D,
             metric='euclidean',
             n_cells=n_cells,
             max_connection=16,

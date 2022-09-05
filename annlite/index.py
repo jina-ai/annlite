@@ -27,9 +27,9 @@ class AnnLite(CellContainer):
 
         .. highlight:: python
         .. code-block:: python
-            pqlite = AnnLite(256, metric='cosine')
+            ann = AnnLite(256, metric='cosine')
 
-    :param dim: dimensionality of input vectors. there are 2 constraints on dim:
+    :param n_dim: dimensionality of input vectors. there are 2 constraints on dim:
             (1) it needs to be divisible by n_subvectors; (2) it needs to be a multiple of 4.*
     :param metric: distance metric type, can be 'euclidean', 'inner_product', or 'cosine'.
     :param n_subvectors: number of sub-quantizers, essentially this is the byte size of
@@ -41,6 +41,7 @@ class AnnLite(CellContainer):
             ``n_cells * initial_size`` is the number of vectors that can be stored initially.
             if any cell has reached its capacity, that cell will be automatically expanded.
             If you need to add vectors frequently, a larger value for init_size is recommended.
+    :param filterable_attrs: a list of attributes that can be used in filter.
     :param data_path: path to the directory where the data is stored.
     :param create_if_missing: if False, do not create the directory path if it is missing.
     :param read_only: if True, the index is not writable.
@@ -52,7 +53,7 @@ class AnnLite(CellContainer):
 
     def __init__(
         self,
-        dim: int,
+        n_dim: int,
         metric: Union[str, Metric] = 'cosine',
         n_cells: int = 1,
         n_subvectors: Optional[int] = None,
@@ -61,7 +62,7 @@ class AnnLite(CellContainer):
         n_components: Optional[int] = None,
         initial_size: Optional[int] = None,
         expand_step_size: int = 10240,
-        columns: Optional[List[tuple]] = None,
+        filterable_attrs: Optional[Dict[str]] = None,
         data_path: Union[Path, str] = Path('./data'),
         create_if_missing: bool = True,
         read_only: bool = False,
@@ -73,9 +74,9 @@ class AnnLite(CellContainer):
 
         if n_subvectors:
             assert (
-                dim % n_subvectors == 0
-            ), '"dim" needs to be divisible by "n_subvectors"'
-        self.dim = dim
+                n_dim % n_subvectors == 0
+            ), '"n_dim" needs to be divisible by "n_subvectors"'
+        self.n_dim = n_dim
         self.n_components = n_components
         self.n_subvectors = n_subvectors
         self.n_clusters = n_clusters
@@ -142,7 +143,7 @@ class AnnLite(CellContainer):
             n_cells=n_cells,
             initial_size=initial_size,
             expand_step_size=expand_step_size,
-            columns=columns,
+            filterable_attrs=filterable_attrs,
             data_path=data_path,
             **kwargs,
         )
@@ -166,8 +167,8 @@ class AnnLite(CellContainer):
     def _sanity_check(self, x: 'np.ndarray'):
         assert x.ndim == 2, 'inputs must be a 2D array'
         assert (
-            x.shape[1] == self.dim
-        ), f'inputs must have the same dimension as the index , got {x.shape[1]}, expected {self.dim}'
+            x.shape[1] == self.n_dim
+        ), f'inputs must have the same dimension as the index , got {x.shape[1]}, expected {self.n_dim}'
 
         return x.shape
 
@@ -496,7 +497,7 @@ class AnnLite(CellContainer):
     @property
     def params_hash(self):
         model_metas = (
-            f'dim: {self.dim} '
+            f'n_dim: {self.n_dim} '
             f'metric: {self.metric} '
             f'n_cells: {self.n_cells} '
             f'n_components: {self.n_components} '
@@ -632,7 +633,7 @@ class AnnLite(CellContainer):
             'total_docs': self.total_docs,
             'index_size': self.index_size,
             'n_cells': self.n_cells,
-            'dim': self.dim,
+            'n_dim': self.n_dim,
             'n_components': self.n_components,
             'metric': self.metric.name,
             'is_trained': self.is_trained,

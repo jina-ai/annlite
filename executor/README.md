@@ -72,17 +72,17 @@ One can run `benchmark.py` to get a quick performance overview.
 
 ## Getting Started
 
-For an in-depth overview of the features of PQLite
+For an in-depth overview of the features of AnnLite
 you can follow along with one of the examples below:
 
 
-| Name  | Link  |
-|---|---|
-| E-commerce product image search with PQLite  | [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/jina-ai/pqlite/blob/main/notebooks/fashion_product_search.ipynb)|
+| Name                                         | Link  |
+|----------------------------------------------|---|
+| E-commerce product image search with AnnLite | [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/jina-ai/pqlite/blob/main/notebooks/fashion_product_search.ipynb)|
 
 ## Quick Start
 
-`PQLiteIndexer` stores  `Document` objects at the  `workspace` directory, specified under the [`metas`](https://docs.jina.ai/fundamentals/executor/executor-built-in-features/#meta-attributes) attribute.
+`AnnLiteIndexer` stores  `Document` objects at the  `workspace` directory, specified under the [`metas`](https://docs.jina.ai/fundamentals/executor/executor-built-in-features/#meta-attributes) attribute.
 
 #### Example: Selecting items whose 'price' is less than 50
 
