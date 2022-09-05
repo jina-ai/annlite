@@ -31,7 +31,7 @@ class AnnLiteIndexer(Executor):
         filterable_attrs: Optional[Dict] = None,
         serialize_config: Optional[Dict] = None,
         dim: int = None,
-        columns: Optional[List[str]] = None,
+        columns: Optional[List[Tuple[str, str]]] = None,
         *args,
         **kwargs,
     ):
