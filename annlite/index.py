@@ -112,7 +112,7 @@ class AnnLite(CellContainer):
             logger.info(
                 f'Initialize Projector codec (n_components={self.n_components})'
             )
-            self.projector_codec = ProjectorCodec(dim, n_components=self.n_components)
+            self.projector_codec = ProjectorCodec(n_dim, n_components=self.n_components)
 
         self.vq_codec = None
         if self._vq_codec_path.exists():
@@ -133,7 +133,7 @@ class AnnLite(CellContainer):
         elif n_subvectors:
             logger.info(f'Initialize PQ codec (n_subvectors={self.n_subvectors})')
             self.pq_codec = PQCodec(
-                dim=dim
+                dim=n_dim
                 if not self.projector_codec
                 else self.projector_codec.n_components,
                 n_subvectors=self.n_subvectors,
@@ -142,7 +142,7 @@ class AnnLite(CellContainer):
             )
 
         super(AnnLite, self).__init__(
-            dim=dim,
+            n_dim,
             metric=metric,
             projector_codec=self.projector_codec,
             pq_codec=self.pq_codec,
