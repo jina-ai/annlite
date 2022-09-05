@@ -19,7 +19,7 @@ class AnnLiteIndexer(Executor):
 
     def __init__(
         self,
-        dim: int = 0,
+        n_dim: int = 0,
         metric: str = 'cosine',
         limit: int = 10,
         ef_construction: int = 200,
@@ -34,7 +34,7 @@ class AnnLiteIndexer(Executor):
         **kwargs,
     ):
         """
-        :param dim: Dimensionality of vectors to index
+        :param n_dim: Dimensionality of vectors to index
         :param metric: Distance metric type. Can be 'euclidean', 'inner_product', or 'cosine'
         :param include_metadata: If True, return the document metadata in response
         :param limit: Number of results to get for each query document in search
@@ -53,7 +53,9 @@ class AnnLiteIndexer(Executor):
         super().__init__(*args, **kwargs)
         self.logger = JinaLogger(self.__class__.__name__)
 
-        if not dim:
+        n_dim = n_dim or kwargs.pop('dim', 0)
+
+        if not n_dim:
             raise ValueError('Please specify the dimension of the vectors to index!')
 
         self.metric = metric
@@ -93,7 +95,7 @@ class AnnLiteIndexer(Executor):
             columns = cols
 
         self._index = AnnLite(
-            dim=dim,
+            n_dim=n_dim,
             metric=metric,
             columns=columns,
             ef_construction=ef_construction,
