@@ -28,13 +28,16 @@ class AnnLiteIndexer(Executor):
         include_metadata: bool = True,
         index_access_paths: str = '@r',
         search_access_paths: str = '@r',
-        columns: Optional[List[Tuple[str, str]]] = None,
+        filterable_attrs: Optional[Dict] = None,
         serialize_config: Optional[Dict] = None,
+        dim: int = None,
+        columns: Optional[List[str]] = None,
         *args,
         **kwargs,
     ):
         """
         :param n_dim: Dimensionality of vectors to index
+        :param dim: Deprecated, use n_dim instead
         :param metric: Distance metric type. Can be 'euclidean', 'inner_product', or 'cosine'
         :param include_metadata: If True, return the document metadata in response
         :param limit: Number of results to get for each query document in search
@@ -46,14 +49,15 @@ class AnnLiteIndexer(Executor):
                 (used for indexing, delete and update), e.g. '@r', '@c', '@r,c'
         :param search_access_paths: Default traversal paths on docs
         (used for search), e.g. '@r', '@c', '@r,c'
-        :param columns: List of tuples of the form (column_name, str_type). Here str_type must be a string that can be
-                parsed as a valid Python type.
+        :param columns: Deprecated, use `filterable_attrs` instead.
+        :param filterable_attrs: Dict of attributes that can be used for filtering. The key is the attribute name and the
+                value is a string that can be parsed as a valid Python type.
         :param serialize_config: The configurations used for serializing documents, e.g., {'protocol': 'pickle'}
         """
         super().__init__(*args, **kwargs)
         self.logger = JinaLogger(self.__class__.__name__)
 
-        n_dim = n_dim or kwargs.pop('dim', 0)
+        n_dim = n_dim or dim
 
         if not n_dim:
             raise ValueError('Please specify the dimension of the vectors to index!')
@@ -84,20 +88,29 @@ class AnnLiteIndexer(Executor):
 
         self.logger = JinaLogger(getattr(self.metas, 'name', self.__class__.__name__))
 
-        if columns:
-            cols = []
-            for n, t in columns:
-                if t not in self._valid_input_columns:
+        filterable_attrs = filterable_attrs or {}
+        for attr_name, attr_type in filterable_attrs.items():
+            if attr_type not in self._valid_input_columns:
+                raise ValueError(
+                    f'Invalid column type {attr_type} for attribute {attr_name}. Valid types are {self._valid_input_columns}'
+                )
+            filterable_attrs[attr_name] = eval(attr_type)
+
+        if not filterable_attrs and columns:
+            self.logger.warning(
+                f'`columns` is deprecated. Use `filterable_attrs` instead.'
+            )
+            for attr_name, attr_type in columns:
+                if attr_type not in self._valid_input_columns:
                     raise ValueError(
-                        f'column of type={t} is not supported. Supported types are {self._valid_input_columns}'
+                        f'attribute of type={attr_type} is not supported. Supported types are {self._valid_input_columns}'
                     )
-                cols.append((n, eval(t)))
-            columns = cols
+                filterable_attrs[attr_name] = eval(attr_type)
 
         self._index = AnnLite(
             n_dim=n_dim,
             metric=metric,
-            columns=columns,
+            filterable_attrs=filterable_attrs,
             ef_construction=ef_construction,
             ef_query=ef_query,
             max_connection=max_connection,
