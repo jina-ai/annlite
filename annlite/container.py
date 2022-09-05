@@ -65,23 +65,15 @@ class CellContainer:
             for _ in range(n_cells)
         ]
 
-        columns = []
-        if kwargs.get('columns'):
+        columns = kwargs.get('columns', None)
+        if columns:
             warnings.warn(
-                'The parameter columns in tuple format is deprecated, please use the filterable_attrs in dict format',
-                'For example: columns=[("price", "float"), ("brand", "str")]',
-                'should be changed to filterable_attrs={"price": "float", "brand": "str"}',
+                'columns is deprecated, use filterable_attrs instead',
                 DeprecationWarning,
             )
-            columns = kwargs['columns']
 
         if filterable_attrs:
-            if len(columns) > 0:
-                warnings.warn(
-                    'The columns parameter is not used when filterable_attrs is provided'
-                )
-
-                columns = []
+            columns = []
             for attr_name, attr_type in filterable_attrs.items():
                 columns.append((attr_name, attr_type))
 
