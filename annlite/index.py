@@ -72,6 +72,12 @@ class AnnLite(CellContainer):
     ):
         setup_logging(verbose)
 
+        if 'dim' in kwargs:
+            logger.warning(
+                'The argument `dim` is deprecated, please use `n_dim` instead.'
+            )
+            n_dim = kwargs['dim']
+
         if n_subvectors:
             assert (
                 n_dim % n_subvectors == 0
