@@ -62,7 +62,7 @@ class AnnLite(CellContainer):
         n_components: Optional[int] = None,
         initial_size: Optional[int] = None,
         expand_step_size: int = 10240,
-        filterable_attrs: Optional[Dict[str]] = None,
+        filterable_attrs: Optional[Dict] = None,
         data_path: Union[Path, str] = Path('./data'),
         create_if_missing: bool = True,
         read_only: bool = False,

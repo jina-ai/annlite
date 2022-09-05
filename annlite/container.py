@@ -29,7 +29,7 @@ class CellContainer:
         initial_size: Optional[int] = None,
         expand_step_size: int = 50000,
         expand_mode: 'ExpandMode' = ExpandMode.STEP,
-        filterable_attrs: Optional[Dict[str]] = None,
+        filterable_attrs: Optional[Dict] = None,
         serialize_config: Optional[Dict] = None,
         data_path: 'Path' = Path('./data'),
         **kwargs,
