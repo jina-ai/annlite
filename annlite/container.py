@@ -17,6 +17,8 @@ from .storage.base import ExpandMode
 from .storage.kv import DocStorage
 from .storage.table import CellTable, MetaTable
 
+VALID_FILTERABLE_DATA_TYPES = [int, str, float]
+
 
 class CellContainer:
     def __init__(
@@ -65,16 +67,16 @@ class CellContainer:
             for _ in range(n_cells)
         ]
 
-        columns = kwargs.get('columns', None)
-        if columns:
-            warnings.warn(
-                'columns is deprecated, use filterable_attrs instead',
-                DeprecationWarning,
-            )
-
+        columns = []
         if filterable_attrs:
-            columns = []
             for attr_name, attr_type in filterable_attrs.items():
+                if isinstance(attr_type, str):
+                    attr_type = eval(attr_type)
+
+                if attr_type not in VALID_FILTERABLE_DATA_TYPES:
+                    raise ValueError(
+                        f'Invalid filterable attribute type `{attr_type}` for attribute `{attr_name}`. '
+                    )
                 columns.append((attr_name, attr_type))
 
         self._cell_tables = [

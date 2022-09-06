@@ -107,14 +107,15 @@ def test_error_filter():
         f.parse_where_clause()
 
 
-def test_filter_without_query_vector():
+@pytest.mark.parametrize(
+    'columns', [[('x', float)], [('x', 'float')], {'x': 'float'}, {'x': float}]
+)
+def test_filter_with_columns(columns):
     N = 100
     D = 2
     limit = 3
     with tempfile.TemporaryDirectory() as tmpdirname:
-        index = AnnLite(
-            D, columns=[('x', float)], data_path=tmpdirname, include_metadata=True
-        )
+        index = AnnLite(D, columns=columns, data_path=tmpdirname, include_metadata=True)
         X = np.random.random((N, D)).astype(np.float32)
 
         docs = DocumentArray(
@@ -132,10 +133,16 @@ def test_filter_without_query_vector():
         for m in matches:
             assert m.tags['x'] < 0.5
 
+
+@pytest.mark.parametrize('filterable_attrs', [{'x': 'float'}, {'x': float}])
+def test_filter_with_dict(filterable_attrs):
+    N = 100
+    D = 2
+    limit = 3
     with tempfile.TemporaryDirectory() as tmpdirname:
         index = AnnLite(
             D,
-            filterable_attrs={'x': float},
+            filterable_attrs=filterable_attrs,
             data_path=tmpdirname,
             include_metadata=True,
         )

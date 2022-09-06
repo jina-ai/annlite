@@ -108,12 +108,15 @@ def test_search(tmpdir):
             )
 
 
-def test_search_with_filtering(tmpdir):
+@pytest.mark.parametrize(
+    'columns',
+    [[('price', 'float'), ('category', 'str')], {'price': 'float', 'category': 'str'}],
+)
+def test_search_with_filtering(tmpdir, columns):
     metas = {'workspace': str(tmpdir)}
 
     docs = docs_with_tags(N)
     docs_query = gen_docs(1)
-    columns = [('price', 'float'), ('category', 'str')]
 
     f = Flow().add(
         uses=AnnLiteIndexer,

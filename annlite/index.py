@@ -41,7 +41,9 @@ class AnnLite(CellContainer):
             ``n_cells * initial_size`` is the number of vectors that can be stored initially.
             if any cell has reached its capacity, that cell will be automatically expanded.
             If you need to add vectors frequently, a larger value for init_size is recommended.
-    :param filterable_attrs: a list of attributes that can be used in filter.
+    :param columns: the columns to be indexed for fast filtering, default is None.
+    :param filterable_attrs: a dict of attributes to be indexed for fast filtering, default is None.
+            The key is the attribute name, and the value is the attribute type. And it only works when ``columns`` is None.
     :param data_path: path to the directory where the data is stored.
     :param create_if_missing: if False, do not create the directory path if it is missing.
     :param read_only: if True, the index is not writable.
@@ -62,6 +64,7 @@ class AnnLite(CellContainer):
         n_components: Optional[int] = None,
         initial_size: Optional[int] = None,
         expand_step_size: int = 10240,
+        columns: Optional[Union[Dict, List]] = None,
         filterable_attrs: Optional[Dict] = None,
         data_path: Union[Path, str] = Path('./data'),
         create_if_missing: bool = True,
@@ -74,7 +77,7 @@ class AnnLite(CellContainer):
 
         if 'dim' in kwargs:
             logger.warning(
-                'The argument `dim` is deprecated, please use `n_dim` instead.'
+                'The argument `dim` will be deprecated, please use `n_dim` instead.'
             )
             n_dim = kwargs['dim']
 
@@ -140,6 +143,13 @@ class AnnLite(CellContainer):
                 n_clusters=self.n_clusters,
                 metric=self.metric,
             )
+
+        if columns is not None:
+            if filterable_attrs:
+                logger.warning('`filterable_attrs` will be overwritten by `columns`.')
+            filterable_attrs = {}
+            for n, t in columns.items() if isinstance(columns, dict) else columns:
+                filterable_attrs[n] = t
 
         super(AnnLite, self).__init__(
             n_dim,

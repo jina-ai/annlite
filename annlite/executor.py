@@ -3,7 +3,7 @@ import time
 import traceback
 import warnings
 from threading import Thread
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional, Tuple, Union
 
 from docarray import Document, DocumentArray
 from jina import Executor, requests
@@ -28,10 +28,10 @@ class AnnLiteIndexer(Executor):
         include_metadata: bool = True,
         index_access_paths: str = '@r',
         search_access_paths: str = '@r',
+        columns: Optional[Union[Dict, List]] = None,
         filterable_attrs: Optional[Dict] = None,
         serialize_config: Optional[Dict] = None,
         dim: int = None,
-        columns: Optional[List[Tuple[str, str]]] = None,
         *args,
         **kwargs,
     ):
@@ -49,9 +49,10 @@ class AnnLiteIndexer(Executor):
                 (used for indexing, delete and update), e.g. '@r', '@c', '@r,c'
         :param search_access_paths: Default traversal paths on docs
         (used for search), e.g. '@r', '@c', '@r,c'
-        :param columns: Deprecated, use `filterable_attrs` instead.
+        :param columns: A list or dict of column names to index.
         :param filterable_attrs: Dict of attributes that can be used for filtering. The key is the attribute name and the
-                value is a string that can be parsed as a valid Python type.
+                value is a string that can be parsed as a valid Python type ['float', 'str', 'int']. It only works if
+                `columns` is None.
         :param serialize_config: The configurations used for serializing documents, e.g., {'protocol': 'pickle'}
         """
         super().__init__(*args, **kwargs)
@@ -80,7 +81,6 @@ class AnnLiteIndexer(Executor):
             )
             self.search_access_paths = kwargs['search_traversal_paths']
 
-        self._valid_input_columns = ['str', 'float', 'int']
         self._data_buffer = DocumentArray()
         self._index_batch_size = 1024
         self._max_length_queue = 2 * self._index_batch_size
@@ -88,28 +88,10 @@ class AnnLiteIndexer(Executor):
 
         self.logger = JinaLogger(getattr(self.metas, 'name', self.__class__.__name__))
 
-        filterable_attrs = filterable_attrs or {}
-        for attr_name, attr_type in filterable_attrs.items():
-            if attr_type not in self._valid_input_columns:
-                raise ValueError(
-                    f'Invalid column type {attr_type} for attribute {attr_name}. Valid types are {self._valid_input_columns}'
-                )
-            filterable_attrs[attr_name] = eval(attr_type)
-
-        if not filterable_attrs and columns:
-            self.logger.warning(
-                f'`columns` is deprecated. Use `filterable_attrs` instead.'
-            )
-            for attr_name, attr_type in columns:
-                if attr_type not in self._valid_input_columns:
-                    raise ValueError(
-                        f'attribute of type={attr_type} is not supported. Supported types are {self._valid_input_columns}'
-                    )
-                filterable_attrs[attr_name] = eval(attr_type)
-
         self._index = AnnLite(
             n_dim=n_dim,
             metric=metric,
+            columns=columns,
             filterable_attrs=filterable_attrs,
             ef_construction=ef_construction,
             ef_query=ef_query,
