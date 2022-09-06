@@ -10,6 +10,7 @@
 
 
 
+
 <a name=release-note-0-3-0></a>
 ## Release Note (`0.3.0`)
 
@@ -242,4 +243,33 @@
 ### 🍹 Other Improvements
 
  - [[```f34062b2```](https://github.com/jina-ai/docarray/commit/f34062b2249a3fce8cb51dc9e8b8497d33a54a2f)] __-__ __version__: the next version will be 0.3.9 (*Jina Dev Bot*)
+
+<a name=release-note-0-3-10></a>
+## Release Note (`0.3.10`)
+
+> Release time: 2022-09-06 09:40:07
+
+
+
+🙇 We'd like to thank all contributors for this new release! In particular,
+ felix-wang,  numb3r3,  Jie Fu,  Jina Dev Bot,  🙇
+
+
+### 🐞 Bug fixes
+
+ - [[```bc7f5ae2```](https://github.com/jina-ai/docarray/commit/bc7f5ae2e8e83cef919052a9d8a3a954a1cd813f)] __-__ allow columns as dict format (#160) (*felix-wang*)
+ - [[```25c3ec3d```](https://github.com/jina-ai/docarray/commit/25c3ec3d616a9ece53c710d734ba71d0eb6fc19c)] __-__ thread safe index and search (#157) (*felix-wang*)
+ - [[```d235cb83```](https://github.com/jina-ai/docarray/commit/d235cb83a2d8399f1120b3ebf6e54392ecb37efa)] __-__ executor unittest (#156) (*felix-wang*)
+
+### 🏁 Unit Test and CICD
+
+ - [[```e6543a28```](https://github.com/jina-ai/docarray/commit/e6543a28894aad5481d1a6a5bbd8f070ca979a90)] __-__ add docarray tests (#153) (*Jie Fu*)
+
+### 🍹 Other Improvements
+
+ - [[```6a774648```](https://github.com/jina-ai/docarray/commit/6a774648d772ad98f42641c6094192bf4e7d1877)] __-__ update logo (*numb3r3*)
+ - [[```33fd66be```](https://github.com/jina-ai/docarray/commit/33fd66be1135ebe63f2a1e1366196c8712e2bc63)] __-__ update readme (*numb3r3*)
+ - [[```e1ad3a55```](https://github.com/jina-ai/docarray/commit/e1ad3a55d4732a115e6a925075b7b5ed768cd9f8)] __-__ update log (*numb3r3*)
+ - [[```c2630257```](https://github.com/jina-ai/docarray/commit/c26302572de4e755d64ffee71b017e798f790e9e)] __-__  update readme (#149) (*felix-wang*)
+ - [[```c1fd8cfe```](https://github.com/jina-ai/docarray/commit/c1fd8cfe746d94de2ebef843f6e13384f266773b)] __-__ __version__: the next version will be 0.3.10 (*Jina Dev Bot*)
 
