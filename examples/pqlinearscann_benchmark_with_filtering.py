@@ -30,7 +30,7 @@ for n_i in n_index:
         clean_workspace()
         columns = [('category', str)]
         indexer = AnnLite(
-            dim=D,
+            D,
             initial_size=n_i,
             n_subvectors=n_subvectors,
             n_cells=n_cells,

@@ -44,9 +44,7 @@ results = []
 for n_cells in [1, 4, 8]:
     for n_subvectors in [64, 128]:
 
-        pq = AnnLite(
-            dim=D, metric='euclidean', n_cells=n_cells, n_subvectors=n_subvectors
-        )
+        pq = AnnLite(D, metric='euclidean', n_cells=n_cells, n_subvectors=n_subvectors)
 
         t0 = time.time()
         pq.train(Xtr[:20480])

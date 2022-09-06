@@ -10,7 +10,7 @@ Nq = 5
 Nt = 2000
 D = 128  # dimensionality / number of features
 
-index = AnnLite(dim=D, data_path='/tmp/annlite_test')
+index = AnnLite(D, data_path='/tmp/annlite_test')
 
 X = np.random.random((N, D)).astype(np.float32)  # 10,000 128-dim vectors to be indexed
 

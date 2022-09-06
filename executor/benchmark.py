@@ -16,7 +16,7 @@ times = {}
 
 for n_i in n_index:
     idxer = AnnLiteIndexer(
-        dim=D,
+        n_dim=D,
         initial_size=n_i,
         n_cells=n_cells,
     )

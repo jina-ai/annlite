@@ -17,11 +17,13 @@ from .storage.base import ExpandMode
 from .storage.kv import DocStorage
 from .storage.table import CellTable, MetaTable
 
+VALID_FILTERABLE_DATA_TYPES = [int, str, float]
+
 
 class CellContainer:
     def __init__(
         self,
-        dim: int,
+        n_dim: int,
         metric: Metric = Metric.COSINE,
         n_cells: int = 1,
         projector_codec: Optional['ProjectorCodec'] = None,
@@ -29,12 +31,12 @@ class CellContainer:
         initial_size: Optional[int] = None,
         expand_step_size: int = 50000,
         expand_mode: 'ExpandMode' = ExpandMode.STEP,
-        columns: Optional[List[tuple]] = None,
+        filterable_attrs: Optional[Dict] = None,
         serialize_config: Optional[Dict] = None,
         data_path: 'Path' = Path('./data'),
         **kwargs,
     ):
-        self.dim = dim
+        self.n_dim = n_dim
         self.metric = metric
         self.n_cells = n_cells
         self.n_components = projector_codec.n_components if projector_codec else None
@@ -45,7 +47,7 @@ class CellContainer:
 
         self._vec_indexes = [
             HnswIndex(
-                dim=self.n_components or dim,
+                dim=self.n_components or n_dim,
                 metric=metric,
                 initial_size=initial_size,
                 expand_step_size=expand_step_size,
@@ -64,6 +66,18 @@ class CellContainer:
             )
             for _ in range(n_cells)
         ]
+
+        columns = []
+        if filterable_attrs:
+            for attr_name, attr_type in filterable_attrs.items():
+                if isinstance(attr_type, str):
+                    attr_type = eval(attr_type)
+
+                if attr_type not in VALID_FILTERABLE_DATA_TYPES:
+                    raise ValueError(
+                        f'Invalid filterable attribute type `{attr_type}` for attribute `{attr_name}`. '
+                    )
+                columns.append((attr_name, attr_type))
 
         self._cell_tables = [
             CellTable(f'table_{c}', columns=columns) for c in range(n_cells)
@@ -186,7 +200,7 @@ class CellContainer:
 
         topk_dists, topk_docs = [], []
         for x, cell_idx in zip(query, cells):
-            # x.shape = (self.dim,)
+            # x.shape = (self.n_dim,)
             dists, doc_ids, cells = self.ivf_search(
                 x,
                 cells=cell_idx,
@@ -285,7 +299,7 @@ class CellContainer:
 
     def _add_vecs(self, data: 'np.ndarray', cells: 'np.ndarray', offsets: 'np.ndarray'):
         assert data.shape[0] == cells.shape[0]
-        assert data.shape[1] == self.dim
+        assert data.shape[1] == self.n_dim
 
         unique_cells, _ = np.unique(cells, return_counts=True)
 

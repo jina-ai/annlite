@@ -16,7 +16,7 @@ dirpath = tempfile.mkdtemp()
 with tempfile.TemporaryDirectory() as tmpdirname:
 
     index = AnnLite(
-        dim=D, columns=[('x', float)], data_path=tmpdirname, include_metadata=True
+        D, columns=[('x', float)], data_path=tmpdirname, include_metadata=True
     )
 
     X = np.random.random((N, D)).astype(

@@ -3,7 +3,7 @@ import time
 import traceback
 import warnings
 from threading import Thread
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional, Tuple, Union
 
 from docarray import Document, DocumentArray
 from jina import Executor, requests
@@ -19,7 +19,7 @@ class AnnLiteIndexer(Executor):
 
     def __init__(
         self,
-        dim: int = 0,
+        n_dim: int = 0,
         metric: str = 'cosine',
         limit: int = 10,
         ef_construction: int = 200,
@@ -28,13 +28,16 @@ class AnnLiteIndexer(Executor):
         include_metadata: bool = True,
         index_access_paths: str = '@r',
         search_access_paths: str = '@r',
-        columns: Optional[List[Tuple[str, str]]] = None,
+        columns: Optional[Union[Dict, List]] = None,
+        filterable_attrs: Optional[Dict] = None,
         serialize_config: Optional[Dict] = None,
+        dim: int = None,
         *args,
         **kwargs,
     ):
         """
-        :param dim: Dimensionality of vectors to index
+        :param n_dim: Dimensionality of vectors to index
+        :param dim: Deprecated, use n_dim instead
         :param metric: Distance metric type. Can be 'euclidean', 'inner_product', or 'cosine'
         :param include_metadata: If True, return the document metadata in response
         :param limit: Number of results to get for each query document in search
@@ -46,14 +49,18 @@ class AnnLiteIndexer(Executor):
                 (used for indexing, delete and update), e.g. '@r', '@c', '@r,c'
         :param search_access_paths: Default traversal paths on docs
         (used for search), e.g. '@r', '@c', '@r,c'
-        :param columns: List of tuples of the form (column_name, str_type). Here str_type must be a string that can be
-                parsed as a valid Python type.
+        :param columns: A list or dict of column names to index.
+        :param filterable_attrs: Dict of attributes that can be used for filtering. The key is the attribute name and the
+                value is a string that can be parsed as a valid Python type ['float', 'str', 'int']. It only works if
+                `columns` is None.
         :param serialize_config: The configurations used for serializing documents, e.g., {'protocol': 'pickle'}
         """
         super().__init__(*args, **kwargs)
         self.logger = JinaLogger(self.__class__.__name__)
 
-        if not dim:
+        n_dim = n_dim or dim
+
+        if not n_dim:
             raise ValueError('Please specify the dimension of the vectors to index!')
 
         self.metric = metric
@@ -74,7 +81,6 @@ class AnnLiteIndexer(Executor):
             )
             self.search_access_paths = kwargs['search_traversal_paths']
 
-        self._valid_input_columns = ['str', 'float', 'int']
         self._data_buffer = DocumentArray()
         self._index_batch_size = 1024
         self._max_length_queue = 2 * self._index_batch_size
@@ -82,20 +88,11 @@ class AnnLiteIndexer(Executor):
 
         self.logger = JinaLogger(getattr(self.metas, 'name', self.__class__.__name__))
 
-        if columns:
-            cols = []
-            for n, t in columns:
-                if t not in self._valid_input_columns:
-                    raise ValueError(
-                        f'column of type={t} is not supported. Supported types are {self._valid_input_columns}'
-                    )
-                cols.append((n, eval(t)))
-            columns = cols
-
         self._index = AnnLite(
-            dim=dim,
+            n_dim=n_dim,
             metric=metric,
             columns=columns,
+            filterable_attrs=filterable_attrs,
             ef_construction=ef_construction,
             ef_query=ef_query,
             max_connection=max_connection,

@@ -56,7 +56,7 @@ for n_i in n_index:
 
     columns = [('category', str)]
     idxer = AnnLite(
-        dim=D,
+        D,
         initial_size=n_i,
         n_cells=n_cells,
         data_path='./workspace',

@@ -24,7 +24,7 @@ def random_docs():
 
 def test_hnsw_pq_load_empty(tmpdir, random_docs):
     pq_index = AnnLite(
-        dim=D,
+        D,
         data_path=tmpdir / 'annlite_pq_test',
         n_subvectors=8,
     )
@@ -40,7 +40,7 @@ def test_hnsw_pq_load_empty(tmpdir, random_docs):
 
 def test_hnsw_pq_load(tmpdir, random_docs):
     pq_index = AnnLite(
-        dim=D,
+        D,
         data_path=tmpdir / 'annlite_pq_test',
         n_subvectors=8,
     )
@@ -56,7 +56,7 @@ def test_hnsw_pq_search_multi_clusters(n_clusters, tmpdir, random_docs):
     topk = 50
 
     X = random_docs.embeddings
-    no_pq_index = AnnLite(dim=D, data_path=tmpdir / 'annlite_test')
+    no_pq_index = AnnLite(D, data_path=tmpdir / 'annlite_test')
 
     query = DocumentArray([Document(embedding=X[i]) for i in range(total_test)])
     test_query = DocumentArray([Document(embedding=X[i]) for i in range(total_test)])
@@ -65,7 +65,7 @@ def test_hnsw_pq_search_multi_clusters(n_clusters, tmpdir, random_docs):
     no_pq_index.search(query, limit=topk)
 
     pq_index = AnnLite(
-        dim=D,
+        D,
         data_path=tmpdir / f'annlite_pq_test',
         n_subvectors=8,
         n_clusters=n_clusters,
