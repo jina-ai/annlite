@@ -1,5 +1,6 @@
 import hashlib
 import logging
+import warnings
 from pathlib import Path
 from typing import TYPE_CHECKING, Dict, List, Optional, Union
 
@@ -76,7 +77,7 @@ class AnnLite(CellContainer):
         setup_logging(verbose)
 
         if 'dim' in kwargs:
-            logger.warning(
+            warnings.warn(
                 'The argument `dim` will be deprecated, please use `n_dim` instead.'
             )
             n_dim = kwargs['dim']
@@ -147,6 +148,7 @@ class AnnLite(CellContainer):
         if columns is not None:
             if filterable_attrs:
                 logger.warning('`filterable_attrs` will be overwritten by `columns`.')
+
             filterable_attrs = {}
             for n, t in columns.items() if isinstance(columns, dict) else columns:
                 filterable_attrs[n] = t
