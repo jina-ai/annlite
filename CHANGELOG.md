@@ -11,6 +11,7 @@
 
 
 
+
 <a name=release-note-0-3-0></a>
 ## Release Note (`0.3.0`)
 
@@ -272,4 +273,23 @@
  - [[```e1ad3a55```](https://github.com/jina-ai/docarray/commit/e1ad3a55d4732a115e6a925075b7b5ed768cd9f8)] __-__ update log (*numb3r3*)
  - [[```c2630257```](https://github.com/jina-ai/docarray/commit/c26302572de4e755d64ffee71b017e798f790e9e)] __-__  update readme (#149) (*felix-wang*)
  - [[```c1fd8cfe```](https://github.com/jina-ai/docarray/commit/c1fd8cfe746d94de2ebef843f6e13384f266773b)] __-__ __version__: the next version will be 0.3.10 (*Jina Dev Bot*)
+
+<a name=release-note-0-3-11></a>
+## Release Note (`0.3.11`)
+
+> Release time: 2022-09-08 06:17:25
+
+
+
+🙇 We'd like to thank all contributors for this new release! In particular,
+ felix-wang,  Jina Dev Bot,  🙇
+
+
+### 🐞 Bug fixes
+
+ - [[```0b435eb6```](https://github.com/jina-ai/docarray/commit/0b435eb6c5a737d370b389ba3c2395796febe95f)] __-__ bump pybind11 (#162) (*felix-wang*)
+
+### 🍹 Other Improvements
+
+ - [[```9c43f02c```](https://github.com/jina-ai/docarray/commit/9c43f02c5ec9face32ee58858b8ab25d65edbf12)] __-__ __version__: the next version will be 0.3.11 (*Jina Dev Bot*)
 
