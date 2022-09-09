@@ -196,6 +196,11 @@ public:
 
   void *get_dist_func_param() { return &dim_; }
 
+  // Not local state
+  void set_local_data(const void *) {}
+
+  void free_local_data() {}
+
   ~L2Space() {}
 };
 
@@ -266,6 +271,11 @@ public:
   DISTFUNC<int> get_dist_func() { return fstdistfunc_; }
 
   void *get_dist_func_param() { return &dim_; }
+
+  // Not local state
+  void set_local_data(const void *) {}
+
+  void free_local_data() {}
 
   ~L2SpaceI() {}
 };
