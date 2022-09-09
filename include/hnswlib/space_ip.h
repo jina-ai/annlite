@@ -279,6 +279,11 @@ public:
 
   void *get_dist_func_param() { return &dim_; }
 
+  // Not local state
+  void set_local_data(const void *) {}
+
+  void free_local_data() {}
+
   ~InnerProductSpace() {}
 };
 
