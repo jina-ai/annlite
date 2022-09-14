@@ -2,7 +2,7 @@ import datetime
 import sqlite3
 import threading
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, List, Optional, Tuple, Union, Dict
+from typing import TYPE_CHECKING, Any, List, Optional, Tuple, Union,  Dict
 
 import numpy as np
 
