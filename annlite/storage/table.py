@@ -2,7 +2,7 @@ import datetime
 import sqlite3
 import threading
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, List, Optional, Tuple, Union
+from typing import TYPE_CHECKING, Any, List, Optional, Tuple, Union, Dict
 
 import numpy as np
 
@@ -158,7 +158,7 @@ class CellTable(Table):
     def __init__(
         self,
         name: str,
-        columns: Optional[List[tuple]] = None,
+        columns: Optional[Union[List[Tuple[str, str]], Dict[str, str]]] = None,
         in_memory: bool = True,
         data_path: Optional[Path] = None,
         lazy_create: bool = False,
