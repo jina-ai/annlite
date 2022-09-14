@@ -20,7 +20,7 @@
 
 ## What is AnnLite?
 
-`AnnLite` is a lightweight library for **fast** and **filterable** *approximate nearest neighbor search* (ANNS).
+`AnnLite` is a *lightweight* and *embeddable* library for **fast** and **filterable** *approximate nearest neighbor search* (ANNS).
 It allows to search for nearest neighbors in a dataset of millions of points with a Pythonic API.
 
 
