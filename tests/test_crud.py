@@ -28,6 +28,22 @@ def annlite_with_data(tmpdir):
     return index
 
 
+@pytest.mark.parametrize('filter', [None, {'x': {'$lt': 0.5}}])
+@pytest.mark.parametrize('limit', [1, 3, 5])
+def test_get(annlite_with_data, filter, limit):
+    index = annlite_with_data
+
+    doc = index.get_doc('0')
+    assert doc.id == '0'
+
+    docs = index.get_docs(filter=filter, limit=limit)
+    assert len(docs) == limit
+
+    if filter:
+        for doc in docs:
+            assert doc.tags['x'] < 0.5
+
+
 def test_update_legal(annlite_with_data):
     index = annlite_with_data
 
