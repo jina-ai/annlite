@@ -1,3 +1,5 @@
+from argparse import ArgumentError
+
 import numpy as np
 from scipy.cluster.vq import vq
 
@@ -231,7 +233,7 @@ class PQCodec(BaseCodec):
         Expect a 3-dimensional matrix is returned,
         with shape (`n_subvectors`, `n_clusters`, `d_subvector`) and dtype float32
         """
-        return self.codebooks
+        return np.ascontiguousarray(self.codebooks, dtype='float32')
 
     def get_subspace_splitting(self):
         """Return subspace splitting setting
@@ -256,6 +258,8 @@ class PQCodec(BaseCodec):
         assert (
             D == self.d_subvector * self.n_subvectors
         ), 'input dimension must be Ds * M'
+        if self.normalize_input:
+            x = l2_normalize(x)
 
         x = x.reshape(
             N,
@@ -263,17 +267,27 @@ class PQCodec(BaseCodec):
             1,
             self.d_subvector,
         )
+        if self.metric == Metric.EUCLIDEAN:
+            # (1, n_subvectors, n_clusters, d_subvector)
+            codebook = self.codebooks[np.newaxis, ...]
 
-        # (1, n_subvectors, n_clusters, d_subvector)
-        codebook = self.codebooks[np.newaxis, ...]
+            # broadcast to (N, n_subvectors, n_clusters, d_subvector)
+            dist_vector = (x - codebook) ** 2
 
-        # broadcast to (N, n_subvectors, n_clusters, d_subvector)
-        dist_vector = (x - codebook) ** 2
+            # reduce to (N, n_subvectors, n_clusters)
+            dist_mat = np.sum(dist_vector, axis=3)
+        elif self.metric in [Metric.INNER_PRODUCT, Metric.COSINE]:
+            # (1, n_subvectors, n_clusters, d_subvector)
+            codebook = self.codebooks[np.newaxis, ...]
 
-        # reduce to (N, n_subvectors, n_clusters)
-        dist_mat = np.sum(dist_vector, axis=3)
+            # broadcast to (N, n_subvectors, n_clusters, d_subvector)
+            dist_vector = x * codebook
 
-        return dist_mat
+            # reduce to (N, n_subvectors, n_clusters)
+            dist_mat = 1 - np.sum(dist_vector, axis=3)
+        else:
+            raise ArgumentError(f'Unable support metrics {self.metric}')
+        return np.ascontiguousarray(dist_mat, dtype='float32')
 
     # -------------------------------------
 
