@@ -168,9 +168,11 @@ public:
     return (int)r;
   }
 
+  // TODO:
   std::priority_queue<std::pair<dist_t, tableint>,
                       std::vector<std::pair<dist_t, tableint>>, CompareByFirst>
-  searchBaseLayer(tableint ep_id, const void *data_point, int layer) {
+  searchBaseLayer(tableint ep_id, const void *data_point, int layer,
+                  const local_state_t *local_state_ptr) {
     VisitedList *vl = visited_list_pool_->getFreeVisitedList();
     vl_type *visited_array = vl->mass;
     vl_type visited_array_tag = vl->curV;
@@ -187,7 +189,7 @@ public:
     dist_t lowerBound;
     if (!isMarkedDeleted(ep_id)) {
       dist_t dist = fstdistfunc_(data_point, getDataByInternalId(ep_id),
-                                 dist_func_param_, nullptr);
+                                 dist_func_param_, local_state_ptr);
       top_candidates.emplace(dist, ep_id);
       lowerBound = dist;
       candidateSet.emplace(-dist, ep_id);
@@ -238,8 +240,8 @@ public:
         visited_array[candidate_id] = visited_array_tag;
         char *currObj1 = (getDataByInternalId(candidate_id));
 
-        dist_t dist1 =
-            fstdistfunc_(data_point, currObj1, dist_func_param_, nullptr);
+        dist_t dist1 = fstdistfunc_(data_point, currObj1, dist_func_param_,
+                                    local_state_ptr);
         if (top_candidates.size() < ef_construction_ || lowerBound > dist1) {
           candidateSet.emplace(-dist1, candidate_id);
 #ifdef USE_SSE
@@ -269,7 +271,8 @@ public:
   template <bool has_deletions, bool collect_metrics = false>
   std::priority_queue<std::pair<dist_t, tableint>,
                       std::vector<std::pair<dist_t, tableint>>, CompareByFirst>
-  searchBaseLayerST(tableint ep_id, const void *data_point, size_t ef) const {
+  searchBaseLayerST(tableint ep_id, const void *data_point, size_t ef,
+                    const local_state_t *local_state_ptr) const {
     VisitedList *vl = visited_list_pool_->getFreeVisitedList();
     vl_type *visited_array = vl->mass;
     vl_type visited_array_tag = vl->curV;
@@ -286,7 +289,7 @@ public:
     dist_t lowerBound;
     if (!has_deletions || !isMarkedDeleted(ep_id)) {
       dist_t dist = fstdistfunc_(data_point, getDataByInternalId(ep_id),
-                                 dist_func_param_, nullptr);
+                                 dist_func_param_, local_state_ptr);
       lowerBound = dist;
       top_candidates.emplace(dist, ep_id);
       candidate_set.emplace(-dist, ep_id);
@@ -340,8 +343,8 @@ public:
           visited_array[candidate_id] = visited_array_tag;
 
           char *currObj1 = (getDataByInternalId(candidate_id));
-          dist_t dist =
-              fstdistfunc_(data_point, currObj1, dist_func_param_, nullptr);
+          dist_t dist = fstdistfunc_(data_point, currObj1, dist_func_param_,
+                                     local_state_ptr);
 
           if (top_candidates.size() < ef || lowerBound > dist) {
             candidate_set.emplace(-dist, candidate_id);
@@ -370,11 +373,13 @@ public:
     return top_candidates;
   }
 
+  // TODO
   template <bool has_deletions, bool collect_metrics = false>
   std::priority_queue<std::pair<dist_t, tableint>,
                       std::vector<std::pair<dist_t, tableint>>, CompareByFirst>
   searchBaseLayerSTWithFilter(tableint ep_id, const void *data_point,
-                              const binary_fuse16_t *filter, size_t ef) const {
+                              const binary_fuse16_t *filter, size_t ef,
+                              const local_state_t *local_state_ptr) const {
     VisitedList *vl = visited_list_pool_->getFreeVisitedList();
     vl_type *visited_array = vl->mass;
     vl_type visited_array_tag = vl->curV;
@@ -393,7 +398,7 @@ public:
     uint64_t label = getExternalLabel(ep_id);
     if (binary_fuse16_contain(label, filter)) {
       dist_t dist = fstdistfunc_(data_point, getDataByInternalId(ep_id),
-                                 dist_func_param_, nullptr);
+                                 dist_func_param_, local_state_ptr);
       lowerBound = dist;
       top_candidates.emplace(dist, ep_id);
       candidate_set.emplace(-dist, ep_id);
@@ -447,8 +452,8 @@ public:
           visited_array[candidate_id] = visited_array_tag;
 
           char *currObj1 = (getDataByInternalId(candidate_id));
-          dist_t dist =
-              fstdistfunc_(data_point, currObj1, dist_func_param_, nullptr);
+          dist_t dist = fstdistfunc_(data_point, currObj1, dist_func_param_,
+                                     local_state_ptr);
 
           if (top_candidates.size() < ef || lowerBound > dist) {
             candidate_set.emplace(-dist, candidate_id);
@@ -479,11 +484,12 @@ public:
     return top_candidates;
   }
 
+  // TODO
   void getNeighborsByHeuristic2(
       std::priority_queue<std::pair<dist_t, tableint>,
                           std::vector<std::pair<dist_t, tableint>>,
                           CompareByFirst> &top_candidates,
-      const size_t M) {
+      const size_t M, const local_state_t *local_state_ptr) {
     if (top_candidates.size() < M) {
       return;
     }
@@ -507,7 +513,7 @@ public:
       for (std::pair<dist_t, tableint> second_pair : return_list) {
         dist_t curdist = fstdistfunc_(getDataByInternalId(second_pair.second),
                                       getDataByInternalId(curent_pair.second),
-                                      dist_func_param_, nullptr);
+                                      dist_func_param_, local_state_ptr);
         ;
         if (curdist < dist_to_query) {
           good = false;
@@ -553,9 +559,9 @@ public:
       std::priority_queue<std::pair<dist_t, tableint>,
                           std::vector<std::pair<dist_t, tableint>>,
                           CompareByFirst> &top_candidates,
-      int level, bool isUpdate) {
+      int level, bool isUpdate, const local_state_t *local_state_ptr) {
     size_t Mcurmax = level ? maxM_ : maxM0_;
-    getNeighborsByHeuristic2(top_candidates, M_);
+    getNeighborsByHeuristic2(top_candidates, M_, local_state_ptr);
     if (top_candidates.size() > M_)
       throw std::runtime_error(
           "Should be not be more than M_ candidates returned by the heuristic");
@@ -638,7 +644,7 @@ public:
           dist_t d_max =
               fstdistfunc_(getDataByInternalId(cur_c),
                            getDataByInternalId(selectedNeighbors[idx]),
-                           dist_func_param_, nullptr);
+                           dist_func_param_, local_state_ptr);
           // Heuristic:
           std::priority_queue<std::pair<dist_t, tableint>,
                               std::vector<std::pair<dist_t, tableint>>,
@@ -650,11 +656,11 @@ public:
             candidates.emplace(
                 fstdistfunc_(getDataByInternalId(data[j]),
                              getDataByInternalId(selectedNeighbors[idx]),
-                             dist_func_param_, nullptr),
+                             dist_func_param_, local_state_ptr),
                 data[j]);
           }
 
-          getNeighborsByHeuristic2(candidates, Mcurmax);
+          getNeighborsByHeuristic2(candidates, Mcurmax, local_state_ptr);
 
           int indx = 0;
           while (candidates.size() > 0) {
@@ -692,10 +698,16 @@ public:
     std::priority_queue<std::pair<dist_t, tableint>> top_candidates;
     if (cur_element_count == 0)
       return top_candidates;
+
+    // FIXME: Never used, so fix index to 0.
+    local_state_t local_state;
+    local_state.batch_index = 0;
+    local_state.stage = 1;
+
     tableint currObj = enterpoint_node_;
     dist_t curdist =
         fstdistfunc_(query_data, getDataByInternalId(enterpoint_node_),
-                     dist_func_param_, nullptr);
+                     dist_func_param_, &local_state);
 
     for (size_t level = maxlevel_; level > 0; level--) {
       bool changed = true;
@@ -723,11 +735,11 @@ public:
 
     if (has_deletions_) {
       std::priority_queue<std::pair<dist_t, tableint>> top_candidates1 =
-          searchBaseLayerST<true>(currObj, query_data, ef_);
+          searchBaseLayerST<true>(currObj, query_data, ef_, &local_state);
       top_candidates.swap(top_candidates1);
     } else {
       std::priority_queue<std::pair<dist_t, tableint>> top_candidates1 =
-          searchBaseLayerST<false>(currObj, query_data, ef_);
+          searchBaseLayerST<false>(currObj, query_data, ef_, &local_state);
       top_candidates.swap(top_candidates1);
     }
 
@@ -998,7 +1010,8 @@ public:
   }
 
   void updatePoint(const void *dataPoint, tableint internalId,
-                   float updateNeighborProbability) {
+                   float updateNeighborProbability,
+                   const local_state_t *local_state_ptr) {
     // update the feature vector associated with existing point with new vector
     memcpy(getDataByInternalId(internalId), dataPoint, data_size_);
 
@@ -1056,7 +1069,7 @@ public:
 
           dist_t distance = fstdistfunc_(getDataByInternalId(neigh),
                                          getDataByInternalId(cand),
-                                         dist_func_param_, nullptr);
+                                         dist_func_param_, local_state_ptr);
           if (candidates.size() < elementsToKeep) {
             candidates.emplace(distance, cand);
           } else {
@@ -1068,7 +1081,8 @@ public:
         }
 
         // Retrieve neighbours using heuristic and set connections.
-        getNeighborsByHeuristic2(candidates, layer == 0 ? maxM0_ : maxM_);
+        getNeighborsByHeuristic2(candidates, layer == 0 ? maxM0_ : maxM_,
+                                 local_state_ptr);
 
         {
           std::unique_lock<std::mutex> lock(link_list_locks_[neigh]);
@@ -1086,17 +1100,18 @@ public:
     }
 
     repairConnectionsForUpdate(dataPoint, entryPointCopy, internalId, elemLevel,
-                               maxLevelCopy);
+                               maxLevelCopy, local_state_ptr);
   };
 
   void repairConnectionsForUpdate(const void *dataPoint,
                                   tableint entryPointInternalId,
                                   tableint dataPointInternalId,
-                                  int dataPointLevel, int maxLevel) {
+                                  int dataPointLevel, int maxLevel,
+                                  const local_state_t *local_state_ptr) {
     tableint currObj = entryPointInternalId;
     if (dataPointLevel < maxLevel) {
       dist_t curdist = fstdistfunc_(dataPoint, getDataByInternalId(currObj),
-                                    dist_func_param_, nullptr);
+                                    dist_func_param_, local_state_ptr);
       for (int level = maxLevel; level > dataPointLevel; level--) {
         bool changed = true;
         while (changed) {
@@ -1115,7 +1130,7 @@ public:
 #endif
             tableint cand = datal[i];
             dist_t d = fstdistfunc_(dataPoint, getDataByInternalId(cand),
-                                    dist_func_param_, nullptr);
+                                    dist_func_param_, local_state_ptr);
             if (d < curdist) {
               curdist = d;
               currObj = cand;
@@ -1134,7 +1149,8 @@ public:
       std::priority_queue<std::pair<dist_t, tableint>,
                           std::vector<std::pair<dist_t, tableint>>,
                           CompareByFirst>
-          topCandidates = searchBaseLayer(currObj, dataPoint, level);
+          topCandidates =
+              searchBaseLayer(currObj, dataPoint, level, local_state_ptr);
 
       std::priority_queue<std::pair<dist_t, tableint>,
                           std::vector<std::pair<dist_t, tableint>>,
@@ -1156,14 +1172,15 @@ public:
         if (epDeleted) {
           filteredTopCandidates.emplace(
               fstdistfunc_(dataPoint, getDataByInternalId(entryPointInternalId),
-                           dist_func_param_, nullptr),
+                           dist_func_param_, local_state_ptr),
               entryPointInternalId);
           if (filteredTopCandidates.size() > ef_construction_)
             filteredTopCandidates.pop();
         }
 
         currObj = mutuallyConnectNewElement(dataPoint, dataPointInternalId,
-                                            filteredTopCandidates, level, true);
+                                            filteredTopCandidates, level, true,
+                                            local_state_ptr);
       }
     }
   }
@@ -1182,6 +1199,10 @@ public:
                     size_t batch_index) {
 
     tableint cur_c = 0;
+    local_state_t local_state;
+    local_state.batch_index = batch_index;
+    local_state.stage = 0;
+
     {
       // Checking if the element with the same label already exists
       // if so, updating it *instead* of creating a new element.
@@ -1197,7 +1218,7 @@ public:
         if (isMarkedDeleted(existingInternalId)) {
           unmarkDeletedInternal(existingInternalId);
         }
-        updatePoint(data_point, existingInternalId, 1.0);
+        updatePoint(data_point, existingInternalId, 1.0, &local_state);
 
         return existingInternalId;
       }
@@ -1251,7 +1272,7 @@ public:
       if (curlevel < maxlevelcopy) {
 
         dist_t curdist = fstdistfunc_(data_point, getDataByInternalId(currObj),
-                                      dist_func_param_, nullptr);
+                                      dist_func_param_, &local_state);
         for (int level = maxlevelcopy; level > curlevel; level--) {
 
           bool changed = true;
@@ -1268,7 +1289,7 @@ public:
               if (cand < 0 || cand > max_elements_)
                 throw std::runtime_error("cand error");
               dist_t d = fstdistfunc_(data_point, getDataByInternalId(cand),
-                                      dist_func_param_, nullptr);
+                                      dist_func_param_, &local_state);
               if (d < curdist) {
                 curdist = d;
                 currObj = cand;
@@ -1287,17 +1308,18 @@ public:
         std::priority_queue<std::pair<dist_t, tableint>,
                             std::vector<std::pair<dist_t, tableint>>,
                             CompareByFirst>
-            top_candidates = searchBaseLayer(currObj, data_point, level);
+            top_candidates =
+                searchBaseLayer(currObj, data_point, level, &local_state);
         if (epDeleted) {
           top_candidates.emplace(
               fstdistfunc_(data_point, getDataByInternalId(enterpoint_copy),
-                           dist_func_param_, nullptr),
+                           dist_func_param_, &local_state),
               enterpoint_copy);
           if (top_candidates.size() > ef_construction_)
             top_candidates.pop();
         }
         currObj = mutuallyConnectNewElement(data_point, cur_c, top_candidates,
-                                            level, false);
+                                            level, false, &local_state);
       }
 
     } else {
@@ -1315,15 +1337,18 @@ public:
   };
 
   std::priority_queue<std::pair<dist_t, labeltype>>
-  searchKnn(const void *query_data, size_t k) const {
+  searchKnn(const void *query_data, size_t k, size_t batch_index) const {
     std::priority_queue<std::pair<dist_t, labeltype>> result;
     if (cur_element_count == 0)
       return result;
+    local_state_t local_state;
+    local_state.batch_index = batch_index;
+    local_state.stage = 1;
 
     tableint currObj = enterpoint_node_;
     dist_t curdist =
         fstdistfunc_(query_data, getDataByInternalId(enterpoint_node_),
-                     dist_func_param_, nullptr);
+                     dist_func_param_, &local_state);
 
     for (int level = maxlevel_; level > 0; level--) {
       bool changed = true;
@@ -1342,7 +1367,7 @@ public:
           if (cand < 0 || cand > max_elements_)
             throw std::runtime_error("cand error");
           dist_t d = fstdistfunc_(query_data, getDataByInternalId(cand),
-                                  dist_func_param_, nullptr);
+                                  dist_func_param_, &local_state);
 
           if (d < curdist) {
             curdist = d;
@@ -1358,11 +1383,11 @@ public:
                         CompareByFirst>
         top_candidates;
     if (has_deletions_) {
-      top_candidates =
-          searchBaseLayerST<true, true>(currObj, query_data, std::max(ef_, k));
+      top_candidates = searchBaseLayerST<true, true>(
+          currObj, query_data, std::max(ef_, k), &local_state);
     } else {
-      top_candidates =
-          searchBaseLayerST<false, true>(currObj, query_data, std::max(ef_, k));
+      top_candidates = searchBaseLayerST<false, true>(
+          currObj, query_data, std::max(ef_, k), &local_state);
     }
 
     while (top_candidates.size() > k) {
@@ -1379,15 +1404,18 @@ public:
 
   std::priority_queue<std::pair<dist_t, labeltype>>
   searchKnnWithFilter(const void *query_data, const binary_fuse16_t *filter,
-                      size_t k) const {
+                      size_t k, size_t batch_index) const {
     std::priority_queue<std::pair<dist_t, labeltype>> result;
     if (cur_element_count == 0)
       return result;
+    local_state_t local_state;
+    local_state.batch_index = batch_index;
+    local_state.stage = 1;
 
     tableint currObj = enterpoint_node_;
     dist_t curdist =
         fstdistfunc_(query_data, getDataByInternalId(enterpoint_node_),
-                     dist_func_param_, nullptr);
+                     dist_func_param_, &local_state);
 
     for (int level = maxlevel_; level > 0; level--) {
       bool changed = true;
@@ -1406,7 +1434,7 @@ public:
           if (cand < 0 || cand > max_elements_)
             throw std::runtime_error("cand error");
           dist_t d = fstdistfunc_(query_data, getDataByInternalId(cand),
-                                  dist_func_param_, nullptr);
+                                  dist_func_param_, &local_state);
 
           if (d < curdist) {
             curdist = d;
@@ -1423,10 +1451,10 @@ public:
         top_candidates;
     if (has_deletions_) {
       top_candidates = searchBaseLayerSTWithFilter<true, true>(
-          currObj, query_data, filter, std::max(ef_, k));
+          currObj, query_data, filter, std::max(ef_, k), &local_state);
     } else {
       top_candidates = searchBaseLayerSTWithFilter<false, true>(
-          currObj, query_data, filter, std::max(ef_, k));
+          currObj, query_data, filter, std::max(ef_, k), &local_state);
     }
 
     while (top_candidates.size() > k) {
