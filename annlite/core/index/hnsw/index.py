@@ -38,6 +38,9 @@ def pre_process(f):
                 self._set_backend_pq = True
             dtables = self.pq_codec.get_dist_mat(x)
             x = self.pq_codec.encode(x)
+
+            assert dtables.dtype == 'float32'
+            assert dtables.flags['C_CONTIGUOUS']
             return f(self, x, *args, **kwargs, pre_process_dtables=dtables)
         else:
             return f(self, x, *args, **kwargs)
