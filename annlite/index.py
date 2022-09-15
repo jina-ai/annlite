@@ -380,6 +380,9 @@ class AnnLite(CellContainer):
         self,
         filter: Dict = {},
         limit: int = 10,
+        offset: int = 0,
+        order_by: Optional[str] = None,
+        ascending: bool = True,
         include_metadata: bool = True,
     ):
 
@@ -390,6 +393,10 @@ class AnnLite(CellContainer):
             cells=cells,
             where_clause=where_clause,
             where_params=where_params,
+            limit=limit,
+            offset=offset,
+            order_by=order_by,
+            ascending=ascending,
             include_metadata=include_metadata,
         )
         return match_docs[0:limit]

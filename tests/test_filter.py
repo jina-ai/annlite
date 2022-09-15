@@ -162,3 +162,51 @@ def test_filter_with_dict(filterable_attrs):
         assert len(matches) == limit
         for m in matches:
             assert m.tags['x'] < 0.5
+
+
+@pytest.mark.parametrize('limit', [1, 5])
+@pytest.mark.parametrize('offset', [1, 5])
+@pytest.mark.parametrize('order_by', ['x', 'y'])
+@pytest.mark.parametrize('ascending', [False])
+def test_filter_with_limit_offset(limit, offset, order_by, ascending):
+    N = 100
+    D = 2
+    with tempfile.TemporaryDirectory() as tmpdirname:
+        index = AnnLite(
+            D,
+            filterable_attrs={'x': 'float', 'y': 'float'},
+            data_path=tmpdirname,
+            include_metadata=True,
+        )
+        X = np.random.random((N, D)).astype(np.float32)
+
+        docs = DocumentArray(
+            [
+                Document(
+                    id=f'{i}',
+                    embedding=X[i],
+                    tags={'x': random.random(), 'y': random.random()},
+                )
+                for i in range(N)
+            ]
+        )
+        index.index(docs)
+
+        matches = index.filter(
+            filter={'x': {'$lt': 0.5}},
+            limit=limit,
+            offset=offset,
+            order_by=order_by,
+            ascending=ascending,
+            include_metadata=True,
+        )
+        assert len(matches) == limit
+
+        print(f'ASC: {ascending}')
+        for i in range(len(matches) - 1):
+            m = matches[i]
+            assert m.tags['x'] < 0.5
+            if ascending:
+                assert m.tags[order_by] <= matches[i + 1].tags[order_by]
+            else:
+                assert m.tags[order_by] >= matches[i + 1].tags[order_by]

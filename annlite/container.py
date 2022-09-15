@@ -148,43 +148,57 @@ class CellContainer:
         cells: 'np.ndarray',
         where_clause: str = '',
         where_params: Tuple = (),
-        limit: int = 10,
+        limit: int = -1,
+        offset: int = 0,
+        order_by: Optional[str] = None,
+        ascending: bool = True,
         include_metadata: bool = False,
     ):
+        result = DocumentArray()
+        if len(cells) > 1 and offset > 0:
+            raise ValueError('Offset is not supported for multiple cells')
 
-        filtered_docs_list = []
         for cell_id in cells:
             cell_table = self.cell_table(cell_id)
             cell_size = cell_table.count()
             if cell_size == 0:
                 continue
 
-            indices = None
+            indices = []
             if where_clause or (cell_table.deleted_count() > 0):
                 indices = cell_table.query(
-                    where_clause=where_clause, where_params=where_params
+                    where_clause=where_clause,
+                    where_params=where_params,
+                    order_by=order_by,
+                    limit=limit,
+                    offset=offset,
+                    ascending=ascending,
                 )
 
                 if len(indices) == 0:
                     continue
 
-                indices = np.array(indices, dtype=np.int64)
-
-            filtered_cell_docs = DocumentArray()
             for offset in indices:
                 doc_id = self.cell_table(cell_id).get_docid_by_offset(offset)
                 doc = Document(id=doc_id)
-                if include_metadata:
+                if include_metadata or (len(cells) > 1 and order_by):
                     doc = self.doc_store(cell_id).get([doc_id])[0]
 
-                filtered_cell_docs.append(doc)
+                result.append(doc)
 
-            filtered_docs_list.extend(filtered_cell_docs)
-
-            if len(filtered_cell_docs) >= limit:
+            if not order_by and len(result) >= limit > 0:
                 break
 
-        return filtered_docs_list
+        # reordering the results from multiple cells
+        if order_by and len(cells) > 1:
+            result = sorted(
+                result, key=lambda d: d.tags.get(order_by), reverse=not ascending
+            )
+            if limit > 0:
+                result = result[:limit]
+            result = DocumentArray(result)
+
+        return result
 
     def search_cells(
         self,
