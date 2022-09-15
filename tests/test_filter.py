@@ -167,7 +167,7 @@ def test_filter_with_dict(filterable_attrs):
 @pytest.mark.parametrize('limit', [1, 5])
 @pytest.mark.parametrize('offset', [1, 5])
 @pytest.mark.parametrize('order_by', ['x', 'y'])
-@pytest.mark.parametrize('ascending', [False])
+@pytest.mark.parametrize('ascending', [True, False])
 def test_filter_with_limit_offset(limit, offset, order_by, ascending):
     N = 100
     D = 2

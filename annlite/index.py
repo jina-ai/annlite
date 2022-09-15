@@ -191,12 +191,11 @@ class AnnLite(CellContainer):
         return x.shape
 
     def train(self, x: 'np.ndarray', auto_save: bool = True, force_train: bool = False):
-        """Train pqlite with training data.
+        """Train the index with the given data.
 
         :param x: the ndarray data for training.
         :param auto_save: if False, will not dump the trained model to ``model_path``.
         :param force_train: if True, enforce to retrain the model, and overwrite the model if ``auto_save=True``.
-
         """
         n_data, _ = self._sanity_check(x)
 
@@ -232,7 +231,7 @@ class AnnLite(CellContainer):
     def partial_train(
         self, x: np.ndarray, auto_save: bool = True, force_train: bool = False
     ):
-        """Train indexer parameters with a minibatch of  data.
+        """Partially train the index with the given data.
 
         :param x: the ndarray data for training.
         :param auto_save: if False, will not dump the trained model to ``model_path``.
@@ -269,7 +268,7 @@ class AnnLite(CellContainer):
             self.dump_model()
 
     def index(self, docs: 'DocumentArray', **kwargs):
-        """Index new documents.
+        """Add the documents to the index.
 
         :param docs: the document array to be indexed.
         """
@@ -298,7 +297,7 @@ class AnnLite(CellContainer):
         insert_if_not_found: bool = True,
         **kwargs,
     ):
-        """Update existing documents.
+        """Update the documents in the index.
 
         :param insert_if_not_found: whether to raise error when updated id is not found.
         :param raise_errors_on_not_found: whether to raise exception when id not found.
@@ -331,7 +330,7 @@ class AnnLite(CellContainer):
     def search(
         self,
         docs: 'DocumentArray',
-        filter: Dict = {},
+        filter: Optional[dict] = None,
         limit: int = 10,
         include_metadata: bool = True,
         **kwargs,
@@ -348,23 +347,30 @@ class AnnLite(CellContainer):
 
         query_np = to_numpy_array(docs.embeddings)
 
-        match_dists, match_docs = self._search_documents(
-            query_np, filter, limit, include_metadata
+        match_dists, match_docs = self.search_by_vectors(
+            query_np, filter=filter, limit=limit, include_metadata=include_metadata
         )
 
         for doc, matches in zip(docs, match_docs):
             doc.matches = matches
 
-    def _search_documents(
+    def search_by_vectors(
         self,
         query_np: 'np.ndarray',
-        filter: Dict = {},
+        filter: Optional[dict] = None,
         limit: int = 10,
         include_metadata: bool = True,
     ):
+        """Search the index by vectors, and return the matches.
+
+        :param query_np: the query vectors.
+        :param filter: the filter to be applied to the search.
+        :param limit: the number of results to get for each query document in search
+        :param include_metadata: whether to return document metadata in response.
+        """
 
         cells = self._cell_selection(query_np, limit)
-        where_clause, where_params = Filter(filter).parse_where_clause()
+        where_clause, where_params = Filter(filter or {}).parse_where_clause()
 
         match_dists, match_docs = self.search_cells(
             query=query_np,
@@ -378,16 +384,24 @@ class AnnLite(CellContainer):
 
     def filter(
         self,
-        filter: Dict = {},
+        filter: Optional[dict] = None,
         limit: int = 10,
         offset: int = 0,
         order_by: Optional[str] = None,
         ascending: bool = True,
         include_metadata: bool = True,
     ):
+        """Find the documents by the filter.
 
+        :param filter: the filter to be applied to the search.
+        :param limit: the number of results.
+        :param offset: the offset of the results.
+        :param order_by: the field to order the results.
+        :param ascending: whether to order the results in ascending order.
+        :param include_metadata: whether to return document metadata in response.
+        """
         cells = [x for x in range(self.n_cells)]
-        where_clause, where_params = Filter(filter).parse_where_clause()
+        where_clause, where_params = Filter(filter or {}).parse_where_clause()
 
         match_docs = self.filter_cells(
             cells=cells,
@@ -401,8 +415,39 @@ class AnnLite(CellContainer):
         )
         return match_docs[0:limit]
 
-    def _cell_selection(self, query_np, limit):
+    def get_doc(self, doc_id: str):
+        """Get the document by id.
 
+        :param doc_id: the document id.
+        """
+        return self._get_doc_by_id(doc_id)
+
+    def get_docs(
+        self,
+        filter: Optional[dict] = None,
+        limit: int = 10,
+        offset: int = 0,
+        order_by: Optional[str] = None,
+        ascending: bool = True,
+    ):
+        """Get the documents.
+
+        :param filter: the filter to be applied to the search.
+        :param limit: the number of results.
+        :param offset: the offset of the results.
+        :param order_by: the field to order the results.
+        :param ascending: whether to order the results in ascending order.
+        """
+        return self.filter(
+            filter=filter,
+            limit=limit,
+            offset=offset,
+            order_by=order_by,
+            ascending=ascending,
+            include_metadata=True,
+        )
+
+    def _cell_selection(self, query_np, limit):
         n_data, _ = self._sanity_check(query_np)
 
         if self.vq_codec:
