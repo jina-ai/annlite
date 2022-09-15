@@ -214,13 +214,25 @@ public:
 
   template <typename T>
   void addRows_(int dim, int num_threads, const py::object &ids_,
-                const py::object &input) {
+                const py::object &input, const py::object dtables) {
+
     py::array_t<T, py::array::c_style | py::array::forcecast> items(input);
     auto buffer = items.request();
     size_t rows, features;
 
     rows = buffer.shape[0];
     features = buffer.shape[1];
+
+    if (!dtables.is_none()) {
+      hnswlib::pq_local_data_t pq_param;
+      py::array_t<float, py::array::c_style | py::array::forcecast>
+          dtable_items(dtables);
+      auto dtable_buffer = dtable_items.request();
+      pq_param.data = (float *)dtable_buffer.ptr;
+      pq_param.batch_len = rows;
+
+      this->l2space->attach_local_data(&pq_param);
+    }
 
     if (features != dim)
       throw std::runtime_error("wrong dimensionality of the vectors");
@@ -266,19 +278,239 @@ public:
       });
       cur_l += rows;
     }
+
+    if (!dtables.is_none()) {
+      this->l2space->detach_local_data();
+    }
   }
   void addItems(const py::object &input, py::object ids_ = py::none(),
                 int num_threads = -1, py::object dtables = py::none()) {
     // move dim check and normalization to python
     if (!pq_enable) {
-      addRows_<float>(this->dim, num_threads, ids_, input);
+      addRows_<float>(this->dim, num_threads, ids_, input, dtables);
     } else {
       if (pq_n_clusters <= (UINT8_MAX + 1)) {
-        addRows_<uint8_t>(pq_n_subvectors, num_threads, ids_, input);
+        addRows_<uint8_t>(pq_n_subvectors, num_threads, ids_, input, dtables);
       } else if (pq_n_clusters <= (UINT16_MAX + 1)) {
-        addRows_<uint16_t>(pq_n_subvectors, num_threads, ids_, input);
+        addRows_<uint16_t>(pq_n_subvectors, num_threads, ids_, input, dtables);
       } else if (pq_n_clusters <= (UINT32_MAX + 1)) {
-        addRows_<uint32_t>(pq_n_subvectors, num_threads, ids_, input);
+        addRows_<uint32_t>(pq_n_subvectors, num_threads, ids_, input, dtables);
+      }
+    }
+  }
+
+  template <typename T>
+  py::object knnQuery_return_numpy_(size_t k, int num_threads,
+                                    const py::object &input,
+                                    const py::object dtables) {
+    py::array_t<T, py::array::c_style | py::array::forcecast> items(input);
+    auto buffer = items.request();
+    hnswlib::labeltype *data_numpy_l;
+    dist_t *data_numpy_d;
+    size_t rows, features;
+    {
+      py::gil_scoped_release l;
+
+      rows = buffer.shape[0];
+      features = buffer.shape[1];
+
+      if (!dtables.is_none()) {
+        hnswlib::pq_local_data_t pq_param;
+        py::array_t<float, py::array::c_style | py::array::forcecast>
+            dtable_items(dtables);
+        auto dtable_buffer = dtable_items.request();
+        pq_param.data = (float *)dtable_buffer.ptr;
+        pq_param.batch_len = rows;
+
+        this->l2space->attach_local_data(&pq_param);
+      }
+
+      if (num_threads <= 0)
+        num_threads = num_threads_default;
+
+      // avoid using threads when the number of searches is small:
+      if (rows <= num_threads * 4) {
+        num_threads = 1;
+      }
+
+      data_numpy_l = new hnswlib::labeltype[rows * k];
+      data_numpy_d = new dist_t[rows * k];
+
+      ParallelFor(0, rows, num_threads, [&](size_t row, size_t threadId) {
+        std::priority_queue<std::pair<dist_t, hnswlib::labeltype>> result =
+            appr_alg->searchKnn((void *)items.data(row), k, row);
+        if (result.size() != k)
+          throw std::runtime_error(
+              "Cannot return the results in a contigious 2D array. Probably "
+              "ef or M is too small");
+        for (int i = k - 1; i >= 0; i--) {
+          auto &result_tuple = result.top();
+          data_numpy_d[row * k + i] = result_tuple.first;
+          data_numpy_l[row * k + i] = result_tuple.second;
+          result.pop();
+        }
+      });
+    }
+
+    if (!dtables.is_none()) {
+      this->l2space->detach_local_data();
+    }
+    py::capsule free_when_done_l(data_numpy_l, [](void *f) { delete[] f; });
+    py::capsule free_when_done_d(data_numpy_d, [](void *f) { delete[] f; });
+
+    return py::make_tuple(
+        py::array_t<hnswlib::labeltype>(
+            {rows, k}, // shape
+            {k * sizeof(hnswlib::labeltype),
+             sizeof(
+                 hnswlib::labeltype)}, // C-style contiguous strides for double
+            data_numpy_l,              // the data pointer
+            free_when_done_l),
+        py::array_t<dist_t>(
+            {rows, k}, // shape
+            {k * sizeof(dist_t),
+             sizeof(dist_t)}, // C-style contiguous strides for double
+            data_numpy_d,     // the data pointer
+            free_when_done_d));
+  }
+  py::object knnQuery_return_numpy(const py::object &input, size_t k = 1,
+                                   int num_threads = -1,
+                                   py::object dtables = py::none()) {
+    // move dim check and normalization to python
+    if (!pq_enable) {
+      return knnQuery_return_numpy_<float>(k, num_threads, input, dtables);
+    } else {
+      if (pq_n_clusters <= (UINT8_MAX + 1)) {
+        return knnQuery_return_numpy_<uint8_t>(k, num_threads, input, dtables);
+      } else if (pq_n_clusters <= (UINT16_MAX + 1)) {
+        return knnQuery_return_numpy_<uint16_t>(k, num_threads, input, dtables);
+      } else if (pq_n_clusters <= (UINT32_MAX + 1)) {
+        return knnQuery_return_numpy_<uint32_t>(k, num_threads, input, dtables);
+      }
+    }
+  }
+  template <typename T>
+  py::object knnQuery_with_filter_(size_t k, int num_threads,
+                                   const py::object &candidate_ids_,
+                                   const py::object &input,
+                                   const py::object dtables) {
+    py::array_t<T, py::array::c_style | py::array::forcecast> items(input);
+    auto buffer = items.request();
+    hnswlib::labeltype *data_numpy_l;
+    dist_t *data_numpy_d;
+
+    if (num_threads <= 0)
+      num_threads = num_threads_default;
+
+    size_t rows;
+    size_t features;
+
+    rows = buffer.shape[0];
+    features = buffer.shape[1];
+
+    if (!dtables.is_none()) {
+      hnswlib::pq_local_data_t pq_param;
+      py::array_t<float, py::array::c_style | py::array::forcecast>
+          dtable_items(dtables);
+      auto dtable_buffer = dtable_items.request();
+      pq_param.data = (float *)dtable_buffer.ptr;
+      pq_param.batch_len = rows;
+
+      this->l2space->attach_local_data(&pq_param);
+    }
+    // avoid using threads when the number of searches is small:
+
+    if (rows <= num_threads * 4) {
+      num_threads = 1;
+    }
+
+    // FuseFilter constructing
+    binary_fuse16_t filter(appr_alg->max_elements_);
+
+    if (!candidate_ids_.is_none()) {
+      py::array_t<size_t, py::array::c_style | py::array::forcecast> items(
+          candidate_ids_);
+      auto ids_numpy = items.request();
+
+      if (ids_numpy.ndim == 1) {
+        const size_t size = ids_numpy.shape[0];
+        std::vector<uint64_t> big_set;
+        big_set.reserve(size);
+        for (size_t i = 0; i < size; i++) {
+          big_set[i] = items.data()[i]; // we use contiguous values
+        }
+
+        if (!binary_fuse16_populate(big_set.data(), size, &filter)) {
+          throw std::runtime_error("failure to populate the fuse filter");
+        }
+      } else
+        throw std::runtime_error("wrong dimensionality of the filter labels");
+    }
+
+    {
+      py::gil_scoped_release l;
+
+      // would like to check the ownership of this data in more detail
+      data_numpy_l = new hnswlib::labeltype[rows * k];
+      data_numpy_d = new dist_t[rows * k];
+
+      ParallelFor(0, rows, num_threads, [&](size_t row, size_t threadId) {
+        std::priority_queue<std::pair<dist_t, hnswlib::labeltype>> result =
+            appr_alg->searchKnnWithFilter((void *)items.data(row), &filter, k,
+                                          row);
+        if (result.size() != k)
+          throw std::runtime_error(
+              "Cannot return the results in a contigious 2D array. Probably "
+              "ef or M is too small");
+        for (int i = k - 1; i >= 0; i--) {
+          auto &result_tuple = result.top();
+          data_numpy_d[row * k + i] = result_tuple.first;
+          data_numpy_l[row * k + i] = result_tuple.second;
+          result.pop();
+        }
+      });
+    }
+
+    if (!dtables.is_none()) {
+      this->l2space->detach_local_data();
+    }
+
+    py::capsule free_when_done_l(data_numpy_l, [](void *f) { delete[] f; });
+    py::capsule free_when_done_d(data_numpy_d, [](void *f) { delete[] f; });
+
+    return py::make_tuple(
+        py::array_t<hnswlib::labeltype>(
+            {rows, k}, // shape
+            {k * sizeof(hnswlib::labeltype),
+             sizeof(
+                 hnswlib::labeltype)}, // C-style contiguous strides for double
+            data_numpy_l,              // the data pointer
+            free_when_done_l),
+        py::array_t<dist_t>(
+            {rows, k}, // shape
+            {k * sizeof(dist_t),
+             sizeof(dist_t)}, // C-style contiguous strides for double
+            data_numpy_d,     // the data pointer
+            free_when_done_d));
+  }
+  py::object knnQuery_with_filter(py::object input,
+                                  py::object candidate_ids_ = py::none(),
+                                  size_t k = 1, int num_threads = -1,
+                                  py::object dtables = py::none()) {
+    // move dim check and normalization to python
+    if (!pq_enable) {
+      return knnQuery_with_filter_<float>(k, num_threads, candidate_ids_, input,
+                                          dtables);
+    } else {
+      if (pq_n_clusters <= (UINT8_MAX + 1)) {
+        return knnQuery_with_filter_<uint8_t>(k, num_threads, candidate_ids_,
+                                              input, dtables);
+      } else if (pq_n_clusters <= (UINT16_MAX + 1)) {
+        return knnQuery_with_filter_<uint16_t>(k, num_threads, candidate_ids_,
+                                               input, dtables);
+      } else if (pq_n_clusters <= (UINT32_MAX + 1)) {
+        return knnQuery_with_filter_<uint32_t>(k, num_threads, candidate_ids_,
+                                               input, dtables);
       }
     }
   }
@@ -604,202 +836,6 @@ public:
 
         memcpy(appr_alg->linkLists_[i],
                link_list_npy.data() + link_npy_offsets[i], linkListSize);
-      }
-    }
-  }
-  // TODO: add pq
-  template <typename T>
-  py::object knnQuery_return_numpy_(size_t k, int num_threads,
-                                    const py::object &input) {
-    py::array_t<T, py::array::c_style | py::array::forcecast> items(input);
-    auto buffer = items.request();
-    hnswlib::labeltype *data_numpy_l;
-    dist_t *data_numpy_d;
-    size_t rows, features;
-    {
-      py::gil_scoped_release l;
-
-      rows = buffer.shape[0];
-      features = buffer.shape[1];
-
-      if (num_threads <= 0)
-        num_threads = num_threads_default;
-
-      // avoid using threads when the number of searches is small:
-      if (rows <= num_threads * 4) {
-        num_threads = 1;
-      }
-
-      data_numpy_l = new hnswlib::labeltype[rows * k];
-      data_numpy_d = new dist_t[rows * k];
-
-      ParallelFor(0, rows, num_threads, [&](size_t row, size_t threadId) {
-        std::priority_queue<std::pair<dist_t, hnswlib::labeltype>> result =
-            appr_alg->searchKnn((void *)items.data(row), k);
-        if (result.size() != k)
-          throw std::runtime_error(
-              "Cannot return the results in a contigious 2D array. Probably "
-              "ef or M is too small");
-        for (int i = k - 1; i >= 0; i--) {
-          auto &result_tuple = result.top();
-          data_numpy_d[row * k + i] = result_tuple.first;
-          data_numpy_l[row * k + i] = result_tuple.second;
-          result.pop();
-        }
-      });
-    }
-
-    py::capsule free_when_done_l(data_numpy_l, [](void *f) { delete[] f; });
-    py::capsule free_when_done_d(data_numpy_d, [](void *f) { delete[] f; });
-
-    return py::make_tuple(
-        py::array_t<hnswlib::labeltype>(
-            {rows, k}, // shape
-            {k * sizeof(hnswlib::labeltype),
-             sizeof(
-                 hnswlib::labeltype)}, // C-style contiguous strides for double
-            data_numpy_l,              // the data pointer
-            free_when_done_l),
-        py::array_t<dist_t>(
-            {rows, k}, // shape
-            {k * sizeof(dist_t),
-             sizeof(dist_t)}, // C-style contiguous strides for double
-            data_numpy_d,     // the data pointer
-            free_when_done_d));
-  }
-  py::object knnQuery_return_numpy(const py::object &input, size_t k = 1,
-                                   int num_threads = -1,
-                                   py::object dtables = py::none()) {
-    // move dim check and normalization to python
-    if (!pq_enable) {
-      return knnQuery_return_numpy_<float>(k, num_threads, input);
-    } else {
-      if (pq_n_clusters <= (UINT8_MAX + 1)) {
-        return knnQuery_return_numpy_<uint8_t>(k, num_threads, input);
-      } else if (pq_n_clusters <= (UINT16_MAX + 1)) {
-        return knnQuery_return_numpy_<uint16_t>(k, num_threads, input);
-      } else if (pq_n_clusters <= (UINT32_MAX + 1)) {
-        return knnQuery_return_numpy_<uint32_t>(k, num_threads, input);
-      }
-    }
-  }
-  template <typename T>
-  py::object knnQuery_with_filter_(size_t k, int num_threads,
-                                   const py::object &candidate_ids_,
-                                   const py::object &input) {
-    py::array_t<T, py::array::c_style | py::array::forcecast> items(input);
-    auto buffer = items.request();
-    hnswlib::labeltype *data_numpy_l;
-    dist_t *data_numpy_d;
-
-    if (num_threads <= 0)
-      num_threads = num_threads_default;
-
-    size_t rows;
-    size_t features;
-
-    rows = buffer.shape[0];
-    features = buffer.shape[1];
-
-    // avoid using threads when the number of searches is small:
-
-    if (rows <= num_threads * 4) {
-      num_threads = 1;
-    }
-
-    // FuseFilter constructing
-    binary_fuse16_t filter(appr_alg->max_elements_);
-
-    if (!candidate_ids_.is_none()) {
-      py::array_t<size_t, py::array::c_style | py::array::forcecast> items(
-          candidate_ids_);
-      auto ids_numpy = items.request();
-
-      if (ids_numpy.ndim == 1) {
-        const size_t size = ids_numpy.shape[0];
-        std::vector<uint64_t> big_set;
-        big_set.reserve(size);
-        for (size_t i = 0; i < size; i++) {
-          big_set[i] = items.data()[i]; // we use contiguous values
-        }
-
-        if (!binary_fuse16_populate(big_set.data(), size, &filter)) {
-          throw std::runtime_error("failure to populate the fuse filter");
-        }
-      } else
-        throw std::runtime_error("wrong dimensionality of the filter labels");
-    }
-
-    {
-      py::gil_scoped_release l;
-
-      // would like to check the ownership of this data in more detail
-      data_numpy_l = new hnswlib::labeltype[rows * k];
-      data_numpy_d = new dist_t[rows * k];
-
-      ParallelFor(0, rows, num_threads, [&](size_t row, size_t threadId) {
-        std::priority_queue<std::pair<dist_t, hnswlib::labeltype>> result =
-            appr_alg->searchKnnWithFilter((void *)items.data(row), &filter, k);
-
-        //        if (result.size() != k)
-        //          throw std::runtime_error(
-        //              "Cannot return the results in a contigious 2D array.
-        //              Probably " "ef or M is too small");
-
-        size_t result_size = result.size();
-        for (int i = result_size - 1; i >= 0; i--) {
-          const auto &result_tuple = result.top();
-          data_numpy_d[row * k + i] = result_tuple.first;
-          data_numpy_l[row * k + i] = result_tuple.second;
-          result.pop();
-        }
-
-        // HOTFIX: fill the rest of the array with worst possible values
-        if (result_size < k) {
-          for (int i = result.size(); i < k; i++) {
-            data_numpy_d[row * k + i] = data_numpy_d[row * k + result_size - 1];
-            data_numpy_l[row * k + i] = data_numpy_l[row * k + result_size - 1];
-          }
-        }
-      });
-    }
-
-    py::capsule free_when_done_l(data_numpy_l, [](void *f) { delete[] f; });
-    py::capsule free_when_done_d(data_numpy_d, [](void *f) { delete[] f; });
-
-    return py::make_tuple(
-        py::array_t<hnswlib::labeltype>(
-            {rows, k}, // shape
-            {k * sizeof(hnswlib::labeltype),
-             sizeof(
-                 hnswlib::labeltype)}, // C-style contiguous strides for double
-            data_numpy_l,              // the data pointer
-            free_when_done_l),
-        py::array_t<dist_t>(
-            {rows, k}, // shape
-            {k * sizeof(dist_t),
-             sizeof(dist_t)}, // C-style contiguous strides for double
-            data_numpy_d,     // the data pointer
-            free_when_done_d));
-  }
-  py::object knnQuery_with_filter(py::object input,
-                                  py::object candidate_ids_ = py::none(),
-                                  size_t k = 1, int num_threads = -1,
-                                  py::object dtables = py::none()) {
-    // move dim check and normalization to python
-    if (!pq_enable) {
-      return knnQuery_with_filter_<float>(k, num_threads, candidate_ids_,
-                                          input);
-    } else {
-      if (pq_n_clusters <= (UINT8_MAX + 1)) {
-        return knnQuery_with_filter_<uint8_t>(k, num_threads, candidate_ids_,
-                                              input);
-      } else if (pq_n_clusters <= (UINT16_MAX + 1)) {
-        return knnQuery_with_filter_<uint16_t>(k, num_threads, candidate_ids_,
-                                               input);
-      } else if (pq_n_clusters <= (UINT32_MAX + 1)) {
-        return knnQuery_with_filter_<uint32_t>(k, num_threads, candidate_ids_,
-                                               input);
       }
     }
   }
