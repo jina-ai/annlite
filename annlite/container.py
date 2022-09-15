@@ -164,19 +164,17 @@ class CellContainer:
             if cell_size == 0:
                 continue
 
-            indices = []
-            if where_clause or (cell_table.deleted_count() > 0):
-                indices = cell_table.query(
-                    where_clause=where_clause,
-                    where_params=where_params,
-                    order_by=order_by,
-                    limit=limit,
-                    offset=offset,
-                    ascending=ascending,
-                )
+            indices = cell_table.query(
+                where_clause=where_clause,
+                where_params=where_params,
+                order_by=order_by,
+                limit=limit,
+                offset=offset,
+                ascending=ascending,
+            )
 
-                if len(indices) == 0:
-                    continue
+            if len(indices) == 0:
+                continue
 
             for offset in indices:
                 doc_id = self.cell_table(cell_id).get_docid_by_offset(offset)

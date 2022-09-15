@@ -33,9 +33,6 @@ def annlite_with_data(tmpdir):
 def test_get(annlite_with_data, filter, limit):
     index = annlite_with_data
 
-    doc = index.get_doc('0')
-    assert doc.id == '0'
-
     docs = index.get_docs(filter=filter, limit=limit)
     if limit > 0:
         assert len(docs) == limit

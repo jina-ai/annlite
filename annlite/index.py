@@ -413,7 +413,9 @@ class AnnLite(CellContainer):
             ascending=ascending,
             include_metadata=include_metadata,
         )
-        return match_docs[0:limit]
+        if limit > 0:
+            return match_docs[:limit]
+        return match_docs
 
     def get_doc_by_id(self, doc_id: str):
         """Get the document by id.
