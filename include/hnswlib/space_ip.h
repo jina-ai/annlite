@@ -4,7 +4,8 @@
 namespace hnswlib {
 
 static float InnerProduct(const void *pVect1, const void *pVect2,
-                          const void *qty_ptr, const void *local_state) {
+                          const void *qty_ptr,
+                          const local_state_t *local_state) {
   size_t qty = *((size_t *)qty_ptr);
   float res = 0;
   for (unsigned i = 0; i < qty; i++) {
@@ -18,7 +19,7 @@ static float InnerProduct(const void *pVect1, const void *pVect2,
 // Favor using AVX if available.
 static float InnerProductSIMD4Ext(const void *pVect1v, const void *pVect2v,
                                   const void *qty_ptr,
-                                  const void *local_state) {
+                                  const local_state_t *local_state) {
   float PORTABLE_ALIGN32 TmpRes[8];
   float *pVect1 = (float *)pVect1v;
   float *pVect2 = (float *)pVect2v;
@@ -70,7 +71,7 @@ static float InnerProductSIMD4Ext(const void *pVect1v, const void *pVect2v,
 
 static float InnerProductSIMD4Ext(const void *pVect1v, const void *pVect2v,
                                   const void *qty_ptr, ,
-                                  const void *local_state) {
+                                  const local_state_t *local_state) {
   float PORTABLE_ALIGN32 TmpRes[8];
   float *pVect1 = (float *)pVect1v;
   float *pVect2 = (float *)pVect2v;
@@ -131,7 +132,7 @@ static float InnerProductSIMD4Ext(const void *pVect1v, const void *pVect2v,
 
 static float InnerProductSIMD16Ext(const void *pVect1v, const void *pVect2v,
                                    const void *qty_ptr,
-                                   const void *local_state) {
+                                   const local_state_t *local_state) {
   float PORTABLE_ALIGN32 TmpRes[8];
   float *pVect1 = (float *)pVect1v;
   float *pVect2 = (float *)pVect2v;
@@ -170,7 +171,7 @@ static float InnerProductSIMD16Ext(const void *pVect1v, const void *pVect2v,
 
 static float InnerProductSIMD16Ext(const void *pVect1v, const void *pVect2v,
                                    const void *qty_ptr,
-                                   const void *local_state) {
+                                   const local_state_t *local_state) {
   float PORTABLE_ALIGN32 TmpRes[8];
   float *pVect1 = (float *)pVect1v;
   float *pVect2 = (float *)pVect2v;
@@ -220,7 +221,7 @@ static float InnerProductSIMD16Ext(const void *pVect1v, const void *pVect2v,
 static float InnerProductSIMD16ExtResiduals(const void *pVect1v,
                                             const void *pVect2v,
                                             const void *qty_ptr,
-                                            const void *local_state) {
+                                            const local_state_t *local_state) {
   size_t qty = *((size_t *)qty_ptr);
   size_t qty16 = qty >> 4 << 4;
   float res = InnerProductSIMD16Ext(pVect1v, pVect2v, &qty16, local_state);
@@ -235,7 +236,7 @@ static float InnerProductSIMD16ExtResiduals(const void *pVect1v,
 static float InnerProductSIMD4ExtResiduals(const void *pVect1v,
                                            const void *pVect2v,
                                            const void *qty_ptr,
-                                           const void *local_state) {
+                                           const local_state_t *local_state) {
   size_t qty = *((size_t *)qty_ptr);
   size_t qty4 = qty >> 2 << 2;
 
@@ -280,9 +281,9 @@ public:
   void *get_dist_func_param() { return &dim_; }
 
   // Not local state
-  void set_local_data(const void *) {}
+  void attach_local_data(const void *) {}
 
-  void free_local_data() {}
+  void detach_local_data() {}
 
   ~InnerProductSpace() {}
 };
