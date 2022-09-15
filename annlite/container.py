@@ -415,7 +415,7 @@ class CellContainer:
             f'total items for updating: {len(ids)}, ' f'success: {delete_success}'
         )
 
-    def get_doc_by_id(self, doc_id: str):
+    def _get_doc_by_id(self, doc_id: str):
         cell_id = 0
         if self.n_cells > 1:
             cell_id, _ = self._meta_table.get_address(doc_id)

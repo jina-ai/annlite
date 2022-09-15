@@ -123,6 +123,28 @@ Or shorten the loop as one-liner using the element & attribute selector:
 print(query['@m', ('id', 'scores__cosine')])
 ```
 
+### Query
+
+You can get specific document by its id:
+
+```python
+doc = ann.get_doc_by_id('<doc_id>')
+```
+
+And you can also get the documents with `limit` and `offset`, which is useful for pagination:
+
+```python
+docs = ann.get_docs(limit=10, offset=0)
+```
+
+Furthermore, you can also get the documents ordered by a specific column from the index:
+
+```python
+docs = ann.get_docs(limit=10, offset=0, order_by='x', ascending=True)
+```
+
+**Note**: the `order_by` column must be one of the `columns` in the index.
+
 ### Update
 
 After you have indexed the `docs`, you can update the docs in the index by calling `ann.update()`:

@@ -415,11 +415,12 @@ class AnnLite(CellContainer):
         )
         return match_docs[0:limit]
 
-    def get_doc(self, doc_id: str):
+    def get_doc_by_id(self, doc_id: str):
         """Get the document by id.
 
         :param doc_id: the document id.
         """
+
         return self._get_doc_by_id(doc_id)
 
     def get_docs(
