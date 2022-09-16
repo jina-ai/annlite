@@ -384,7 +384,7 @@ class AnnLite(CellContainer):
 
     def filter(
         self,
-        filter: Optional[dict] = None,
+        filter: Dict,
         limit: int = 10,
         offset: int = 0,
         order_by: Optional[str] = None,
@@ -439,8 +439,9 @@ class AnnLite(CellContainer):
         :param limit: the number of results.
         :param offset: the offset of the results.
         :param order_by: the field to order the results.
-        :param ascending: whether to order the results in ascending order.
+        :param ascending: whether to order the results in ascending order. It only works when `order_by` is specified.
         """
+
         return self.filter(
             filter=filter,
             limit=limit,
