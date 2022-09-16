@@ -702,7 +702,6 @@ public:
     // FIXME: Never used, so fix index to 0.
     local_state_t local_state;
     local_state.batch_index = 0;
-    local_state.stage = 1;
 
     tableint currObj = enterpoint_node_;
     dist_t curdist =
@@ -1201,7 +1200,6 @@ public:
     tableint cur_c = 0;
     local_state_t local_state;
     local_state.batch_index = batch_index;
-    local_state.stage = 0;
 
     {
       // Checking if the element with the same label already exists
@@ -1343,7 +1341,6 @@ public:
       return result;
     local_state_t local_state;
     local_state.batch_index = batch_index;
-    local_state.stage = 1;
 
     tableint currObj = enterpoint_node_;
     dist_t curdist =
@@ -1410,7 +1407,6 @@ public:
       return result;
     local_state_t local_state;
     local_state.batch_index = batch_index;
-    local_state.stage = 1;
 
     tableint currObj = enterpoint_node_;
     dist_t curdist =
