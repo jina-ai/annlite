@@ -33,7 +33,6 @@ typedef size_t labeltype;
 
 typedef struct local_state_s {
   size_t batch_index;
-  uint8_t stage;
 } local_state_t;
 
 typedef struct pq_local_data_s {
