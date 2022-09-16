@@ -41,17 +41,6 @@ The library is easy to install and use. It is designed to be used with Python.
 Read more on why should you use `AnnLite`: [here](), and compare to alternatives: [here]().
 -->
 
-## What is unimodal search?
-
-More recently, cross-modal search has attracted considerable attention due to the rapid growth of multimodal data.
-As multimodal data grows, it becomes difficult for users to search for information of interest effectively and efficiently.
-So far, there have been various search methods proposed for searching multimodal data.
-However, these search techniques are mostly single-modality-based, that which converts cross-modal search into keyword-based search.
-
-into keyword-based search.
-
-divided into keyword-based retrieval.
-
 ## Installation
 
 To use AnnLite, you need to first install it. The easiest way to install AnnLite is using `pip`:
