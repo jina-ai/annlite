@@ -275,7 +275,8 @@ The annlite supports the following distance metrics:
 | [Cosine similarity](https://en.wikipedia.org/wiki/Cosine_similarity) |        `cosine` | d = 1.0 - sum(Ai\*Bi) / sqrt(sum(Ai\*Ai) * sum(Bi\*Bi)) |
 
 Note that inner product is not an actual metric. An element can be closer to some other element than to itself.
-That allows some speedup if you remove all elements that are not the closest to themselves from the index.
+That allows some speedup if you remove all elements that are not the closest to themselves from the index, e.g.,
+`inner_product([1.0, 1.0], [1.0. 1.0]) < inner_product([1.0, 1.0], [2.0, 2.0])`
 
 
 ## HNSW algorithm parameters
