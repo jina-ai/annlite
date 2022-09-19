@@ -12,6 +12,7 @@
 
 
 
+
 <a name=release-note-0-3-0></a>
 ## Release Note (`0.3.0`)
 
@@ -292,4 +293,29 @@
 ### 🍹 Other Improvements
 
  - [[```9c43f02c```](https://github.com/jina-ai/docarray/commit/9c43f02c5ec9face32ee58858b8ab25d65edbf12)] __-__ __version__: the next version will be 0.3.11 (*Jina Dev Bot*)
+
+<a name=release-note-0-3-12></a>
+## Release Note (`0.3.12`)
+
+> Release time: 2022-09-19 05:15:49
+
+
+
+🙇 We'd like to thank all contributors for this new release! In particular,
+ felix-wang,  YangXiuyu,  numb3r3,  Jina Dev Bot,  🙇
+
+
+### 🆕 New Features
+
+ - [[```4eb61d3d```](https://github.com/jina-ai/docarray/commit/4eb61d3dea5a86d5212dafaaa0c1ecd87abc399a)] __-__ add limit and offset for filtering (#167) (*felix-wang*)
+
+### 📗 Documentation
+
+ - [[```6ecfa833```](https://github.com/jina-ai/docarray/commit/6ecfa833e3d0f69a1a1b4992724753c89fa8d96f)] __-__ fix typo (#168) (*YangXiuyu*)
+
+### 🍹 Other Improvements
+
+ - [[```6902a8b1```](https://github.com/jina-ai/docarray/commit/6902a8b15763e73fd1cd90827ccfdc758f2fce32)] __-__ add description about hnsw parameters (#169) (*felix-wang*)
+ - [[```aec2d605```](https://github.com/jina-ai/docarray/commit/aec2d605d43394638168282c78e13f7f2150200a)] __-__ update readme (*numb3r3*)
+ - [[```95541bad```](https://github.com/jina-ai/docarray/commit/95541bad119dd2bb03e9894f32f57578cd3d8a7a)] __-__ __version__: the next version will be 0.3.12 (*Jina Dev Bot*)
 
