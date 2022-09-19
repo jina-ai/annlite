@@ -186,7 +186,7 @@ print(f'the result with filtering:')
 for i, q in enumerate(query):
     print(f'query [{i}]:')
     for m in q.matches:
-        print(f'\t{m.id} {m.scores["euclidean"].value} (price={m.tags["x"]})')
+        print(f'\t{m.id} {m.scores["euclidean"].value} (price={m.tags["price"]})')
 ```
 
 The `conditions` parameter is a dictionary of conditions. The key is the field name, and the value is a dictionary of conditions.
@@ -230,15 +230,15 @@ The query will be performed on the field if the condition is satisfied. The foll
 
 2. A Nike shoes or price less than `100$`:
 
-        ```python
-        {
+    ```python
+    {
         "$or":
-            {
-            "brand": {"$eq": "Nike"},
-            "price": {"$lte": 100}
-            }
+        {
+        "brand": {"$eq": "Nike"},
+        "price": {"$lte": 100}
         }
-        ```
+    }
+    ```
 
 ## Benchmark
 
