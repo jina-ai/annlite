@@ -262,6 +262,61 @@ The query will be performed on the field if the condition is satisfied. The foll
     }
     ```
 
+## Supported distance metrics
+
+The annlite supports the following distance metrics:
+
+#### Supported distances:
+
+| Distance                                                             |       parameter |                                                Equation |
+|----------------------------------------------------------------------|----------------:|--------------------------------------------------------:|
+| [Euclidean](https://en.wikipedia.org/wiki/Euclidean_distance)        |     `euclidean` |                                d = sqrt(sum((Ai-Bi)^2)) |
+| [Inner product](https://en.wikipedia.org/wiki/Inner_product_space)   | `inner_product` |                                   d = 1.0 - sum(Ai\*Bi) |
+| [Cosine similarity](https://en.wikipedia.org/wiki/Cosine_similarity) |        `cosine` | d = 1.0 - sum(Ai\*Bi) / sqrt(sum(Ai\*Ai) * sum(Bi\*Bi)) |
+
+Note that inner product is not an actual metric. An element can be closer to some other element than to itself.
+That allows some speedup if you remove all elements that are not the closest to themselves from the index, e.g.,
+`inner_product([1.0, 1.0], [1.0. 1.0]) < inner_product([1.0, 1.0], [2.0, 2.0])`
+
+
+## HNSW algorithm parameters
+
+The HNSW algorithm has several parameters that can be tuned to improve the search performance.
+
+### Search parameters
+
+- `ef_search` - The size of the dynamic list for the nearest neighbors during search (default: `50`).
+The larger the value, the more accurate the search results, but the slower the search speed.
+The `ef_search` must be larger than `limit` parameter in `search(..., limit)`.
+
+- `limit` - The maximum number of results to return (default: `10`).
+
+## Construction parameters
+
+- `max_connection` - The number of bi-directional links created for every new element during construction (default: `16`).
+Reasonable range is from `2` to `100`. Higher values works better for dataset with higher dimensionality and/or high recall.
+This parameter also affects the memory consumption during construction, which is roughly `max_connection * 8-10` bytes per stored element.
+
+    As an example for `n_dim=4` random vectors optimal `max_connection` for search is somewhere around `6`,
+while for high dimensional datasets, higher `max_connection` are required (e.g. `M=48-64`) for optimal performance at high recall.
+The range `max_connection=12-48` is ok for the most of the use cases.
+When `max_connection` is changed one has to update the other parameters.
+Nonetheless, `ef_search` and `ef_construction` parameters can be roughly estimated by assuming that `max_connection * ef_{construction}` is a constant.
+
+
+- `ef_construction`: The size of the dynamic list for the nearest neighbors during construction (default: `200`).
+Higher values give better accuracy, but increase construction time and memory consumption.
+At some point, increasing `ef_construction` does not give any more accuracy.
+To set `ef_construction` to a reasonable value, one can measure the recall: if the recall is lower than 0.9, then increase `ef_construction` and re-run the search.
+
+To set the parameters, you can define them when creating the annlite:
+
+```python
+from annlite import AnnLite
+
+ann = AnnLite(128, columns=[('price', float)], data_path="/tmp/annlite_data", ef_construction=200, max_connection=16)
+```
+
 ## Benchmark
 
 One can run `executor/benchmark.py` to get a quick performance overview.

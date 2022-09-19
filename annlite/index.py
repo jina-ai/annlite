@@ -71,7 +71,6 @@ class AnnLite(CellContainer):
         create_if_missing: bool = True,
         read_only: bool = False,
         verbose: bool = False,
-        *args,
         **kwargs,
     ):
         setup_logging(verbose)

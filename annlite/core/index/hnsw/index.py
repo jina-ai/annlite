@@ -143,6 +143,11 @@ class HnswIndex(BaseIndex):
             )
         else:
             ids, dists = self._index.knn_query(query, k=limit)
+
+        # convert squared l2 into euclidean distance
+        if self.metric == Metric.EUCLIDEAN:
+            dists = np.sqrt(dists)
+
         return dists[0], ids[0]
 
     def delete(self, ids: List[int]):
