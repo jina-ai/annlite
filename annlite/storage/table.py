@@ -262,20 +262,32 @@ class CellTable(Table):
         self,
         where_clause: str = '',
         where_params: Tuple = (),
+        limit: int = -1,
+        offset: int = 0,
+        order_by: Optional[str] = None,
+        ascending: bool = True,
     ) -> List[int]:
         """Query the records which matches the given conditions
 
         :param where_clause: where clause for query
         :param where_params: where parameters for query
+        :param limit: limit the number of results
+        :param offset: offset the number of results
+        :param order_by: order the results by the given column
+        :param ascending: order the results in ascending or descending order
         :return: offsets list of matched docs
         """
-        sql = 'SELECT _id from {table} WHERE {where} ORDER BY _id ASC;'
 
         where_conds = ['_deleted = ?']
         if where_clause:
             where_conds.append(where_clause)
         where = ' and '.join(where_conds)
-        sql = sql.format(table=self.name, where=where)
+
+        _order_by = f'{order_by or "_id"} {"ASC" if ascending else "DESC"}'
+        _limit = f'LIMIT {limit}' if limit > 0 else ''
+        _offset = f'OFFSET {offset}' if offset > 0 else ''
+
+        sql = f'SELECT _id from {self.name} WHERE {where} ORDER BY {_order_by} {_limit} {_offset}'
 
         params = (0,) + tuple([_converting(p) for p in where_params])
 
