@@ -9,40 +9,31 @@ from docarray import Document, DocumentArray
 from jina import Executor, requests
 from jina.logging.logger import JinaLogger
 
-from .index import AnnLite
-
 
 class AnnLiteIndexer(Executor):
-    """
-    A simple indexer that wraps the AnnLite indexer and adds a simple interface for indexing and searching.
-    """
-
     def __init__(
         self,
-        n_dim: int = 0,
+        n_dim: int = 128,
         metric: str = 'cosine',
         limit: int = 10,
-        ef_construction: int = 200,
-        ef_query: int = 50,
-        max_connection: int = 16,
+        data_path: Optional[str] = None,
+        ef_construction: Optional[int] = None,
+        ef_search: Optional[int] = None,
+        max_connection: Optional[int] = None,
         include_metadata: bool = True,
         index_access_paths: str = '@r',
         search_access_paths: str = '@r',
-        columns: Optional[Union[Dict, List]] = None,
-        filterable_attrs: Optional[Dict] = None,
-        serialize_config: Optional[Dict] = None,
-        dim: int = None,
+        columns: Optional[Union[List[Tuple[str, str]],Dict[str, str]]] = None,
         *args,
         **kwargs,
     ):
         """
         :param n_dim: Dimensionality of vectors to index
-        :param dim: Deprecated, use n_dim instead
         :param metric: Distance metric type. Can be 'euclidean', 'inner_product', or 'cosine'
         :param include_metadata: If True, return the document metadata in response
         :param limit: Number of results to get for each query document in search
         :param ef_construction: The construction time/accuracy trade-off
-        :param ef_query: The query time accuracy/speed trade-off
+        :param ef_search: The query time accuracy/speed trade-off
         :param max_connection: The maximum number of outgoing connections in the
             graph (the "M" parameter)
         :param index_access_paths: Default traversal paths on docs
@@ -50,15 +41,9 @@ class AnnLiteIndexer(Executor):
         :param search_access_paths: Default traversal paths on docs
         (used for search), e.g. '@r', '@c', '@r,c'
         :param columns: A list or dict of column names to index.
-        :param filterable_attrs: Dict of attributes that can be used for filtering. The key is the attribute name and the
-                value is a string that can be parsed as a valid Python type ['float', 'str', 'int']. It only works if
-                `columns` is None.
-        :param serialize_config: The configurations used for serializing documents, e.g., {'protocol': 'pickle'}
         """
         super().__init__(*args, **kwargs)
         self.logger = JinaLogger(self.__class__.__name__)
-
-        n_dim = n_dim or dim
 
         if not n_dim:
             raise ValueError('Please specify the dimension of the vectors to index!')
@@ -88,18 +73,16 @@ class AnnLiteIndexer(Executor):
 
         self.logger = JinaLogger(getattr(self.metas, 'name', self.__class__.__name__))
 
-        self._index = AnnLite(
-            n_dim=n_dim,
-            metric=metric,
-            columns=columns,
-            filterable_attrs=filterable_attrs,
-            ef_construction=ef_construction,
-            ef_query=ef_query,
-            max_connection=max_connection,
-            data_path=self.workspace or './workspace',
-            serialize_config=serialize_config or {},
-            **kwargs,
-        )
+        config = {
+            'n_dim': n_dim,
+            'metric': metric,
+            'ef_construction': ef_construction,
+            'ef_search': ef_search,
+            'max_connection': max_connection,
+            'data_path': data_path or self.workspace or './workspace',
+            'columns': columns,
+        }
+        self._index = DocumentArray(storage='annlite', config=config)
 
         # start indexing thread in background to group indexing requests
         # together and perform batch indexing at once
@@ -158,7 +141,7 @@ class AnnLiteIndexer(Executor):
                                 else len(self._data_buffer)
                             )
                         )
-                        self._index.index(batch_docs)
+                        self._index.extend(batch_docs)
                         self.logger.debug(f'indexing {len(batch_docs)} docs done...')
             except Exception as e:
                 self.logger.error(traceback.format_exc())
@@ -195,32 +178,25 @@ class AnnLiteIndexer(Executor):
                     f'Cannot update documents while the pending documents in the buffer are not indexed yet. '
                     'Please wait for the pending documents to be indexed.'
                 )
-            self._index.update(
-                flat_docs,
-                raise_errors_on_not_found=raise_errors_on_not_found,
-                insert_if_not_found=False,
-            )
+            for doc in flat_docs:
+                try:
+                    self._index[doc.id] = doc
+                except IndexError:
+                    self.logger.warning(
+                        f'cannot update doc {doc.id} as it does not exist in storage'
+                    )
 
     @requests(on='/delete')
     def delete(
-        self, docs: Optional[DocumentArray] = None, parameters: dict = {}, **kwargs
+        self, parameters: dict = {}, **kwargs
     ):
         """Delete existing documents
 
-        :param docs: the Documents to delete
-        :param parameters: dictionary with options for deletion
-
-        Keys accepted:
-            - 'access_paths': traversal paths on docs, e.g. '@r', '@c', '@r,c'
+        Delete entries from the index by id
+        :param parameters: parameters to the request
         """
-
-        if not docs:
-            return
-
-        access_paths = parameters.get('access_paths', self.index_access_paths)
-        raise_errors_on_not_found = parameters.get('raise_errors_on_not_found', False)
-        flat_docs = docs[access_paths]
-        if len(flat_docs) == 0:
+        delete_ids = parameters.get('ids', [])
+        if len(delete_ids) == 0:
             return
 
         with self._index_lock:
@@ -230,10 +206,8 @@ class AnnLiteIndexer(Executor):
                     'Please wait for the pending documents to be indexed.'
                 )
 
-            self._index.delete(
-                flat_docs, raise_errors_on_not_found=raise_errors_on_not_found
-            )
-
+            del self._index[delete_ids]
+                
     @requests(on='/search')
     def search(
         self, docs: Optional[DocumentArray] = None, parameters: dict = {}, **kwargs
@@ -255,27 +229,37 @@ class AnnLiteIndexer(Executor):
             - 'filter' (dict): the filtering conditions on document tags
             - 'limit' (int): nr of matches to get per Document
         """
-
         if not docs:
             return
 
         limit = int(parameters.get('limit', self.limit))
-        search_filter = parameters.get('filter', {})
-        include_metadata = bool(
-            parameters.get('include_metadata', self.include_metadata)
-        )
 
-        access_paths = parameters.get('access_paths', self.search_access_paths)
-        flat_docs = docs[access_paths]
-        if len(flat_docs) == 0:
-            return
         with self._index_lock:
-            self._index.search(
-                flat_docs,
-                filter=search_filter,
-                limit=limit,
-                include_metadata=include_metadata,
-            )
+            if len(self._data_buffer) > 0:
+                raise RuntimeError(
+                    f'Cannot delete documents while the pending documents in the buffer are not indexed yet. '
+                    'Please wait for the pending documents to be indexed.'
+                )
+            
+            docs.match(self._index, filter=parameters.get('filter', None), limit=limit)
+
+    @requests(on='/filter')
+    def filter(self, parameters: Dict, **kwargs):
+        """
+        Query documents from the indexer by the filter `query` object in parameters. The `query` object must follow the
+        specifications in the `find` method of `DocumentArray` using annlite: https://docarray.jina.ai/fundamentals/documentarray/find/#filter-with-query-operators
+        :param parameters: Dictionary to define the `filter` that you want to use.
+        """
+        return self._index.find(parameters.get('filter', None))
+    
+    @requests(on='/fill_embedding')
+    def fill_embedding(self, docs: DocumentArray, **kwargs):
+        """
+        retrieve embedding of Documents by id
+        :param docs: DocumentArray to search with
+        """
+        for doc in docs:
+            doc.embedding = self._index[doc.id].embedding
 
     @requests(on='/status')
     def status(self, **kwargs) -> DocumentArray:
@@ -303,6 +287,5 @@ class AnnLiteIndexer(Executor):
             time.sleep(0.1)
 
         with self._index_lock:
-            self._data_buffer = None
-            self._index_thread.join()
-            self._index.close()
+            super().close()
+            del self._index
