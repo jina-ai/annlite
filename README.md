@@ -288,7 +288,6 @@ The HNSW algorithm has several parameters that can be tuned to improve the searc
 The larger the value, the more accurate the search results, but the slower the search speed.
 The `ef_search` must be larger than `limit` parameter in `search(..., limit)`.
 
-
 - `limit` - The maximum number of results to return (default: `10`).
 
 ## Construction parameters
@@ -309,6 +308,13 @@ Higher values give better accuracy, but increase construction time and memory co
 At some point, increasing `ef_construction` does not give any more accuracy.
 To set `ef_construction` to a reasonable value, one can measure the recall: if the recall is lower than 0.9, then increase `ef_construction` and re-run the search.
 
+To set the parameters, you can define them when creating the annlite:
+
+```python
+from annlite import AnnLite
+
+ann = AnnLite(128, columns=[('price', float)], data_path="/tmp/annlite_data", ef_construction=200, max_connection=16)
+```
 
 ## Benchmark
 
