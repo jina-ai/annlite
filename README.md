@@ -262,6 +262,22 @@ The query will be performed on the field if the condition is satisfied. The foll
     }
     ```
 
+## Supported distance metrics
+
+The annlite supports the following distance metrics:
+
+#### Supported distances:
+
+| Distance          |    parameter    |                                                 Equation |
+|-------------------|:---------------:|---------------------------------------------------------:|
+| Euclidean         |   'euclidean'   |                                       d = sum((Ai-Bi)^2) |
+| Inner product     | 'inner_product' |                                    d = 1.0 - sum(Ai\*Bi) |
+| Cosine similarity |    'cosine'     |  d = 1.0 - sum(Ai\*Bi) / sqrt(sum(Ai\*Ai) * sum(Bi\*Bi)) |
+
+Note that inner product is not an actual metric. An element can be closer to some other element than to itself.
+That allows some speedup if you remove all elements that are not the closest to themselves from the index.
+
+
 ## HNSW algorithm parameters
 
 The HNSW algorithm has several parameters that can be tuned to improve the search performance.
