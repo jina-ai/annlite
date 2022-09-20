@@ -11,6 +11,23 @@ from jina.logging.logger import JinaLogger
 
 
 class AnnLiteIndexer(Executor):
+    """
+    :param n_dim: Dimensionality of vectors to index
+    :param dim: Deprecated, use n_dim instead
+    :param metric: Distance metric type. Can be 'euclidean', 'inner_product', or 'cosine'
+    :param include_metadata: If True, return the document metadata in response
+    :param limit: Number of results to get for each query document in search
+    :param ef_construction: The construction time/accuracy trade-off
+    :param ef_search: The query time accuracy/speed trade-off
+    :param max_connection: The maximum number of outgoing connections in the
+        graph (the "M" parameter)
+    :param index_access_paths: Default traversal paths on docs
+            (used for indexing, delete and update), e.g. '@r', '@c', '@r,c'
+    :param search_access_paths: Default traversal paths on docs
+    (used for search), e.g. '@r', '@c', '@r,c'
+    :param columns: A list or dict of column names to index.
+    """
+
     def __init__(
         self,
         n_dim: int = 0,
@@ -23,27 +40,12 @@ class AnnLiteIndexer(Executor):
         include_metadata: bool = True,
         index_access_paths: str = '@r',
         search_access_paths: str = '@r',
-        columns: Optional[Union[List[Tuple[str, str]],Dict[str, str]]] = None,
+        columns: Optional[Union[List[Tuple[str, str]], Dict[str, str]]] = None,
         dim: int = None,
         *args,
         **kwargs,
     ):
-        """
-        :param n_dim: Dimensionality of vectors to index
-        :param dim: Deprecated, use n_dim instead
-        :param metric: Distance metric type. Can be 'euclidean', 'inner_product', or 'cosine'
-        :param include_metadata: If True, return the document metadata in response
-        :param limit: Number of results to get for each query document in search
-        :param ef_construction: The construction time/accuracy trade-off
-        :param ef_search: The query time accuracy/speed trade-off
-        :param max_connection: The maximum number of outgoing connections in the
-            graph (the "M" parameter)
-        :param index_access_paths: Default traversal paths on docs
-                (used for indexing, delete and update), e.g. '@r', '@c', '@r,c'
-        :param search_access_paths: Default traversal paths on docs
-        (used for search), e.g. '@r', '@c', '@r,c'
-        :param columns: A list or dict of column names to index.
-        """
+
         super().__init__(*args, **kwargs)
         self.logger = JinaLogger(self.__class__.__name__)
 
@@ -185,24 +187,24 @@ class AnnLiteIndexer(Executor):
                 try:
                     self._index[doc.id] = doc
                 except IndexError:
-                    self.logger.warning(
-                        f'cannot update doc {doc.id} as it does not exist in storage'
-                    )
                     if raise_errors_on_not_found:
                         raise Exception(
                             f'The document (id={doc.id}) cannot be updated as'
                             f'it is not found in the index'
                         )
+                    else:
+                        self.logger.warning(
+                            f'cannot update doc {doc.id} as it does not exist in storage'
+                        )
 
     @requests(on='/delete')
-    def delete(
-        self, parameters: dict = {}, **kwargs
-    ):
+    def delete(self, parameters: dict = {}, **kwargs):
         """Delete existing documents
 
         Delete entries from the index by id
         :param parameters: parameters to the request
         """
+
         delete_ids = parameters.get('ids', [])
         if len(delete_ids) == 0:
             return
@@ -215,7 +217,7 @@ class AnnLiteIndexer(Executor):
                 )
 
             del self._index[delete_ids]
-                
+
     @requests(on='/search')
     def search(
         self, docs: Optional[DocumentArray] = None, parameters: dict = {}, **kwargs
@@ -237,6 +239,7 @@ class AnnLiteIndexer(Executor):
             - 'filter' (dict): the filtering conditions on document tags
             - 'limit' (int): nr of matches to get per Document
         """
+
         if not docs:
             return
 
@@ -248,10 +251,10 @@ class AnnLiteIndexer(Executor):
         with self._index_lock:
             if len(self._data_buffer) > 0:
                 raise RuntimeError(
-                    f'Cannot delete documents while the pending documents in the buffer are not indexed yet. '
+                    f'Cannot search documents while the pending documents in the buffer are not indexed yet. '
                     'Please wait for the pending documents to be indexed.'
                 )
-            
+
             flat_docs.match(self._index, filter=search_filter, limit=limit)
 
     @requests(on='/filter')
@@ -261,14 +264,16 @@ class AnnLiteIndexer(Executor):
         specifications in the `find` method of `DocumentArray` using annlite: https://docarray.jina.ai/fundamentals/documentarray/find/#filter-with-query-operators
         :param parameters: Dictionary to define the `filter` that you want to use.
         """
+
         return self._index.find(parameters.get('filter', None))
-    
+
     @requests(on='/fill_embedding')
     def fill_embedding(self, docs: DocumentArray, **kwargs):
         """
         retrieve embedding of Documents by id
         :param docs: DocumentArray to search with
         """
+
         for doc in docs:
             doc.embedding = self._index[doc.id].embedding
 
