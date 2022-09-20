@@ -1,18 +1,8 @@
-import shutil
 from pathlib import Path
 from typing import Dict, List, Union
 
 from docarray import Document, DocumentArray
-from rocksdict import (
-    Options,
-    PlainTableFactoryOptions,
-    Rdict,
-    ReadOptions,
-    WriteBatch,
-    WriteOptions,
-)
-
-LMDB_MAP_SIZE = 100 * 1024 * 1024 * 1024
+from rocksdict import Options, Rdict, ReadOptions, WriteBatch, WriteOptions
 
 
 class DocStorage:
