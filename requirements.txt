@@ -5,4 +5,5 @@ docarray[common]>=0.13.16
 lmdb
 loguru
 numpy
+rocksdict>=0.2.16
 scikit-learn
