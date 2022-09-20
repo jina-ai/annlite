@@ -24,6 +24,9 @@ class DocStorage:
 
     def _init_db(self, create_if_missing: bool = True, **kwargs):
         opt = Options(raw_mode=True)
+
+        opt.optimize_for_point_lookup(1024)
+
         opt.set_inplace_update_support(True)
         opt.set_allow_concurrent_memtable_write(False)
 
@@ -36,7 +39,8 @@ class DocStorage:
         # # set to plain-table for better performance
         # opt.set_plain_table_factory(PlainTableFactoryOptions())
 
-        opt.create_if_missing(create_if_missing=create_if_missing)
+        opt.create_if_missing(create_if_missing)
+
         self._db = Rdict(path=self._path, options=opt)
 
         # get the size of the database, if it is not created, set it to 0

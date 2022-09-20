@@ -4,17 +4,21 @@ from docarray import Document, DocumentArray
 
 
 def test_save_load(tmpfile):
+    N = 100
     save_da = DocumentArray(
         storage='annlite', config={'n_dim': 768, 'data_path': tmpfile}
     )
-    for i in range(100):
+    for i in range(N):
         save_da.append(Document(id=str(i), embedding=np.random.rand(768)))
+
+    # need release the resource
+    del save_da
 
     load_da = DocumentArray(
         storage='annlite', config={'n_dim': 768, 'data_path': tmpfile}
     )
-    assert len(load_da) == len(save_da)
+    assert len(load_da) == N
 
-    for i in range(100, 120):
+    for i in range(N, N + 20):
         load_da.append(Document(id=str(i), embedding=np.random.rand(768)))
-    assert len(load_da) == 120
+    assert len(load_da) == N + 20
