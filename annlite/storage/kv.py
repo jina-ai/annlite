@@ -15,24 +15,31 @@ class DocStorage:
         create_if_missing: bool = True,
         **kwargs,
     ):
-        self._path = path
-
-        self._open_db(path, create_if_missing=create_if_missing)
+        self._path = str(path)
         self._serialize_config = serialize_config
 
-    def _open_db(self, path, create_if_missing: bool = True, **kwargs):
+        self._kwargs = kwargs
+
+        self._init_db(create_if_missing=create_if_missing, **self._kwargs)
+
+    def _init_db(self, create_if_missing: bool = True, **kwargs):
         opt = Options(raw_mode=True)
         opt.set_inplace_update_support(True)
         opt.set_allow_concurrent_memtable_write(False)
 
         # configure mem-table to a large value (256 MB)
         opt.set_write_buffer_size(0x10000000)
+
+        # 256 MB file size
+        opt.set_target_file_size_base(0x10000000)
+
         # # set to plain-table for better performance
         # opt.set_plain_table_factory(PlainTableFactoryOptions())
 
         opt.create_if_missing(create_if_missing=create_if_missing)
-        self._db = Rdict(path=str(path), options=opt)
+        self._db = Rdict(path=self._path, options=opt)
 
+        # get the size of the database, if it is not created, set it to 0
         self._size = len(list(self._db.keys()))
 
     def insert(self, docs: 'DocumentArray'):
@@ -79,10 +86,9 @@ class DocStorage:
         return docs
 
     def clear(self):
-        self._size = 0
         self._db.close()
         self._db.destroy(str(self._path))
-        self._open_db(self._path)
+        self._init_db(create_if_missing=True, **self._kwargs)
 
     def close(self):
         self._db.close()
@@ -98,7 +104,11 @@ class DocStorage:
     def size(self):
         return self.stat['entries']
 
-    def batched_iterator(self, batch_size: int = 1, **kwargs):
+    @property
+    def last_transaction_id(self):
+        return self._db.latest_sequence_number()
+
+    def batched_iterator(self, batch_size: int = 1, **kwargs) -> 'DocumentArray':
         count = 0
         docs = DocumentArray()
 

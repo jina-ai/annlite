@@ -96,7 +96,7 @@ class AnnLiteIndexer(Executor):
             ef_construction=ef_construction,
             ef_query=ef_query,
             max_connection=max_connection,
-            data_path=self.workspace or './workspace',
+            data_path=kwargs.pop('data_path', None) or self.workspace or './workspace',
             serialize_config=serialize_config or {},
             **kwargs,
         )
