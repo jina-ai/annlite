@@ -24,3 +24,8 @@ def update_docs():
             Document(id='doc1', embedding=np.array([0, 0, 0, 1])),
         ]
     )
+
+
+@pytest.fixture(autouse=True)
+def test_disable_telemetry(monkeypatch):
+    monkeypatch.setenv('JINA_OPTOUT_TELEMETRY', 'True')
