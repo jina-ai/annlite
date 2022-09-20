@@ -50,7 +50,7 @@ def test_index(tmpdir):
         uses_with={
             'dim': D,
         },
-        uses_metas=metas,
+        workspace=metas['workspace'],
     )
     with f:
         result = f.post(on='/index', inputs=docs, return_results=True)
@@ -66,7 +66,7 @@ def test_update(tmpdir):
         uses_with={
             'dim': D,
         },
-        uses_metas=metas,
+        workspace=metas['workspace'],
     )
     with f:
         f.post(on='/index', inputs=docs)
@@ -91,7 +91,7 @@ def test_search(tmpdir):
         uses_with={
             'dim': D,
         },
-        uses_metas=metas,
+        workspace=metas['workspace'],
     )
     with f:
         f.post(on='/index', inputs=docs)
@@ -121,7 +121,7 @@ def test_search_with_filtering(tmpdir, columns):
     f = Flow().add(
         uses=AnnLiteIndexer,
         uses_with={'dim': D, 'columns': columns},
-        uses_metas=metas,
+        workspace=metas['workspace'],
     )
 
     with f:
@@ -145,7 +145,7 @@ def test_delete(tmpdir):
         uses_with={
             'dim': D,
         },
-        uses_metas=metas,
+        workspace=metas['workspace'],
     )
     with f:
         f.post(on='/index', inputs=docs)
@@ -172,7 +172,7 @@ def test_status(tmpdir):
         uses_with={
             'dim': D,
         },
-        uses_metas=metas,
+        workspace=metas['workspace'],
     )
     with f:
         f.post(on='/index', inputs=docs)
@@ -190,7 +190,7 @@ def test_clear(tmpdir):
         uses_with={
             'dim': D,
         },
-        uses_metas=metas,
+        workspace=metas['workspace'],
     )
     with f:
         f.post(on='/index', inputs=docs)
