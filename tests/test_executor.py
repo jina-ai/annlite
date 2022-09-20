@@ -48,13 +48,14 @@ def test_index(tmpfile):
     f = Flow().add(
         uses=AnnLiteIndexer,
         uses_with={
-            'dim': D,
+            'n_dim': D,
         },
-        workspace=metas['workspace'],
+        workspace=tmpfile,
     )
     with f:
-        result = f.post(on='/index', inputs=docs, return_results=True)
+        result = f.post(on='/index', inputs=docs)
         assert len(result) == N
+        print('indexing')
 
 
 def test_update(tmpfile):
@@ -64,7 +65,7 @@ def test_update(tmpfile):
     f = Flow().add(
         uses=AnnLiteIndexer,
         uses_with={
-            'dim': D,
+            'n_dim': D,
         },
         workspace=metas['workspace'],
     )
@@ -89,7 +90,7 @@ def test_search(tmpfile):
     f = Flow().add(
         uses=AnnLiteIndexer,
         uses_with={
-            'dim': D,
+            'n_dim': D,
         },
         workspace=metas['workspace'],
     )
@@ -120,7 +121,7 @@ def test_search_with_filtering(tmpfile, columns):
 
     f = Flow().add(
         uses=AnnLiteIndexer,
-        uses_with={'dim': D, 'columns': columns},
+        uses_with={'n_dim': D, 'columns': columns},
         workspace=metas['workspace'],
     )
 
@@ -143,7 +144,7 @@ def test_delete(tmpfile):
     f = Flow().add(
         uses=AnnLiteIndexer,
         uses_with={
-            'dim': D,
+            'n_dim': D,
         },
         workspace=metas['workspace'],
     )
@@ -170,7 +171,7 @@ def test_status(tmpfile):
     f = Flow().add(
         uses=AnnLiteIndexer,
         uses_with={
-            'dim': D,
+            'n_dim': D,
         },
         workspace=metas['workspace'],
     )
@@ -188,7 +189,7 @@ def test_clear(tmpfile):
     f = Flow().add(
         uses=AnnLiteIndexer,
         uses_with={
-            'dim': D,
+            'n_dim': D,
         },
         workspace=metas['workspace'],
     )

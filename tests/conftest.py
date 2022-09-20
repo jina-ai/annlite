@@ -31,7 +31,7 @@ def update_docs():
 @pytest.fixture(autouse=True)
 def tmpfile(tmpdir):
     tmpfile = f'annlite_test_{next(tempfile._get_candidate_names())}.db'
-    return tmpdir / tmpfile
+    yield tmpdir / tmpfile
 
 
 @pytest.fixture(autouse=True)

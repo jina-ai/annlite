@@ -56,7 +56,7 @@ def test_hnsw_pq_search_multi_clusters(n_clusters, tmpfile, random_docs):
     topk = 50
 
     X = random_docs.embeddings
-    no_pq_index = AnnLite(D, data_path=tmpfile)
+    no_pq_index = AnnLite(D, data_path=tmpfile + '_no_pq')
 
     query = DocumentArray([Document(embedding=X[i]) for i in range(total_test)])
     test_query = DocumentArray([Document(embedding=X[i]) for i in range(total_test)])
@@ -66,7 +66,7 @@ def test_hnsw_pq_search_multi_clusters(n_clusters, tmpfile, random_docs):
 
     pq_index = AnnLite(
         D,
-        data_path=tmpfile,
+        data_path=tmpfile + '_pq',
         n_subvectors=8,
         n_clusters=n_clusters,
     )

@@ -48,7 +48,7 @@ def test_encode_decode(build_data, build_projector):
         assert original_vecs.shape == Xt.shape
 
 
-def test_save_and_load(tmpfile, build_data, build_projector):
+def test_save_and_load(tmpdir, build_data, build_projector):
     import os
     from pathlib import Path
 
@@ -56,10 +56,10 @@ def test_save_and_load(tmpfile, build_data, build_projector):
     projector_list = build_projector
 
     for projector in projector_list:
-        projector.dump(Path(os.path.join(tmpfile, 'projector.pkl')))
-        assert os.path.exists(os.path.join(tmpfile, 'projector.pkl')) is True
+        projector.dump(Path(os.path.join(tmpdir, 'projector.pkl')))
+        assert os.path.exists(os.path.join(tmpdir, 'projector.pkl')) is True
 
-        projector_ = ProjectorCodec.load(Path(os.path.join(tmpfile, 'projector.pkl')))
+        projector_ = ProjectorCodec.load(Path(os.path.join(tmpdir, 'projector.pkl')))
         assert projector.components.shape == projector_.components.shape
 
         before = projector.encode(Xt)

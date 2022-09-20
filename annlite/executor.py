@@ -305,4 +305,6 @@ class AnnLiteIndexer(Executor):
         with self._index_lock:
             self._data_buffer = None
             self._index_thread.join()
-            self._index.close()
+
+            # TODO: fix the dead-lock issue
+            # self._index.close()

@@ -106,10 +106,10 @@ def test_count(table_with_data):
     assert count == 0
 
 
-def test_create_meta_table(tmpfile):
+def test_create_meta_table(tmpdir):
     import datetime
 
-    table = MetaTable('meta_test', data_path=tmpfile)
+    table = MetaTable('meta_test', data_path=tmpdir)
     addr = table.get_latest_commit()
     assert addr is None
 

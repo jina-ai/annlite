@@ -202,7 +202,6 @@ def test_filter_with_limit_offset(limit, offset, order_by, ascending, tmpfile):
     )
     assert len(matches) == limit
 
-    print(f'ASC: {ascending}')
     for i in range(len(matches) - 1):
         m = matches[i]
         assert m.tags['x'] < 0.5
