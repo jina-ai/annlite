@@ -17,6 +17,10 @@ class DocStorage:
     ):
         self._path = path
 
+        self._open_db(path, create_if_missing=create_if_missing)
+        self._serialize_config = serialize_config
+
+    def _open_db(self, path, create_if_missing: bool = True, **kwargs):
         opt = Options(raw_mode=True)
         opt.set_inplace_update_support(True)
         opt.set_allow_concurrent_memtable_write(False)
@@ -28,7 +32,6 @@ class DocStorage:
 
         opt.create_if_missing(create_if_missing=create_if_missing)
         self._db = Rdict(path=str(path), options=opt)
-        self._serialize_config = serialize_config
 
         self._size = len(list(self._db.keys()))
 
@@ -56,8 +59,13 @@ class DocStorage:
         self._db.write(write_batch, write_opt=write_opt)
 
     def delete(self, doc_ids: List[str]):
+        write_batch = WriteBatch(raw_mode=True)
+        write_opt = WriteOptions()
+        write_opt.set_sync(True)
         for doc_id in doc_ids:
-            del self._db[doc_id.encode()]
+            write_batch.delete(doc_id.encode())
+        self._db.write(write_batch, write_opt=write_opt)
+        self._size -= len(doc_ids)
 
     def get(self, doc_ids: Union[str, list]) -> DocumentArray:
         docs = DocumentArray()
@@ -74,6 +82,7 @@ class DocStorage:
         self._size = 0
         self._db.close()
         self._db.destroy(str(self._path))
+        self._open_db(self._path)
 
     def close(self):
         self._db.close()

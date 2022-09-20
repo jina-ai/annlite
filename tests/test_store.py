@@ -42,6 +42,13 @@ def test_clear(tmpdir, docs):
     storage.clear()
     assert storage.size == 0
 
+    storage.insert(docs)
+    assert storage.size == 6
+
+    storage.close()
+    storage = DocStorage(tmpdir + 'test_doc_store')
+    assert storage.size == 6
+
 
 def test_batched_iterator(tmpdir, docs):
     storage = DocStorage(tmpdir + 'test_doc_store')
