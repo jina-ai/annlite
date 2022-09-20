@@ -87,7 +87,9 @@ class DocStorage:
 
     def clear(self):
         self._db.close()
-        self._db.destroy(str(self._path))
+        self._db.destroy(self._path)
+
+        # re-initialize the database for the next usage
         self._init_db(create_if_missing=True, **self._kwargs)
 
     def close(self):
