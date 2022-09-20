@@ -42,8 +42,8 @@ def docs_with_tags(N):
     return da
 
 
-def test_index(tmpdir):
-    metas = {'workspace': str(tmpdir)}
+def test_index(tmpfile):
+    metas = {'workspace': str(tmpfile)}
     docs = gen_docs(N)
     f = Flow().add(
         uses=AnnLiteIndexer,
@@ -57,8 +57,8 @@ def test_index(tmpdir):
         assert len(result) == N
 
 
-def test_update(tmpdir):
-    metas = {'workspace': str(tmpdir)}
+def test_update(tmpfile):
+    metas = {'workspace': str(tmpfile)}
     docs = gen_docs(N)
     docs_update = gen_docs(Nu)
     f = Flow().add(
@@ -82,8 +82,8 @@ def test_update(tmpdir):
         assert int(status.tags['index_size']) == N
 
 
-def test_search(tmpdir):
-    metas = {'workspace': str(tmpdir)}
+def test_search(tmpfile):
+    metas = {'workspace': str(tmpfile)}
     docs = gen_docs(N)
     docs_query = gen_docs(Nq)
     f = Flow().add(
@@ -112,8 +112,8 @@ def test_search(tmpdir):
     'columns',
     [[('price', 'float'), ('category', 'str')], {'price': 'float', 'category': 'str'}],
 )
-def test_search_with_filtering(tmpdir, columns):
-    metas = {'workspace': str(tmpdir)}
+def test_search_with_filtering(tmpfile, columns):
+    metas = {'workspace': str(tmpfile)}
 
     docs = docs_with_tags(N)
     docs_query = gen_docs(1)
@@ -137,8 +137,8 @@ def test_search_with_filtering(tmpdir, columns):
         assert all([m.tags['price'] < 50 for m in query_res[0].matches])
 
 
-def test_delete(tmpdir):
-    metas = {'workspace': str(tmpdir)}
+def test_delete(tmpfile):
+    metas = {'workspace': str(tmpfile)}
     docs = gen_docs(N)
     f = Flow().add(
         uses=AnnLiteIndexer,
@@ -164,8 +164,8 @@ def test_delete(tmpdir):
         query_res = f.post(on='/search', inputs=docs_query, return_results=True)
 
 
-def test_status(tmpdir):
-    metas = {'workspace': str(tmpdir)}
+def test_status(tmpfile):
+    metas = {'workspace': str(tmpfile)}
     docs = gen_docs(N)
     f = Flow().add(
         uses=AnnLiteIndexer,
@@ -182,8 +182,8 @@ def test_status(tmpdir):
         assert int(status.tags['index_size']) == N
 
 
-def test_clear(tmpdir):
-    metas = {'workspace': str(tmpdir)}
+def test_clear(tmpfile):
+    metas = {'workspace': str(tmpfile)}
     docs = gen_docs(N)
     f = Flow().add(
         uses=AnnLiteIndexer,
