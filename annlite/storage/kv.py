@@ -86,7 +86,6 @@ class DocStorage:
         self._db.destroy(str(self._path))
 
     def close(self):
-        self._db.flush()
         self._db.close()
 
     def __len__(self):
