@@ -13,7 +13,7 @@ from jina.logging.logger import JinaLogger
 class AnnLiteIndexer(Executor):
     def __init__(
         self,
-        n_dim: int = 128,
+        n_dim: int = 0,
         metric: str = 'cosine',
         limit: int = 10,
         data_path: Optional[str] = None,
@@ -24,11 +24,13 @@ class AnnLiteIndexer(Executor):
         index_access_paths: str = '@r',
         search_access_paths: str = '@r',
         columns: Optional[Union[List[Tuple[str, str]],Dict[str, str]]] = None,
+        dim: int = None,
         *args,
         **kwargs,
     ):
         """
         :param n_dim: Dimensionality of vectors to index
+        :param dim: Deprecated, use n_dim instead
         :param metric: Distance metric type. Can be 'euclidean', 'inner_product', or 'cosine'
         :param include_metadata: If True, return the document metadata in response
         :param limit: Number of results to get for each query document in search
@@ -45,6 +47,7 @@ class AnnLiteIndexer(Executor):
         super().__init__(*args, **kwargs)
         self.logger = JinaLogger(self.__class__.__name__)
 
+        n_dim = n_dim or dim
         if not n_dim:
             raise ValueError('Please specify the dimension of the vectors to index!')
 
@@ -185,6 +188,11 @@ class AnnLiteIndexer(Executor):
                     self.logger.warning(
                         f'cannot update doc {doc.id} as it does not exist in storage'
                     )
+                    if raise_errors_on_not_found:
+                        raise Exception(
+                            f'The document (id={doc.id}) cannot be updated as'
+                            f'it is not found in the index'
+                        )
 
     @requests(on='/delete')
     def delete(
@@ -233,6 +241,9 @@ class AnnLiteIndexer(Executor):
             return
 
         limit = int(parameters.get('limit', self.limit))
+        search_filter = parameters.get('filter', None)
+        access_paths = parameters.get('access_paths', self.search_access_paths)
+        flat_docs = docs[access_paths]
 
         with self._index_lock:
             if len(self._data_buffer) > 0:
@@ -241,7 +252,7 @@ class AnnLiteIndexer(Executor):
                     'Please wait for the pending documents to be indexed.'
                 )
             
-            docs.match(self._index, filter=parameters.get('filter', None), limit=limit)
+            flat_docs.match(self._index, filter=search_filter, limit=limit)
 
     @requests(on='/filter')
     def filter(self, parameters: Dict, **kwargs):
