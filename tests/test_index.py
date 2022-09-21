@@ -86,8 +86,11 @@ def heterogenenous_da(tmpfile):
 
 @pytest.fixture
 def annlite_with_heterogeneous_tags(tmpfile, heterogenenous_da):
+    import os
 
+    os.system('rm {}'.format(os.path.join(tmpfile, 'metas.db')))
     columns = [('price', float), ('category', str)]
+
     index = AnnLite(n_dim=D, columns=columns, data_path=tmpfile)
     index.index(heterogenenous_da)
     return index
