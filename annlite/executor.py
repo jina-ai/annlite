@@ -84,7 +84,9 @@ class AnnLiteIndexer(Executor):
             'ef_construction': ef_construction,
             'ef_search': ef_search,
             'max_connection': max_connection,
-            'data_path': data_path or self.workspace or './workspace',
+            'data_path': kwargs.pop('data_path', None)
+            or self.workspace
+            or './workspace',
             'columns': columns,
         }
         self._index = DocumentArray(storage='annlite', config=config)
@@ -299,9 +301,15 @@ class AnnLiteIndexer(Executor):
 
     def close(self, **kwargs):
         """Close the index."""
+        super().close()
+
         while len(self._data_buffer) > 0:
             time.sleep(0.1)
 
+        # wait for the index thread to finish
         with self._index_lock:
-            super().close()
-            del self._index
+            self._data_buffer = None
+            self._index_thread.join()
+
+            # TODO: fix the dead-lock issue
+            self._index.close()
