@@ -84,7 +84,7 @@ class CellContainer:
             CellTable(f'table_{c}', columns=columns) for c in range(n_cells)
         ]
 
-        self._meta_table = MetaTable('metas', data_path=data_path, in_memory=True)
+        self._meta_table = MetaTable('metas', data_path=data_path, in_memory=False)
 
     def ivf_search(
         self,
