@@ -96,7 +96,7 @@ class AnnLiteIndexer(Executor):
             ef_construction=ef_construction,
             ef_query=ef_query,
             max_connection=max_connection,
-            data_path=self.workspace or './workspace',
+            data_path=kwargs.pop('data_path', None) or self.workspace or './workspace',
             serialize_config=serialize_config or {},
             **kwargs,
         )
@@ -299,10 +299,15 @@ class AnnLiteIndexer(Executor):
 
     def close(self, **kwargs):
         """Close the index."""
+        super().close()
+
         while len(self._data_buffer) > 0:
             time.sleep(0.1)
 
+        # wait for the index thread to finish
         with self._index_lock:
             self._data_buffer = None
             self._index_thread.join()
+
+            # TODO: fix the dead-lock issue
             self._index.close()
