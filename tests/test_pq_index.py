@@ -85,13 +85,11 @@ def test_hnsw_pq_search_multi_clusters(n_clusters, tmpfile, random_docs):
     computed_dist = cosine(X, X)
     computed_labels = np.argsort(computed_dist, axis=1)[:, :topk]
 
-    no_pq_index = AnnLite(D, data_path=tmpfile + '_no_pq')
-
     query = DocumentArray([Document(embedding=X[i]) for i in range(total_test)])
     test_query = DocumentArray([Document(embedding=X[i]) for i in range(total_test)])
 
     # HNSW search with float----------------------------------
-    no_pq_index = AnnLite(D, data_path=tmpdir / 'annlite_test')
+    no_pq_index = AnnLite(D, data_path=tmpfile + '_no_pq')
 
     no_pq_index.index(random_docs)
     no_pq_index.search(query, limit=topk)
