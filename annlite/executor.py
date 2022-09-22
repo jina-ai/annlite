@@ -11,21 +11,23 @@ from jina.logging.logger import JinaLogger
 
 
 class AnnLiteIndexer(Executor):
-    """
+    """A simple indexer that wraps the AnnLite indexer and adds a simple interface for indexing and searching.
+
     :param n_dim: Dimensionality of vectors to index
-    :param dim: Deprecated, use n_dim instead
     :param metric: Distance metric type. Can be 'euclidean', 'inner_product', or 'cosine'
-    :param include_metadata: If True, return the document metadata in response
     :param limit: Number of results to get for each query document in search
+    :param data_path: the workspace of the AnnLiteIndexer.
     :param ef_construction: The construction time/accuracy trade-off
     :param ef_search: The query time accuracy/speed trade-off
     :param max_connection: The maximum number of outgoing connections in the
         graph (the "M" parameter)
+    :param include_metadata: If True, return the document metadata in response
     :param index_access_paths: Default traversal paths on docs
             (used for indexing, delete and update), e.g. '@r', '@c', '@r,c'
     :param search_access_paths: Default traversal paths on docs
     (used for search), e.g. '@r', '@c', '@r,c'
     :param columns: A list or dict of column names to index.
+    :param dim: Deprecated, use n_dim instead
     """
 
     def __init__(
@@ -84,9 +86,7 @@ class AnnLiteIndexer(Executor):
             'ef_construction': ef_construction,
             'ef_search': ef_search,
             'max_connection': max_connection,
-            'data_path': kwargs.pop('data_path', None)
-            or self.workspace
-            or './workspace',
+            'data_path': data_path or self.workspace or './workspace',
             'columns': columns,
         }
         self._index = DocumentArray(storage='annlite', config=config)
