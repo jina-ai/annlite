@@ -21,6 +21,9 @@ def index_data():
 
 
 def test_dump_load(tmpfile, index_data):
+    import os
+
+    os.system('rm {}'.format(os.path.join(tmpfile, 'metas.db')))
     query = index_data[0:1]
 
     index = AnnLite(D, data_path=tmpfile)
