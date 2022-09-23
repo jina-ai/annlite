@@ -756,15 +756,23 @@ public:
       ParallelFor(0, rows, num_threads, [&](size_t row, size_t threadId) {
         std::priority_queue<std::pair<dist_t, hnswlib::labeltype>> result =
             appr_alg->searchKnnWithFilter((void *)items.data(row), &filter, k);
-        if (result.size() != k)
-          throw std::runtime_error(
-              "Cannot return the results in a contigious 2D array. Probably "
-              "ef or M is too small");
-        for (int i = k - 1; i >= 0; i--) {
+
+        //        if (result.size() != k)
+        //          throw std::runtime_error(
+        //              "Cannot return the results in a contigious 2D array.
+        //              Probably " "ef or M is too small");
+
+        for (int i = result.size() - 1; i >= 0; i--) {
           auto &result_tuple = result.top();
           data_numpy_d[row * k + i] = result_tuple.first;
           data_numpy_l[row * k + i] = result_tuple.second;
           result.pop();
+        }
+
+        // HOTFIX: fill the rest of the array with worst possible values
+        for (int i = k - 1; i >= result.size(); i--) {
+          data_numpy_d[row * k + i] = data_numpy_d[row * k + result.size() - 1];
+          data_numpy_l[row * k + i] = data_numpy_l[row * k + result.size() - 1];
         }
       });
     }
