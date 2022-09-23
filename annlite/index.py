@@ -1,9 +1,12 @@
 import hashlib
+import io
 import logging
 import warnings
+from audioop import maxpp
 from pathlib import Path
 from typing import TYPE_CHECKING, Dict, List, Optional, Union
 
+import hubble
 import numpy as np
 from docarray.math.ndarray import to_numpy_array
 from loguru import logger
@@ -266,7 +269,7 @@ class AnnLite(CellContainer):
         if auto_save:
             self.dump_model()
 
-    def index(self, docs: 'DocumentArray', **kwargs):
+    def index(self, docs: 'DocumentArray', upload=False, **kwargs):
         """Add the documents to the index.
 
         :param docs: the document array to be indexed.
@@ -287,7 +290,9 @@ class AnnLite(CellContainer):
             if self.vq_codec
             else np.zeros(n_data, dtype=np.int64)
         )
-        return super(AnnLite, self).insert(x, assigned_cells, docs)
+        return super(AnnLite, self).insert(
+            x, assigned_cells, docs, upload, self.remote_store
+        )
 
     def update(
         self,
@@ -622,6 +627,14 @@ class AnnLite(CellContainer):
             return paths[0]
         return None
 
+    @property
+    def remote_store(self):
+        client = hubble.Client(max_retries=None, jsonify=None)
+        user = client.get_user_info()
+        if user:
+            return client
+        return None
+
     def dump_model(self):
         logger.info(f'Save the parameters to {self.model_path}')
         self.model_path.mkdir(parents=True, exist_ok=True)
@@ -662,6 +675,9 @@ class AnnLite(CellContainer):
                     self.snapshot_path / f'cell_{cell_id}.hnsw'
                 )
                 self.cell_table(cell_id).load(self.snapshot_path / f'cell_{cell_id}.db')
+        elif self.remote_store:
+            logger.info(f'Load the indexer from hubstore')
+            # TODO: Load indexer
         else:
             logger.info(f'Rebuild the indexer from scratch')
             for cell_id in range(self.n_cells):

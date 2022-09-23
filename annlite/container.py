@@ -1,8 +1,10 @@
 import hashlib
+import io
 import warnings
 from pathlib import Path
 from typing import TYPE_CHECKING, Dict, List, Optional, Tuple
 
+import hubble
 import numpy as np
 from docarray import Document, DocumentArray
 from loguru import logger
@@ -264,6 +266,8 @@ class CellContainer:
         data: 'np.ndarray',
         cells: 'np.ndarray',
         docs: 'DocumentArray',
+        upload: bool = False,
+        remote_store: 'hubble.Client' = None,
         only_index: bool = False,
     ):
         assert len(docs) == len(data)
@@ -308,6 +312,13 @@ class CellContainer:
                 )
 
         logger.debug(f'{len(docs)} new docs added')
+
+        if upload:
+            assert remote_store is not None, 'Login hubble first.'
+
+            # TODO: organize the storage
+            uploader = remote_store.upload_artifact(f=io.BytesIO())
+            logger.debug(f'{len(docs)} new docs stored')
 
     def _add_vecs(self, data: 'np.ndarray', cells: 'np.ndarray', offsets: 'np.ndarray'):
         assert data.shape[0] == cells.shape[0]
