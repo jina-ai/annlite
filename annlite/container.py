@@ -62,7 +62,6 @@ class CellContainer:
             DocStorage(
                 data_path / f'cell_{_}',
                 serialize_config=serialize_config or {},
-                create_if_missing=True,
                 lock=True,
             )
             for _ in range(n_cells)

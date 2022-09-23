@@ -1,5 +1,3 @@
-import tempfile
-
 import numpy as np
 import pytest
 from docarray import Document, DocumentArray
@@ -26,14 +24,3 @@ def update_docs():
             Document(id='doc1', embedding=np.array([0, 0, 0, 1])),
         ]
     )
-
-
-@pytest.fixture(autouse=True)
-def tmpfile(tmpdir):
-    tmpfile = f'annlite_test_{next(tempfile._get_candidate_names())}.db'
-    yield tmpdir / tmpfile
-
-
-@pytest.fixture(autouse=True)
-def test_disable_telemetry(monkeypatch):
-    monkeypatch.setenv('JINA_OPTOUT_TELEMETRY', 'True')
