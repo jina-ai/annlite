@@ -764,7 +764,7 @@ public:
 
         size_t result_size = result.size();
         for (int i = result_size - 1; i >= 0; i--) {
-          auto &result_tuple = result.top();
+          const auto &result_tuple = result.top();
           data_numpy_d[row * k + i] = result_tuple.first;
           data_numpy_l[row * k + i] = result_tuple.second;
           result.pop();
