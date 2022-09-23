@@ -637,8 +637,6 @@ class AnnLite(CellContainer):
         try:
             self.index_path.mkdir(parents=True)
 
-            self.meta_table.dump(self.index_path / 'meta.db')
-
             for cell_id in range(self.n_cells):
                 self.vec_index(cell_id).dump(self.index_path / f'cell_{cell_id}.hnsw')
                 self.cell_table(cell_id).dump(self.index_path / f'cell_{cell_id}.db')
