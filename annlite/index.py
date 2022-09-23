@@ -634,11 +634,10 @@ class AnnLite(CellContainer):
 
     def dump_index(self):
         logger.info(f'Save the indexer to {self.index_path}')
-
         try:
             self.index_path.mkdir(parents=True)
 
-            self.meta_table.dump(self.index_path / 'meta_table.db')
+            self.meta_table.dump(self.index_path / 'meta.db')
 
             for cell_id in range(self.n_cells):
                 self.vec_index(cell_id).dump(self.index_path / f'cell_{cell_id}.hnsw')

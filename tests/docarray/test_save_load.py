@@ -4,8 +4,6 @@ from docarray import Document, DocumentArray
 
 
 def test_save_load(tmpfile):
-    import os
-
     N = 100
     save_da = DocumentArray(
         storage='annlite', config={'n_dim': 768, 'data_path': tmpfile}
@@ -16,7 +14,6 @@ def test_save_load(tmpfile):
     # need release the resource
     del save_da
 
-    os.system('rm {}'.format(os.path.join(tmpfile, 'metas.db')))
     load_da = DocumentArray(
         storage='annlite', config={'n_dim': 768, 'data_path': tmpfile}
     )

@@ -393,7 +393,7 @@ class MetaTable(Table):
         self.create_table()
 
     def create_table(self):
-        sql = f'''CREATE TABLE {self.name}
+        sql = f'''CREATE TABLE if not exists {self.name}
                         (_doc_id TEXT NOT NULL PRIMARY KEY,
                          cell_id INTEGER NOT NULL,
                          offset INTEGER NOT NULL,
@@ -402,8 +402,12 @@ class MetaTable(Table):
 
         self._conn.execute(sql)
 
-        self._conn.execute(f'CREATE INDEX idx_time_at_ ON {self.name}(time_at)')
-        self._conn.execute(f'CREATE INDEX idx__delete_ ON {self.name}(_deleted)')
+        self._conn.execute(
+            f'CREATE INDEX if not exists idx_time_at_ ON {self.name}(time_at)'
+        )
+        self._conn.execute(
+            f'CREATE INDEX if not exists idx__delete_ ON {self.name}(_deleted)'
+        )
 
         self._conn.commit()
 

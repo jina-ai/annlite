@@ -81,8 +81,7 @@ class CellContainer:
                 columns.append((attr_name, attr_type))
 
         self._cell_tables = [
-            CellTable(f'table_{c}', columns=columns, data_path=data_path)
-            for c in range(n_cells)
+            CellTable(f'table_{c}', columns=columns) for c in range(n_cells)
         ]
 
         self._meta_table = MetaTable('metas', data_path=data_path, in_memory=False)
