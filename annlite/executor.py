@@ -287,9 +287,7 @@ class AnnLiteIndexer(Executor):
         documents, and on the number of (searchable) documents currently in the index.
         """
 
-        status = Document(
-            tags={'appending_size': len(self._data_buffer), **self._index.stat}
-        )
+        status = Document(tags={'appending_size': len(self._data_buffer)})
         return DocumentArray([status])
 
     @requests(on='/clear')
@@ -301,10 +299,15 @@ class AnnLiteIndexer(Executor):
 
     def close(self, **kwargs):
         """Close the index."""
+        super().close()
+
         while len(self._data_buffer) > 0:
             time.sleep(0.1)
 
+        # wait for the index thread to finish
         with self._index_lock:
             self._data_buffer = None
             self._index_thread.join()
+
+            # TODO: fix the dead-lock issue
             self._index.close()
