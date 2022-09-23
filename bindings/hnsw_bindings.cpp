@@ -762,7 +762,8 @@ public:
         //              "Cannot return the results in a contigious 2D array.
         //              Probably " "ef or M is too small");
 
-        for (int i = result.size() - 1; i >= 0; i--) {
+        size_t result_size = result.size();
+        for (int i = result_size - 1; i >= 0; i--) {
           auto &result_tuple = result.top();
           data_numpy_d[row * k + i] = result_tuple.first;
           data_numpy_l[row * k + i] = result_tuple.second;
@@ -770,9 +771,11 @@ public:
         }
 
         // HOTFIX: fill the rest of the array with worst possible values
-        for (int i = k - 1; i >= result.size(); i--) {
-          data_numpy_d[row * k + i] = data_numpy_d[row * k + result.size() - 1];
-          data_numpy_l[row * k + i] = data_numpy_l[row * k + result.size() - 1];
+        if (result_size < k) {
+          for (int i = result.size(); i < k; i++) {
+            data_numpy_d[row * k + i] = data_numpy_d[row * k + result_size - 1];
+            data_numpy_l[row * k + i] = data_numpy_l[row * k + result_size - 1];
+          }
         }
       });
     }
