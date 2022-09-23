@@ -647,11 +647,8 @@ class AnnLite(CellContainer):
 
     def dump_index(self):
         logger.info(f'Save the indexer to {self.index_path}')
-
         try:
             self.index_path.mkdir(parents=True)
-
-            self.meta_table.dump(self.index_path / 'meta_table.db')
 
             for cell_id in range(self.n_cells):
                 self.vec_index(cell_id).dump(self.index_path / f'cell_{cell_id}.hnsw')
@@ -669,7 +666,6 @@ class AnnLite(CellContainer):
     def _rebuild_index(self):
         if self.snapshot_path:
             logger.info(f'Load the indexer from snapshot {self.snapshot_path}')
-            self.meta_table.load(self.snapshot_path / 'meta_table.db')
             for cell_id in range(self.n_cells):
                 self.vec_index(cell_id).load(
                     self.snapshot_path / f'cell_{cell_id}.hnsw'
