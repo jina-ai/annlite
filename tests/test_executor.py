@@ -42,34 +42,31 @@ def docs_with_tags(N):
     return da
 
 
-@pytest.mark.skip(reason='need to fix dead-lock issue during close')
-def test_index(tmpfile):
-    metas = {'workspace': str(tmpfile)}
+def test_index(tmpdir):
+    metas = {'workspace': str(tmpdir)}
     docs = gen_docs(N)
     f = Flow().add(
         uses=AnnLiteIndexer,
         uses_with={
-            'n_dim': D,
+            'dim': D,
         },
-        workspace=tmpfile,
+        uses_metas=metas,
     )
     with f:
-        result = f.post(on='/index', inputs=docs)
+        result = f.post(on='/index', inputs=docs, return_results=True)
         assert len(result) == N
-        print('indexing')
 
 
-@pytest.mark.skip(reason='need to fix dead-lock issue during close')
-def test_update(tmpfile):
-    metas = {'workspace': str(tmpfile)}
+def test_update(tmpdir):
+    metas = {'workspace': str(tmpdir)}
     docs = gen_docs(N)
     docs_update = gen_docs(Nu)
     f = Flow().add(
         uses=AnnLiteIndexer,
         uses_with={
-            'n_dim': D,
+            'dim': D,
         },
-        workspace=metas['workspace'],
+        uses_metas=metas,
     )
     with f:
         f.post(on='/index', inputs=docs)
@@ -85,17 +82,16 @@ def test_update(tmpfile):
         assert int(status.tags['index_size']) == N
 
 
-@pytest.mark.skip(reason='need to fix dead-lock issue during close')
-def test_search(tmpfile):
-    metas = {'workspace': str(tmpfile)}
+def test_search(tmpdir):
+    metas = {'workspace': str(tmpdir)}
     docs = gen_docs(N)
     docs_query = gen_docs(Nq)
     f = Flow().add(
         uses=AnnLiteIndexer,
         uses_with={
-            'n_dim': D,
+            'dim': D,
         },
-        workspace=metas['workspace'],
+        uses_metas=metas,
     )
     with f:
         f.post(on='/index', inputs=docs)
@@ -112,21 +108,20 @@ def test_search(tmpfile):
             )
 
 
-@pytest.mark.skip(reason='need to fix dead-lock issue during close')
 @pytest.mark.parametrize(
     'columns',
     [[('price', 'float'), ('category', 'str')], {'price': 'float', 'category': 'str'}],
 )
-def test_search_with_filtering(tmpfile, columns):
-    metas = {'workspace': str(tmpfile)}
+def test_search_with_filtering(tmpdir, columns):
+    metas = {'workspace': str(tmpdir)}
 
     docs = docs_with_tags(N)
     docs_query = gen_docs(1)
 
     f = Flow().add(
         uses=AnnLiteIndexer,
-        uses_with={'n_dim': D, 'columns': columns},
-        workspace=metas['workspace'],
+        uses_with={'dim': D, 'columns': columns},
+        uses_metas=metas,
     )
 
     with f:
@@ -142,16 +137,15 @@ def test_search_with_filtering(tmpfile, columns):
         assert all([m.tags['price'] < 50 for m in query_res[0].matches])
 
 
-@pytest.mark.skip(reason='need to fix dead-lock issue during close')
-def test_delete(tmpfile):
-    metas = {'workspace': str(tmpfile)}
+def test_delete(tmpdir):
+    metas = {'workspace': str(tmpdir)}
     docs = gen_docs(N)
     f = Flow().add(
         uses=AnnLiteIndexer,
         uses_with={
-            'n_dim': D,
+            'dim': D,
         },
-        workspace=metas['workspace'],
+        uses_metas=metas,
     )
     with f:
         f.post(on='/index', inputs=docs)
@@ -170,16 +164,15 @@ def test_delete(tmpfile):
         query_res = f.post(on='/search', inputs=docs_query, return_results=True)
 
 
-@pytest.mark.skip(reason='need to fix dead-lock issue during close')
-def test_status(tmpfile):
-    metas = {'workspace': str(tmpfile)}
+def test_status(tmpdir):
+    metas = {'workspace': str(tmpdir)}
     docs = gen_docs(N)
     f = Flow().add(
         uses=AnnLiteIndexer,
         uses_with={
-            'n_dim': D,
+            'dim': D,
         },
-        workspace=metas['workspace'],
+        uses_metas=metas,
     )
     with f:
         f.post(on='/index', inputs=docs)
@@ -189,16 +182,15 @@ def test_status(tmpfile):
         assert int(status.tags['index_size']) == N
 
 
-@pytest.mark.skip(reason='need to fix dead-lock issue during close')
-def test_clear(tmpfile):
-    metas = {'workspace': str(tmpfile)}
+def test_clear(tmpdir):
+    metas = {'workspace': str(tmpdir)}
     docs = gen_docs(N)
     f = Flow().add(
         uses=AnnLiteIndexer,
         uses_with={
-            'n_dim': D,
+            'dim': D,
         },
-        workspace=metas['workspace'],
+        uses_metas=metas,
     )
     with f:
         f.post(on='/index', inputs=docs)

@@ -29,19 +29,19 @@ categorical_operators = {'$eq': operator.eq, '$neq': operator.ne}
 
 
 @pytest.fixture
-def annlite_index(tmpfile):
+def annlite_index(tmpdir):
     Xt = np.random.random((Nt, D)).astype(
         np.float32
     )  # 2,000 128-dim vectors for training
 
-    index = AnnLite(n_dim=D, data_path=tmpfile)
+    index = AnnLite(n_dim=D, data_path=tmpdir / 'annlite_test')
     return index
 
 
 @pytest.fixture
-def annlite_with_data(tmpfile):
+def annlite_with_data(tmpdir):
     columns = [('x', float)]
-    index = AnnLite(n_dim=D, columns=columns, data_path=tmpfile)
+    index = AnnLite(n_dim=D, columns=columns, data_path=tmpdir / 'annlite_test')
 
     X = np.random.random((N, D)).astype(
         np.float32
@@ -58,12 +58,12 @@ def annlite_with_data(tmpfile):
 
 
 @pytest.fixture
-def heterogenenous_da(tmpfile):
+def heterogenenous_da(tmpdir):
     prices = [10.0, 25.0, 50.0, 100.0]
     categories = ['comics', 'movies', 'audiobook']
 
     columns = [('price', float), ('category', str)]
-    index = AnnLite(n_dim=D, columns=columns, data_path=tmpfile)
+    index = AnnLite(n_dim=D, columns=columns, data_path=tmpdir / 'annlite_test')
 
     X = np.random.random((N, D)).astype(
         np.float32
@@ -84,11 +84,10 @@ def heterogenenous_da(tmpfile):
     return da
 
 
-@pytest.fixture
-def annlite_with_heterogeneous_tags(tmpfile, heterogenenous_da):
-    columns = [('price', float), ('category', str)]
+def annlite_with_heterogeneous_tags(tmpdir, heterogenenous_da):
 
-    index = AnnLite(n_dim=D, columns=columns, data_path=tmpfile)
+    columns = [('price', float), ('category', str)]
+    index = AnnLite(n_dim=D, columns=columns, data_path=tmpdir / 'annlite_test')
     index.index(heterogenenous_da)
     return index
 
