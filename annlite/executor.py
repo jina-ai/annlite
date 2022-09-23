@@ -301,15 +301,10 @@ class AnnLiteIndexer(Executor):
 
     def close(self, **kwargs):
         """Close the index."""
-        super().close()
-
         while len(self._data_buffer) > 0:
             time.sleep(0.1)
 
-        # wait for the index thread to finish
         with self._index_lock:
             self._data_buffer = None
             self._index_thread.join()
-
-            # TODO: fix the dead-lock issue
             self._index.close()

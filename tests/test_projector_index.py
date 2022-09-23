@@ -17,8 +17,8 @@ def build_data():
 
 
 @pytest.fixture
-def build_projector_annlite(tmpfile):
-    index = AnnLite(n_dim=n_features, data_path=tmpfile)
+def build_projector_annlite(tmpdir):
+    index = AnnLite(n_dim=n_features, data_path=tmpdir / 'projector_annlite_test')
     return index
 
 

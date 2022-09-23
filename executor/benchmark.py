@@ -16,7 +16,9 @@ times = {}
 
 for n_i in n_index:
     idxer = AnnLiteIndexer(
-        n_dim=D, initial_size=n_i, n_cells=n_cells, data_path='./workspace'
+        n_dim=D,
+        initial_size=n_i,
+        n_cells=n_cells,
     )
 
     # build index docs
