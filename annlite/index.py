@@ -1,8 +1,6 @@
 import hashlib
-import io
 import logging
 import warnings
-from audioop import maxpp
 from pathlib import Path
 from typing import TYPE_CHECKING, Dict, List, Optional, Union
 
