@@ -1,9 +1,11 @@
 import hashlib
 import io
+import pickle
 import warnings
 from pathlib import Path
 from typing import TYPE_CHECKING, Dict, List, Optional, Tuple
 
+import dill
 import hubble
 import numpy as np
 from docarray import Document, DocumentArray
@@ -313,8 +315,11 @@ class CellContainer:
         if upload:
             assert remote_store is not None, 'Login hubble first.'
 
-            # TODO: organize the storage
-            uploader = remote_store.upload_artifact(f=io.BytesIO())
+            for cell_id in unique_cells:
+                table_data = self.cell_table(cell_id).fetchtable.encode(encoding='utf8')
+                remote_store.upload_artifact(f=io.BytesIO(table_data))
+                # TODO: index
+
             logger.debug(f'{len(docs)} new docs stored')
 
     def _add_vecs(self, data: 'np.ndarray', cells: 'np.ndarray', offsets: 'np.ndarray'):

@@ -673,7 +673,9 @@ class AnnLite(CellContainer):
                 self.cell_table(cell_id).load(self.snapshot_path / f'cell_{cell_id}.db')
         elif self.remote_store:
             logger.info(f'Load the indexer from hubstore')
-            # TODO: Load indexer
+            for cell_id in range(self.n_cells):
+                self.cell_table(cell_id).load_from_storage()
+                # TODO: index
         else:
             logger.info(f'Rebuild the indexer from scratch')
             for cell_id in range(self.n_cells):

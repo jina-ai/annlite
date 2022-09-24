@@ -1,9 +1,11 @@
 import datetime
+import io
 import sqlite3
 import threading
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, List, Optional, Tuple, Union
 
+import hubble
 import numpy as np
 
 if TYPE_CHECKING:
@@ -153,6 +155,14 @@ class Table:
             result.append(', '.join([str(_) for _ in row]))
         return '\n'.join(result)
 
+    @property
+    def fetchtable(self):
+        """Fetch all data of SQL database"""
+        result = []
+        for row in self._conn.execute(f'select * from {self.name}').fetchall():
+            result.append(', '.join([str(_) for _ in row]))
+        return '\n'.join(result)
+
 
 class CellTable(Table):
     def __init__(
@@ -214,7 +224,7 @@ class CellTable(Table):
 
     def insert(
         self,
-        docs: 'DocumentArray',
+        docs: Union['DocumentArray', List[str]],
         commit: bool = True,
     ) -> List[int]:
         """Add a single record into the table.
@@ -233,16 +243,26 @@ class CellTable(Table):
 
         values = []
         docs_size = 0
-        for doc in docs:
-            doc_value = tuple(
-                [doc.id]
-                + [
-                    _converting(doc.tags[c]) if c in doc.tags else None
-                    for c in self.columns[2:]
-                ]
-            )
-            values.append(doc_value)
-            docs_size += 1
+        if isinstance(docs, list):
+            for doc in docs:
+                doc = doc.split(',')
+                # TODO: bool value
+                doc_value = tuple(
+                    [int(doc[1])] + [c if c != 'None' else None for c in doc[3:]]
+                )
+                values.append(doc_value)
+                docs_size += 1
+        else:
+            for doc in docs:
+                doc_value = tuple(
+                    [doc.id]
+                    + [
+                        _converting(doc.tags[c]) if c in doc.tags else None
+                        for c in self.columns[2:]
+                    ]
+                )
+                values.append(doc_value)
+                docs_size += 1
 
         with self._conn_lock:
             cursor = self._conn.cursor()
@@ -257,6 +277,16 @@ class CellTable(Table):
                 self._conn.commit()
 
         return row_ids
+
+    def load_from_storage(self):
+        remote_store = hubble.Client(max_retries=None, jsonify=True)
+        id_list = remote_store.list_artifacts()['data']
+        table_data = (
+            remote_store.download_artifact(id=id_list[0]['_id'], f=io.BytesIO())
+            .getvalue()
+            .decode(encoding='utf8')
+        )
+        self.insert(table_data.split('\n'))
 
     def query(
         self,
