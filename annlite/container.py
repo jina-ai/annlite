@@ -1,4 +1,5 @@
 import io
+import pickle
 import warnings
 from pathlib import Path
 from typing import TYPE_CHECKING, Dict, List, Optional, Tuple
@@ -315,9 +316,27 @@ class CellContainer:
             for cell_id in unique_cells:
                 table_data = self.cell_table(cell_id).fetchtable.encode(encoding='utf8')
                 remote_store.upload_artifact(f=io.BytesIO(table_data))
-                # TODO: index
+                index = pickle.dumps(self.vec_index(cell_id))
+                remote_store.upload_artifact(f=io.BytesIO(index))
 
             logger.debug(f'{len(docs)} new docs stored')
+
+    def load_from_storage(self, cell_id: int):
+        remote_store = hubble.Client(max_retries=None, jsonify=True)
+        id_list = remote_store.list_artifacts()['data']
+
+        assert len(id_list) > 0, 'No stored content found.'
+        table_data = (
+            remote_store.download_artifact(id=id_list[0]['_id'], f=io.BytesIO())
+            .getvalue()
+            .decode(encoding='utf8')
+        )
+        index_data = remote_store.download_artifact(
+            id=id_list[1]['_id'], f=io.BytesIO()
+        ).getvalue()
+        # TODO: support more than 1
+        self._cell_tables[cell_id].insert(table_data.split('\n'))
+        self._vec_indexes[cell_id] = pickle.loads(index_data)
 
     def _add_vecs(self, data: 'np.ndarray', cells: 'np.ndarray', offsets: 'np.ndarray'):
         assert data.shape[0] == cells.shape[0]

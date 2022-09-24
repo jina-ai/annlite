@@ -278,16 +278,6 @@ class CellTable(Table):
 
         return row_ids
 
-    def load_from_storage(self):
-        remote_store = hubble.Client(max_retries=None, jsonify=True)
-        id_list = remote_store.list_artifacts()['data']
-        table_data = (
-            remote_store.download_artifact(id=id_list[0]['_id'], f=io.BytesIO())
-            .getvalue()
-            .decode(encoding='utf8')
-        )
-        self.insert(table_data.split('\n'))
-
     def query(
         self,
         where_clause: str = '',

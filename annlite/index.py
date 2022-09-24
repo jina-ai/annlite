@@ -672,8 +672,7 @@ class AnnLite(CellContainer):
         elif self.remote_store:
             logger.info(f'Load the indexer from hubstore')
             for cell_id in range(self.n_cells):
-                self.cell_table(cell_id).load_from_storage()
-                # TODO: index
+                super(AnnLite, self).load_from_storage(cell_id)
         else:
             logger.info(f'Rebuild the indexer from scratch')
             for cell_id in range(self.n_cells):
