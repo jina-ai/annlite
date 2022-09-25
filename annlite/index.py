@@ -288,9 +288,7 @@ class AnnLite(CellContainer):
             if self.vq_codec
             else np.zeros(n_data, dtype=np.int64)
         )
-        return super(AnnLite, self).insert(
-            x, assigned_cells, docs, upload, self.remote_store
-        )
+        return super(AnnLite, self).insert(x, assigned_cells, docs, upload)
 
     def update(
         self,
@@ -675,7 +673,7 @@ class AnnLite(CellContainer):
         elif self.remote_store:
             logger.info(f'Load the indexer from hubstore')
             for cell_id in range(self.n_cells):
-                super(AnnLite, self).load_from_storage(cell_id)
+                super(AnnLite, self)._load_from_storage(cell_id)
         else:
             logger.info(f'Rebuild the indexer from scratch')
             for cell_id in range(self.n_cells):
