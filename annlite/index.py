@@ -628,10 +628,13 @@ class AnnLite(CellContainer):
     @property
     def remote_store(self):
         client = hubble.Client(max_retries=None, jsonify=None)
-        user = client.get_user_info()
-        if user:
+        try:
+            client.get_user_info()
             return client
-        return None
+        except hubble.excepts.AuthenticationRequiredError:
+            print('Please login first.')
+        except Exception:
+            print('Unknown error')
 
     def dump_model(self):
         logger.info(f'Save the parameters to {self.model_path}')

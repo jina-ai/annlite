@@ -311,8 +311,6 @@ class CellContainer:
         logger.debug(f'{len(docs)} new docs added')
 
         if upload:
-            assert remote_store is not None, 'Login hubble first.'
-
             for cell_id in unique_cells:
                 table_data = self.cell_table(cell_id).fetchtable.encode(encoding='utf8')
                 remote_store.upload_artifact(f=io.BytesIO(table_data))
