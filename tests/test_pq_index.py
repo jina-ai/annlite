@@ -22,10 +22,10 @@ def random_docs():
     return docs
 
 
-def test_hnsw_pq_load_empty(tmpdir, random_docs):
+def test_hnsw_pq_load_empty(tmpfile, random_docs):
     pq_index = AnnLite(
         D,
-        data_path=tmpdir / 'annlite_pq_test',
+        data_path=tmpfile,
         n_subvectors=8,
     )
 
@@ -38,10 +38,10 @@ def test_hnsw_pq_load_empty(tmpdir, random_docs):
         pq_index.search(random_docs)
 
 
-def test_hnsw_pq_load(tmpdir, random_docs):
+def test_hnsw_pq_load(tmpfile, random_docs):
     pq_index = AnnLite(
         D,
-        data_path=tmpdir / 'annlite_pq_test',
+        data_path=tmpfile,
         n_subvectors=8,
     )
     pq_index.train(random_docs.embeddings)
@@ -51,12 +51,12 @@ def test_hnsw_pq_load(tmpdir, random_docs):
 
 
 @pytest.mark.parametrize('n_clusters', [256, 512, 768])
-def test_hnsw_pq_search_multi_clusters(n_clusters, tmpdir, random_docs):
+def test_hnsw_pq_search_multi_clusters(tmpdir, n_clusters, random_docs):
     total_test = 10
     topk = 50
 
     X = random_docs.embeddings
-    no_pq_index = AnnLite(D, data_path=tmpdir / 'annlite_test')
+    no_pq_index = AnnLite(D, data_path=tmpdir / 'no_pq_index')
 
     query = DocumentArray([Document(embedding=X[i]) for i in range(total_test)])
     test_query = DocumentArray([Document(embedding=X[i]) for i in range(total_test)])
@@ -64,9 +64,11 @@ def test_hnsw_pq_search_multi_clusters(n_clusters, tmpdir, random_docs):
     no_pq_index.index(random_docs)
     no_pq_index.search(query, limit=topk)
 
+    no_pq_index.close()
+
     pq_index = AnnLite(
         D,
-        data_path=tmpdir / f'annlite_pq_test',
+        data_path=tmpdir / 'pq_index',
         n_subvectors=8,
         n_clusters=n_clusters,
     )

@@ -12,9 +12,9 @@ D = 128
 
 
 @pytest.fixture
-def annlite_with_data(tmpdir):
+def annlite_with_data(tmpfile):
     columns = [('x', float)]
-    index = AnnLite(n_dim=D, columns=columns, data_path=tmpdir / 'annlite_test')
+    index = AnnLite(n_dim=D, columns=columns, data_path=tmpfile)
 
     X = np.random.random((N, D)).astype(np.float32)
 

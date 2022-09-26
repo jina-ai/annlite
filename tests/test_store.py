@@ -3,8 +3,8 @@ import pytest
 from annlite.storage.kv import DocStorage
 
 
-def test_get(tmpdir, docs):
-    storage = DocStorage(tmpdir + 'test_doc_store')
+def test_get(tmpfile, docs):
+    storage = DocStorage(tmpfile)
 
     storage.insert(docs)
 
@@ -16,8 +16,8 @@ def test_get(tmpdir, docs):
     assert len(docs) == 0
 
 
-def test_update(tmpdir, docs, update_docs):
-    storage = DocStorage(tmpdir + 'test_doc_store')
+def test_update(tmpfile, docs, update_docs):
+    storage = DocStorage(tmpfile)
     storage.insert(docs)
 
     storage.update(update_docs)
@@ -26,16 +26,16 @@ def test_update(tmpdir, docs, update_docs):
     assert (doc.embedding == [0, 0, 0, 1]).all()
 
 
-def test_delete(tmpdir, docs):
-    storage = DocStorage(tmpdir + 'test_doc_store')
+def test_delete(tmpfile, docs):
+    storage = DocStorage(tmpfile)
     storage.insert(docs)
     storage.delete(['doc1'])
     docs = storage.get('doc1')
     assert len(docs) == 0
 
 
-def test_clear(tmpdir, docs):
-    storage = DocStorage(tmpdir + 'test_doc_store')
+def test_clear(tmpfile, docs):
+    storage = DocStorage(tmpfile)
     storage.insert(docs)
 
     assert storage.size == 6
@@ -43,18 +43,16 @@ def test_clear(tmpdir, docs):
     assert storage.size == 0
 
 
-def test_batched_iterator(tmpdir, docs):
-    storage = DocStorage(tmpdir + 'test_doc_store')
+def test_batched_iterator(tmpfile, docs):
+    storage = DocStorage(tmpfile)
     storage.insert(docs)
     for docs in storage.batched_iterator(batch_size=3):
         assert len(docs) == 3
 
 
 @pytest.mark.parametrize('protocol', ['pickle', 'protobuf'])
-def test_searalize(protocol, tmpdir, docs):
-    storage = DocStorage(
-        tmpdir + 'test_doc_store', serialize_config={'protocol': protocol}
-    )
+def test_searalize(tmpfile, protocol, docs):
+    storage = DocStorage(tmpfile, serialize_config={'protocol': protocol})
     storage.insert(docs)
 
     doc = storage.get('doc1')[0]
