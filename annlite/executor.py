@@ -63,7 +63,7 @@ class AnnLiteIndexer(Executor):
         self.match_args = match_args or {}
         self.include_metadata = include_metadata
         if limit:
-            self.match_args.update('limit', limit)
+            self.match_args.update({'limit': limit})
 
         self.index_access_paths = index_access_paths
         if 'index_traversal_paths' in kwargs:
