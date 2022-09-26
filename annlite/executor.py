@@ -10,6 +10,8 @@ from docarray import Document, DocumentArray
 from jina import Executor, requests
 from jina.logging.logger import JinaLogger
 
+INDEX_BATCH_SIZE = 1024
+
 
 class AnnLiteIndexer(Executor):
     """A simple indexer that wraps the AnnLite indexer and adds a simple interface for indexing and searching.
@@ -80,11 +82,14 @@ class AnnLiteIndexer(Executor):
             self.search_access_paths = kwargs['search_traversal_paths']
 
         self._data_buffer = DocumentArray()
-        self._index_batch_size = 1024
+        self._index_batch_size = INDEX_BATCH_SIZE
         self._max_length_queue = 2 * self._index_batch_size
         self._index_lock = threading.Lock()
 
         self.logger = JinaLogger(getattr(self.metas, 'name', self.__class__.__name__))
+
+        if self.runtime_args.shards > 1 and data_path:
+            raise ValueError(f'`data_path` is not supported in shards mode')
 
         config = {
             'n_dim': n_dim,
@@ -296,7 +301,13 @@ class AnnLiteIndexer(Executor):
         documents, and on the number of (searchable) documents currently in the index.
         """
 
-        status = Document(tags={'appending_size': len(self._data_buffer)})
+        status = Document(
+            tags={
+                'appending_size': len(self._data_buffer),
+                'total_docs': len(self._index),
+                'index_size': len(self._index),
+            }
+        )
         return DocumentArray([status])
 
     @requests(on='/clear')
@@ -318,5 +329,4 @@ class AnnLiteIndexer(Executor):
             self._data_buffer = None
             self._index_thread.join()
 
-            # TODO: fix the dead-lock issue
-            self._index.close()
+            del self._index
