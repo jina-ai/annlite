@@ -326,3 +326,7 @@ class AnnLiteIndexer(Executor):
         with self._index_lock:
             self._data_buffer = None
             self._index_thread.join()
+
+            # WARNING: the commented code below hangs the close in pytest `pytest tests/test_*.py`
+            # But don't know why. It works fine in `pytest tests/test_executor.py` and normal python execution
+            # del self._index
