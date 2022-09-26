@@ -2,6 +2,7 @@ import threading
 import time
 import traceback
 import warnings
+from nis import match
 from threading import Thread
 from typing import Dict, List, Optional, Tuple, Union
 
@@ -16,6 +17,7 @@ class AnnLiteIndexer(Executor):
     :param n_dim: Dimensionality of vectors to index
     :param metric: Distance metric type. Can be 'euclidean', 'inner_product', or 'cosine'
     :param limit: Number of results to get for each query document in search
+    :param match_args: the arguments to `DocumentArray`'s match function
     :param data_path: the workspace of the AnnLiteIndexer.
     :param ef_construction: The construction time/accuracy trade-off
     :param ef_search: The query time accuracy/speed trade-off
@@ -35,6 +37,7 @@ class AnnLiteIndexer(Executor):
         n_dim: int = 0,
         metric: str = 'cosine',
         limit: int = 10,
+        match_args: Optional[Dict] = None,
         data_path: Optional[str] = None,
         ef_construction: Optional[int] = None,
         ef_search: Optional[int] = None,
@@ -56,8 +59,11 @@ class AnnLiteIndexer(Executor):
             raise ValueError('Please specify the dimension of the vectors to index!')
 
         self.metric = metric
-        self.limit = limit
+        self.match_args = match_args
         self.include_metadata = include_metadata
+        self.limit = limit
+        if 'limit' in self.match_args:
+            self.limit = self.match_args.get('limit')
 
         self.index_access_paths = index_access_paths
         if 'index_traversal_paths' in kwargs:
@@ -245,10 +251,13 @@ class AnnLiteIndexer(Executor):
         if not docs:
             return
 
-        limit = int(parameters.get('limit', self.limit))
-        search_filter = parameters.get('filter', None)
         access_paths = parameters.get('access_paths', self.search_access_paths)
         flat_docs = docs[access_paths]
+        match_args = (
+            {**self.match_args, **parameters}
+            if parameters is not None
+            else self.match_args
+        )
 
         with self._index_lock:
             if len(self._data_buffer) > 0:
@@ -257,7 +266,7 @@ class AnnLiteIndexer(Executor):
                     'Please wait for the pending documents to be indexed.'
                 )
 
-            flat_docs.match(self._index, filter=search_filter, limit=limit)
+            flat_docs.match(self._index, limit=self.limit, **match_args)
 
     @requests(on='/filter')
     def filter(self, parameters: Dict, **kwargs):
