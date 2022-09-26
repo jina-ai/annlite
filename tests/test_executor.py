@@ -147,7 +147,7 @@ def test_delete(tmpfile):
         assert int(status.tags['total_docs']) == N
         assert int(status.tags['index_size']) == N
 
-        f.post(on='/delete', inputs=docs[:5])
+        f.post(on='/delete', parameters={'ids': [d.id for d in docs[:5]]})
         status = f.post(on='/status', return_results=True)[0]
         assert int(status.tags['total_docs']) == N - 5
         assert int(status.tags['index_size']) == N - 5
