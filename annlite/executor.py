@@ -62,9 +62,8 @@ class AnnLiteIndexer(Executor):
         self.metric = metric
         self.match_args = match_args or {}
         self.include_metadata = include_metadata
-        self.limit = limit
-        if self.match_args is not None and 'limit' in self.match_args:
-            self.limit = self.match_args.get('limit')
+        if limit:
+            self.match_args.update('limit', limit)
 
         self.index_access_paths = index_access_paths
         if 'index_traversal_paths' in kwargs:
@@ -270,8 +269,7 @@ class AnnLiteIndexer(Executor):
                     'Please wait for the pending documents to be indexed.'
                 )
 
-            # flat_docs.match(self._index, limit=self.limit, **match_args)
-            flat_docs.match(self._index, filter=None, limit=None)
+            flat_docs.match(self._index, **match_args)
 
     @requests(on='/filter')
     def filter(self, parameters: Dict, **kwargs):
