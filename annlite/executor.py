@@ -15,8 +15,8 @@ class AnnLiteIndexer(Executor):
 
     :param n_dim: Dimensionality of vectors to index
     :param metric: Distance metric type. Can be 'euclidean', 'inner_product', or 'cosine'
+    :param limit: Number of results to get for each query document in search
     :param data_path: the workspace of the AnnLiteIndexer.
-    :param match_args: the arguments to `DocumentArray`'s match functiion
     :param ef_construction: The construction time/accuracy trade-off
     :param ef_search: The query time accuracy/speed trade-off
     :param max_connection: The maximum number of outgoing connections in the
@@ -34,8 +34,8 @@ class AnnLiteIndexer(Executor):
         self,
         n_dim: int = 0,
         metric: str = 'cosine',
+        limit: int = 10,
         data_path: Optional[str] = None,
-        match_args: Optional[Dict] = None,
         ef_construction: Optional[int] = None,
         ef_search: Optional[int] = None,
         max_connection: Optional[int] = None,
@@ -56,7 +56,7 @@ class AnnLiteIndexer(Executor):
             raise ValueError('Please specify the dimension of the vectors to index!')
 
         self.metric = metric
-        self.match_args = match_args or {}
+        self.limit = limit
         self.include_metadata = include_metadata
 
         self.index_access_paths = index_access_paths
@@ -245,13 +245,10 @@ class AnnLiteIndexer(Executor):
         if not docs:
             return
 
+        limit = int(parameters.get('limit', self.limit))
+        search_filter = parameters.get('filter', None)
         access_paths = parameters.get('access_paths', self.search_access_paths)
         flat_docs = docs[access_paths]
-        match_args = (
-            {**self.match_args, **parameters}
-            if parameters is not None
-            else self.match_args
-        )
 
         with self._index_lock:
             if len(self._data_buffer) > 0:
@@ -260,7 +257,7 @@ class AnnLiteIndexer(Executor):
                     'Please wait for the pending documents to be indexed.'
                 )
 
-            flat_docs.match(self._index, **match_args)
+            flat_docs.match(self._index, filter=search_filter, limit=limit)
 
     @requests(on='/filter')
     def filter(self, parameters: Dict, **kwargs):

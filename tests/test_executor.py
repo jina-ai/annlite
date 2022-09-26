@@ -130,34 +130,6 @@ def test_search_with_filtering(tmpfile, columns):
         assert all([m.tags['price'] < 50 for m in query_res[0].matches])
 
 
-@pytest.mark.parametrize(
-    'columns',
-    [[('price', 'float'), ('category', 'str')], {'price': 'float', 'category': 'str'}],
-)
-def test_search_with_match_args(tmpfile, columns):
-    docs = docs_with_tags(N)
-    docs_query = gen_docs(1)
-
-    f = Flow().add(
-        uses=AnnLiteIndexer,
-        uses_with={'dim': D, 'columns': columns},
-        match_args={'filter': {'price': {'$lt': 50.0}}, 'limit': 10},
-        workspace=tmpfile,
-    )
-
-    with f:
-        f.post(on='/index', inputs=docs)
-        time.sleep(2)
-
-        query_res = f.post(
-            on='/search',
-            inputs=docs_query,
-            return_results=True,
-            parameters={'include_metadata': True},
-        )
-        assert all([m.tags['price'] < 50 for m in query_res[0].matches])
-
-
 def test_delete(tmpfile):
     docs = gen_docs(N)
     f = Flow().add(
