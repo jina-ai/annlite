@@ -314,8 +314,11 @@ class PQCodec(BaseCodec):
                 x, self.d_subvector, self.n_clusters, self.codebooks
             )
         elif self.metric in [Metric.INNER_PRODUCT, Metric.COSINE]:
-            dist_mat = 1 / self.n_clusters - pq_bind.batch_precompute_adc_table_ip(
-                x, self.d_subvector, self.n_clusters, self.codebooks
+            dist_mat = 1 / self.n_clusters - np.array(
+                pq_bind.batch_precompute_adc_table_ip(
+                    x, self.d_subvector, self.n_clusters, self.codebooks
+                ),
+                dtype='float32',
             )
         else:
             raise ArgumentError(f'Unable support metrics {self.metric}')
