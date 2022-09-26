@@ -36,12 +36,12 @@ def pre_process(f):
             elif not self._set_backend_pq:
                 self._index.loadPQ(self.pq_codec)
                 self._set_backend_pq = True
-            dtables = self.pq_codec.get_dist_mat(x)
+            kwargs['pre_process_dtables'] = self.pq_codec.get_dist_mat(x)
             x = self.pq_codec.encode(x)
 
-            assert dtables.dtype == 'float32'
-            assert dtables.flags['C_CONTIGUOUS']
-            return f(self, x, *args, **kwargs, pre_process_dtables=dtables)
+            assert kwargs['pre_process_dtables'].dtype == 'float32'
+            assert kwargs['pre_process_dtables'].flags['C_CONTIGUOUS']
+            return f(self, x, *args, **kwargs)
         else:
             return f(self, x, *args, **kwargs)
 
