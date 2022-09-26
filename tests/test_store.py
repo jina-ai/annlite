@@ -42,13 +42,6 @@ def test_clear(tmpfile, docs):
     storage.clear()
     assert storage.size == 0
 
-    storage.insert(docs)
-    assert storage.size == 6
-
-    storage.close()
-    storage = DocStorage(tmpfile)
-    assert storage.size == 6
-
 
 def test_batched_iterator(tmpfile, docs):
     storage = DocStorage(tmpfile)
@@ -58,7 +51,7 @@ def test_batched_iterator(tmpfile, docs):
 
 
 @pytest.mark.parametrize('protocol', ['pickle', 'protobuf'])
-def test_searalize(protocol, tmpfile, docs):
+def test_searalize(tmpfile, protocol, docs):
     storage = DocStorage(tmpfile, serialize_config={'protocol': protocol})
     storage.insert(docs)
 

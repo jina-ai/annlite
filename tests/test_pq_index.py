@@ -77,10 +77,10 @@ def test_hnsw_pq_load(tmpfile, random_docs):
     assert all([x._index.pq_enable for x in pq_index._vec_indexes])
 
 
-@pytest.mark.parametrize('n_clusters', [256])
-def test_hnsw_pq_search_multi_clusters(n_clusters, tmpfile, random_docs):
-    total_test = 100
-    topk = 10
+@pytest.mark.parametrize('n_clusters', [256, 512, 768])
+def test_hnsw_pq_search_multi_clusters(tmpdir, n_clusters, random_docs):
+    total_test = 10
+    topk = 50
 
     X = random_docs.embeddings
     N, Dim = X.shape
@@ -91,7 +91,7 @@ def test_hnsw_pq_search_multi_clusters(n_clusters, tmpfile, random_docs):
     test_query = DocumentArray([Document(embedding=X[i]) for i in range(total_test)])
 
     # HNSW search with float----------------------------------
-    no_pq_index = AnnLite(D, data_path=tmpfile + '_no_pq', metric='EUCLIDEAN')
+    no_pq_index = AnnLite(D, data_path=tmpdir / 'no_pq_index', metric='EUCLIDEAN')
 
     hnsw_s = time()
     no_pq_index.index(random_docs)
@@ -101,12 +101,11 @@ def test_hnsw_pq_search_multi_clusters(n_clusters, tmpfile, random_docs):
     no_pq_index.search(query, limit=topk)
     hnsw_d = time() - hnsw_s
     print(hnsw_d)
-    # ----------------------------------
-
+    no_pq_index.close()
     # HNSW search with quantization---------------------------
     pq_index = AnnLite(
         D,
-        data_path=tmpfile + '_pq',
+        data_path=tmpdir / 'pq_index',
         n_subvectors=8,
         n_clusters=n_clusters,
         metric='EUCLIDEAN',

@@ -110,7 +110,7 @@ def test_error_filter():
 @pytest.mark.parametrize(
     'columns', [[('x', float)], [('x', 'float')], {'x': 'float'}, {'x': float}]
 )
-def test_filter_with_columns(columns, tmpfile):
+def test_filter_with_columns(tmpfile, columns):
     N = 100
     D = 2
     limit = 3
@@ -135,7 +135,7 @@ def test_filter_with_columns(columns, tmpfile):
 
 
 @pytest.mark.parametrize('filterable_attrs', [{'x': 'float'}, {'x': float}])
-def test_filter_with_dict(filterable_attrs, tmpfile):
+def test_filter_with_dict(tmpfile, filterable_attrs):
     N = 100
     D = 2
     limit = 3
@@ -168,7 +168,7 @@ def test_filter_with_dict(filterable_attrs, tmpfile):
 @pytest.mark.parametrize('offset', [1, 5])
 @pytest.mark.parametrize('order_by', ['x', 'y'])
 @pytest.mark.parametrize('ascending', [True, False])
-def test_filter_with_limit_offset(limit, offset, order_by, ascending, tmpfile):
+def test_filter_with_limit_offset(tmpfile, limit, offset, order_by, ascending):
     N = 100
     D = 2
 

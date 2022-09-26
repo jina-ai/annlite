@@ -62,7 +62,6 @@ class CellContainer:
             DocStorage(
                 data_path / f'cell_{_}',
                 serialize_config=serialize_config or {},
-                create_if_missing=True,
                 lock=True,
             )
             for _ in range(n_cells)
@@ -84,7 +83,7 @@ class CellContainer:
             CellTable(f'table_{c}', columns=columns) for c in range(n_cells)
         ]
 
-        self._meta_table = MetaTable('metas', data_path=data_path, in_memory=True)
+        self._meta_table = MetaTable('metas', data_path=data_path, in_memory=False)
 
     def ivf_search(
         self,
@@ -277,25 +276,20 @@ class CellContainer:
         if len(unique_cells) == 1:
             cell_id = unique_cells[0]
 
-            if not only_index:
-                self.doc_store(cell_id).insert(docs)
-
             offsets = self.cell_table(cell_id).insert(docs)
             offsets = np.array(offsets, dtype=np.int64)
 
             self.vec_index(cell_id).add_with_ids(data, offsets)
 
-            self._meta_table.bulk_add_address([d.id for d in docs], cells, offsets)
-
+            if not only_index:
+                self.doc_store(cell_id).insert(docs)
+                self._meta_table.bulk_add_address([d.id for d in docs], cells, offsets)
         else:
             for cell_id, cell_count in zip(unique_cells, unique_cell_counts):
                 # TODO: Jina should allow boolean filtering in docarray to avoid this
                 # and simply use cells == cell_index
                 indices = np.where(cells == cell_id)[0]
                 cell_docs = docs[indices.tolist()]
-
-                if not only_index:
-                    self.doc_store(cell_id).insert(cell_docs)
 
                 cell_offsets = self.cell_table(cell_id).insert(cell_docs)
                 cell_offsets = np.array(cell_offsets, dtype=np.int64)
@@ -304,9 +298,11 @@ class CellContainer:
 
                 self.vec_index(cell_id).add_with_ids(cell_data, cell_offsets)
 
-                self._meta_table.bulk_add_address(
-                    [d.id for d in cell_docs], [cell_id] * cell_count, cell_offsets
-                )
+                if not only_index:
+                    self.doc_store(cell_id).insert(cell_docs)
+                    self._meta_table.bulk_add_address(
+                        [d.id for d in cell_docs], [cell_id] * cell_count, cell_offsets
+                    )
 
         logger.debug(f'{len(docs)} new docs added')
 

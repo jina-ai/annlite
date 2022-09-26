@@ -13,6 +13,7 @@
 
 
 
+
 <a name=release-note-0-3-0></a>
 ## Release Note (`0.3.0`)
 
@@ -318,4 +319,33 @@
  - [[```6902a8b1```](https://github.com/jina-ai/docarray/commit/6902a8b15763e73fd1cd90827ccfdc758f2fce32)] __-__ add description about hnsw parameters (#169) (*felix-wang*)
  - [[```aec2d605```](https://github.com/jina-ai/docarray/commit/aec2d605d43394638168282c78e13f7f2150200a)] __-__ update readme (*numb3r3*)
  - [[```95541bad```](https://github.com/jina-ai/docarray/commit/95541bad119dd2bb03e9894f32f57578cd3d8a7a)] __-__ __version__: the next version will be 0.3.12 (*Jina Dev Bot*)
+
+<a name=release-note-0-3-13></a>
+## Release Note (`0.3.13`)
+
+> Release time: 2022-09-26 02:04:59
+
+
+
+🙇 We'd like to thank all contributors for this new release! In particular,
+ felix-wang,  Jie Fu,  numb3r3,  Jina Dev Bot,  🙇
+
+
+### 🆕 New Features
+
+ - [[```f98a8336```](https://github.com/jina-ai/docarray/commit/f98a83368e9fc81d82abb2be9c8a6569ee45e177)] __-__ change sqlite in_memory to false (#173) (*Jie Fu*)
+
+### 🐞 Bug fixes
+
+ - [[```b5f8694f```](https://github.com/jina-ai/docarray/commit/b5f8694fb5c33af15cc9b4a140a0165bf3aa01f4)] __-__ __hnswlib__: cannot find sufficient data with filtering (#176) (*felix-wang*)
+ - [[```0aa07863```](https://github.com/jina-ai/docarray/commit/0aa078633d7b6b850a3ea0ffe651dbad06240cc0)] __-__ __ci__: unittest (#175) (*felix-wang*)
+
+### 🧼 Code Refactoring
+
+ - [[```896c5006```](https://github.com/jina-ai/docarray/commit/896c5006a6cac5f6b144bcb452ec5b2169ca4c88)] __-__ use rockdb as the storage backend (#171) (*felix-wang*)
+
+### 🍹 Other Improvements
+
+ - [[```66257b41```](https://github.com/jina-ai/docarray/commit/66257b4147836a8e8b7c17dd12537143509e78a2)] __-__ Revert &#34;refactor: use rockdb as the storage backend (#171)&#34; (*numb3r3*)
+ - [[```e56aae75```](https://github.com/jina-ai/docarray/commit/e56aae757e65e5f8294a15b6ba998e00bda97e1a)] __-__ __version__: the next version will be 0.3.13 (*Jina Dev Bot*)
 
