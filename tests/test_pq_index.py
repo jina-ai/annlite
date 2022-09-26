@@ -1,3 +1,5 @@
+from time import time
+
 import numpy as np
 import pytest
 from docarray import Document, DocumentArray
@@ -6,7 +8,7 @@ from loguru import logger
 from annlite import AnnLite, pq_bind
 from annlite.core.codec.pq import PQCodec
 from annlite.core.index.pq_index import PQIndex
-from annlite.math import cosine, l2_normalize
+from annlite.math import euclidean, l2_normalize
 
 N = 1000  # number of data points
 Nq = 5
@@ -75,24 +77,30 @@ def test_hnsw_pq_load(tmpfile, random_docs):
     assert all([x._index.pq_enable for x in pq_index._vec_indexes])
 
 
-@pytest.mark.parametrize('n_clusters', [256, 512, 768])
+@pytest.mark.parametrize('n_clusters', [256])
 def test_hnsw_pq_search_multi_clusters(n_clusters, tmpfile, random_docs):
     total_test = 100
     topk = 10
 
     X = random_docs.embeddings
     N, Dim = X.shape
-    computed_dist = cosine(X, X)
+    computed_dist = euclidean(X, X)
     computed_labels = np.argsort(computed_dist, axis=1)[:, :topk]
 
     query = DocumentArray([Document(embedding=X[i]) for i in range(total_test)])
     test_query = DocumentArray([Document(embedding=X[i]) for i in range(total_test)])
 
     # HNSW search with float----------------------------------
-    no_pq_index = AnnLite(D, data_path=tmpfile + '_no_pq')
+    no_pq_index = AnnLite(D, data_path=tmpfile + '_no_pq', metric='EUCLIDEAN')
 
+    hnsw_s = time()
     no_pq_index.index(random_docs)
+    hnsw_d = time() - hnsw_s
+    print('Index time', hnsw_d)
+    hnsw_s = time()
     no_pq_index.search(query, limit=topk)
+    hnsw_d = time() - hnsw_s
+    print(hnsw_d)
     # ----------------------------------
 
     # HNSW search with quantization---------------------------
@@ -101,26 +109,34 @@ def test_hnsw_pq_search_multi_clusters(n_clusters, tmpfile, random_docs):
         data_path=tmpfile + '_pq',
         n_subvectors=8,
         n_clusters=n_clusters,
+        metric='EUCLIDEAN',
     )
     pq_index.train(X)
+    hnsw_pq_s = time()
     pq_index.index(random_docs)
+    hnsw_pq_d = time() - hnsw_pq_s
+    print('Index time', hnsw_pq_d)
+
+    hnsw_pq_s = time()
     pq_index.search(test_query, limit=topk)
+    hnsw_pq_d = time() - hnsw_pq_s
     # ----------------------------------
 
     # PQ linear search----------------------------------
     _pq_codec = pq_index.pq_codec
     ids = np.array([int(doc.id) for doc in random_docs])
-    norm_x = l2_normalize(X)
     linear_pq_index = PQIndex(Dim, _pq_codec)
-    linear_pq_index.add_with_ids(norm_x, ids)
+    linear_pq_index.add_with_ids(X, ids)
 
-    search_x = l2_normalize(test_query.embeddings)
+    search_x = test_query.embeddings
     pq_dists = []
     linear_results = []
+    pq_s = time()
     for i in range(total_test):
         pq_dist, linear_result = linear_pq_index.search(search_x[i], limit=topk)
         pq_dists.append(pq_dist)
         linear_results.append(linear_result)
+    pq_d = time() - pq_s
     # ----------------------------------
 
     precision = []
@@ -135,8 +151,14 @@ def test_hnsw_pq_search_multi_clusters(n_clusters, tmpfile, random_docs):
         pq_precision.append(len(real_ground_truth & linear_pq_result) / topk)
         precision.append(len(real_ground_truth & pq_result) / topk)
     logger.info(f'Total test {total_test}')
-    logger.info(f'PQ backend top-{topk} precision: {np.mean(pq_precision)}')
-    logger.info(f'HNSW backend top-{topk} precision: {np.mean(original_precision)}')
-    logger.info(f'HNSW PQ backend top-{topk} precision: {np.mean(precision)}')
+    logger.info(
+        f'PQ backend top-{topk} precision: {np.mean(pq_precision)}, time {pq_d}'
+    )
+    logger.info(
+        f'HNSW backend top-{topk} precision: {np.mean(original_precision)}, time {hnsw_d}'
+    )
+    logger.info(
+        f'HNSW PQ backend top-{topk} precision: {np.mean(precision)}, time {hnsw_pq_d}'
+    )
     # TODO: fix the precision issue
     # assert np.mean(precision) > 0.9
