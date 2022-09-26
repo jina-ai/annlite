@@ -32,6 +32,6 @@ def test_save_and_load(tmpdir, build_hnsw):
     assert hnsw_.size == hnsw.size
 
 
-def test_loading_from_wrong_path(tmpdir):
+def test_loading_from_wrong_path(tmpfile):
     with pytest.raises(FileNotFoundError):
-        HnswIndex(dim=n_features, index_file=os.path.join(tmpdir, 'hnsw_wrong.pkl'))
+        HnswIndex(dim=n_features, index_file=os.path.join(tmpfile, 'hnsw_wrong.pkl'))

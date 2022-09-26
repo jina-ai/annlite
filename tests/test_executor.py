@@ -42,31 +42,29 @@ def docs_with_tags(N):
     return da
 
 
-def test_index(tmpdir):
-    metas = {'workspace': str(tmpdir)}
+def test_index(tmpfile):
     docs = gen_docs(N)
     f = Flow().add(
         uses=AnnLiteIndexer,
         uses_with={
-            'dim': D,
+            'n_dim': D,
         },
-        uses_metas=metas,
+        workspace=tmpfile,
     )
     with f:
         result = f.post(on='/index', inputs=docs, return_results=True)
         assert len(result) == N
 
 
-def test_update(tmpdir):
-    metas = {'workspace': str(tmpdir)}
+def test_update(tmpfile):
     docs = gen_docs(N)
     docs_update = gen_docs(Nu)
     f = Flow().add(
         uses=AnnLiteIndexer,
         uses_with={
-            'dim': D,
+            'n_dim': D,
         },
-        uses_metas=metas,
+        workspace=tmpfile,
     )
     with f:
         f.post(on='/index', inputs=docs)
@@ -82,16 +80,15 @@ def test_update(tmpdir):
         assert int(status.tags['index_size']) == N
 
 
-def test_search(tmpdir):
-    metas = {'workspace': str(tmpdir)}
+def test_search(tmpfile):
     docs = gen_docs(N)
     docs_query = gen_docs(Nq)
     f = Flow().add(
         uses=AnnLiteIndexer,
         uses_with={
-            'dim': D,
+            'n_dim': D,
         },
-        uses_metas=metas,
+        workspace=tmpfile,
     )
     with f:
         f.post(on='/index', inputs=docs)
@@ -112,16 +109,12 @@ def test_search(tmpdir):
     'columns',
     [[('price', 'float'), ('category', 'str')], {'price': 'float', 'category': 'str'}],
 )
-def test_search_with_filtering(tmpdir, columns):
-    metas = {'workspace': str(tmpdir)}
-
+def test_search_with_filtering(tmpfile, columns):
     docs = docs_with_tags(N)
     docs_query = gen_docs(1)
 
     f = Flow().add(
-        uses=AnnLiteIndexer,
-        uses_with={'dim': D, 'columns': columns},
-        uses_metas=metas,
+        uses=AnnLiteIndexer, uses_with={'dim': D, 'columns': columns}, workspace=tmpfile
     )
 
     with f:
@@ -137,15 +130,14 @@ def test_search_with_filtering(tmpdir, columns):
         assert all([m.tags['price'] < 50 for m in query_res[0].matches])
 
 
-def test_delete(tmpdir):
-    metas = {'workspace': str(tmpdir)}
+def test_delete(tmpfile):
     docs = gen_docs(N)
     f = Flow().add(
         uses=AnnLiteIndexer,
         uses_with={
             'dim': D,
         },
-        uses_metas=metas,
+        workspace=tmpfile,
     )
     with f:
         f.post(on='/index', inputs=docs)
@@ -164,15 +156,14 @@ def test_delete(tmpdir):
         query_res = f.post(on='/search', inputs=docs_query, return_results=True)
 
 
-def test_status(tmpdir):
-    metas = {'workspace': str(tmpdir)}
+def test_status(tmpfile):
     docs = gen_docs(N)
     f = Flow().add(
         uses=AnnLiteIndexer,
         uses_with={
             'dim': D,
         },
-        uses_metas=metas,
+        workspace=tmpfile,
     )
     with f:
         f.post(on='/index', inputs=docs)
@@ -182,15 +173,14 @@ def test_status(tmpdir):
         assert int(status.tags['index_size']) == N
 
 
-def test_clear(tmpdir):
-    metas = {'workspace': str(tmpdir)}
+def test_clear(tmpfile):
     docs = gen_docs(N)
     f = Flow().add(
         uses=AnnLiteIndexer,
         uses_with={
             'dim': D,
         },
-        uses_metas=metas,
+        workspace=tmpfile,
     )
     with f:
         f.post(on='/index', inputs=docs)
