@@ -125,7 +125,7 @@ class AnnLiteIndexer(Executor):
             return
 
         while len(self._data_buffer) >= self._max_length_queue:
-            time.sleep(0.001)
+            time.sleep(0.01)
 
         with self._index_lock:
             self._data_buffer.extend(flat_docs)
@@ -326,5 +326,3 @@ class AnnLiteIndexer(Executor):
         with self._index_lock:
             self._data_buffer = None
             self._index_thread.join()
-
-            del self._index
