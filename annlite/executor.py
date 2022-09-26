@@ -60,10 +60,10 @@ class AnnLiteIndexer(Executor):
             raise ValueError('Please specify the dimension of the vectors to index!')
 
         self.metric = metric
-        self.match_args = match_args
+        self.match_args = match_args or {}
         self.include_metadata = include_metadata
         self.limit = limit
-        if 'limit' in self.match_args:
+        if self.match_args is not None and 'limit' in self.match_args:
             self.limit = self.match_args.get('limit')
 
         self.index_access_paths = index_access_paths
@@ -270,7 +270,8 @@ class AnnLiteIndexer(Executor):
                     'Please wait for the pending documents to be indexed.'
                 )
 
-            flat_docs.match(self._index, limit=self.limit, **match_args)
+            # flat_docs.match(self._index, limit=self.limit, **match_args)
+            flat_docs.match(self._index, filter=None, limit=None)
 
     @requests(on='/filter')
     def filter(self, parameters: Dict, **kwargs):
