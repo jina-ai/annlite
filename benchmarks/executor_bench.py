@@ -1,4 +1,5 @@
 import tempfile
+import time
 
 import numpy as np
 from jina import DocumentArray
@@ -40,6 +41,9 @@ for n_i in n_index:
 
         times[n_i] = {}
         times[n_i]['index'] = t_i.duration
+
+        # waiting for the index to be ready
+        time.sleep(5)
 
         for n_q in n_query:
             q_embs = np.random.random([n_q, D]).astype(np.float32)

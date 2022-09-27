@@ -86,8 +86,10 @@ class AnnLiteIndexer(Executor):
 
         self.logger = JinaLogger(getattr(self.metas, 'name', self.__class__.__name__))
 
-        if self.runtime_args.shards > 1 and data_path:
-            raise ValueError(f'`data_path` is not supported in shards mode')
+        if getattr(self.runtime_args, 'shards', 1) > 1 and data_path:
+            raise ValueError(
+                '`data_path` is not supported when shards > 1, please use `workspace` instead'
+            )
 
         config = {
             'n_dim': n_dim,
@@ -125,7 +127,7 @@ class AnnLiteIndexer(Executor):
             return
 
         while len(self._data_buffer) >= self._max_length_queue:
-            time.sleep(0.01)
+            time.sleep(0.001)
 
         with self._index_lock:
             self._data_buffer.extend(flat_docs)
@@ -263,11 +265,11 @@ class AnnLiteIndexer(Executor):
         )
 
         with self._index_lock:
-            if len(self._data_buffer) > 0:
-                raise RuntimeError(
-                    f'Cannot search documents while the pending documents in the buffer are not indexed yet. '
-                    'Please wait for the pending documents to be indexed.'
-                )
+            # if len(self._data_buffer) > 0:
+            #     raise RuntimeError(
+            #         f'Cannot search documents while the pending documents in the buffer are not indexed yet. '
+            #         'Please wait for the pending documents to be indexed.'
+            #     )
 
             flat_docs.match(self._index, **match_args)
 
