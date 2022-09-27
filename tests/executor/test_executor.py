@@ -184,7 +184,7 @@ def test_clear(tmpfile):
     )
     with f:
         f.post(on='/index', inputs=docs)
-        f.post(on='/clear', return_results=True)
+        f.post(on='/clear')
         status = f.post(on='/status', return_results=True)[0]
         assert int(status.tags['total_docs']) == 0
         assert int(status.tags['index_size']) == 0

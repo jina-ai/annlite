@@ -86,8 +86,10 @@ class AnnLiteIndexer(Executor):
 
         self.logger = JinaLogger(getattr(self.metas, 'name', self.__class__.__name__))
 
-        if self.runtime_args.shards > 1 and data_path:
-            raise ValueError(f'`data_path` is not supported in shards mode')
+        if getattr(self.runtime_args, 'shards', 1) > 1 and data_path:
+            raise ValueError(
+                '`data_path` is not supported when shards > 1, please use `workspace` instead'
+            )
 
         config = {
             'n_dim': n_dim,
@@ -263,11 +265,11 @@ class AnnLiteIndexer(Executor):
         )
 
         with self._index_lock:
-            if len(self._data_buffer) > 0:
-                raise RuntimeError(
-                    f'Cannot search documents while the pending documents in the buffer are not indexed yet. '
-                    'Please wait for the pending documents to be indexed.'
-                )
+            # if len(self._data_buffer) > 0:
+            #     raise RuntimeError(
+            #         f'Cannot search documents while the pending documents in the buffer are not indexed yet. '
+            #         'Please wait for the pending documents to be indexed.'
+            #     )
 
             flat_docs.match(self._index, **match_args)
 
@@ -308,23 +310,36 @@ class AnnLiteIndexer(Executor):
         )
         return DocumentArray([status])
 
+    def flush(self):
+        """Flush all the data in the buffer to the index"""
+        while len(self._data_buffer) > 0:
+            time.sleep(0.1)
+
     @requests(on='/clear')
     def clear(self, **kwargs):
         """Clear the index of all entries."""
+        self.flush()
+
         with self._index_lock:
-            self._data_buffer = DocumentArray()
+            self._data_buffer = None
+            self._index_thread.join()
+
+        self._data_buffer = DocumentArray()
         self._index.clear()
+
+        self._start_index_loop()
 
     def close(self, **kwargs):
         """Close the index."""
         super().close()
 
-        while len(self._data_buffer) > 0:
-            time.sleep(0.1)
+        self.flush()
 
         # wait for the index thread to finish
         with self._index_lock:
             self._data_buffer = None
             self._index_thread.join()
 
-            del self._index
+        # WARNING: the commented code below hangs the close in pytest `pytest tests/test_*.py`
+        # But don't know why. It works fine in `pytest tests/test_executor.py` and normal python execution
+        del self._index

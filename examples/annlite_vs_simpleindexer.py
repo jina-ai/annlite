@@ -1,5 +1,6 @@
 import os
 import shutil
+import tempfile
 import time
 
 import numpy as np
@@ -56,14 +57,6 @@ def evaluate(predicts, relevants, eval_at):
     return recall / len(predicts), precision / len(predicts)
 
 
-def clean_workspace():
-    if os.path.exists('./SimpleIndexer'):
-        shutil.rmtree('./SimpleIndexer')
-
-    if os.path.exists('./workspace'):
-        shutil.rmtree('./workspace')
-
-
 def create_data(n_examples, D):
     np.random.seed(123)
     Xtr, Xte = train_test_split(
@@ -105,36 +98,38 @@ if BENCHMARK_SIMPLEINDEXER:
 
     for n_examples in n_datasets:
         time_taken = 0
-        clean_workspace()
+
         Xtr, Xte = create_data(n_examples, D)
 
-        f = Flow().add(
-            uses='jinahub://SimpleIndexer',
-            uses_with={'match_args': {'metric': 'euclidean', 'limit': 10}},
-        )
-        docs = [Document(id=f'{i}', embedding=Xtr[i]) for i in range(len(Xtr))]
+        with tempfile.TemporaryDirectory() as tmpdir:
 
-        with f:
-            resp = f.post(
-                on='/index',
-                inputs=docs,
+            f = Flow().add(
+                uses='jinahub://SimpleIndexer',
+                uses_with={'match_args': {'metric': 'euclidean', 'limit': 10}},
+                workspace=tmpdir,
             )
+            docs = [Document(id=f'{i}', embedding=Xtr[i]) for i in range(len(Xtr))]
 
-        with f:
-            t0 = time.time()
-            resp = f.post(
-                on='/search',
-                inputs=DocumentArray([Document(embedding=Xte[0])]),
-                return_results=True,
-            )
-            time_taken = time.time() - t0
+            with f:
+                resp = f.post(
+                    on='/index',
+                    inputs=docs,
+                )
 
-        times.append(time_taken)
+            with f:
+                t0 = time.time()
+                resp = f.post(
+                    on='/search',
+                    inputs=DocumentArray([Document(embedding=Xte[0])]),
+                    return_results=True,
+                )
+                time_taken = time.time() - t0
+
+            times.append(time_taken)
 
     df = pd.DataFrame({'n_examples': n_datasets, 'times': times})
     df.to_csv('simpleindexer.csv')
     print(df)
-    clean_workspace()
     ################ SimpleIndexer Benchmark END #################
 
 
@@ -147,58 +142,57 @@ if BENCHMARK_ANNLITE:
 
     batch_size = 4096
     times = []
-    metas = {'workspace': './workspace'}
 
     results = {}
     for n_examples in n_datasets:
         print(f'\n\nWorking with n_examples={n_examples}\n\n')
         time_taken = 0
-        clean_workspace()
 
-        f = Flow().add(
-            uses=AnnLiteIndexer,
-            uses_with={
-                'dim': D,
-                'limit': 10,
-            },
-            uses_metas=metas,
-        )
+        with tempfile.TemporaryDirectory() as tmpdir:
 
-        # docs = [Document(id=f'{i}', embedding=Xtr[i]) for i in range(len(Xtr))]
-        docs = create_data_online(n_examples, D, batch_size)
+            f = Flow().add(
+                uses=AnnLiteIndexer,
+                uses_with={
+                    'n_dim': D,
+                    'limit': 10,
+                },
+                workspace=tmpdir,
+            )
 
-        results_current = {}
-        with f:
-            time_taken = 0
-            for batch in docs:
-                t0 = time.time()
-                resp = f.post(on='/index', inputs=batch, request_size=10240)
-                # This is done to avoid data creation time loaded in index time
-                time_taken += time.time() - t0
-            results_current['index_time'] = time_taken
+            docs = create_data_online(n_examples, D, batch_size)
 
-        times_per_n_query = []
-        with f:
-            for n_query in n_queries:
-                da_queries = create_test_data(D, n_query)
-                t_qs = []
-                for _ in range(R):
+            results_current = {}
+            with f:
+                time_taken = 0
+                for batch in docs:
                     t0 = time.time()
-                    resp = f.post(
-                        on='/search',
-                        inputs=da_queries,
-                        return_results=True,
-                    )
-                    time_taken = time.time() - t0
-                    t_qs.append(time_taken)
-                # remove warm-up
-                times_per_n_query.append(np.mean(t_qs[1:]))
+                    resp = f.post(on='/index', inputs=batch, request_size=10240)
+                    # This is done to avoid data creation time loaded in index time
+                    time_taken += time.time() - t0
+                results_current['index_time'] = time_taken
 
-        results_current['query_times'] = times_per_n_query
-        print(f'==> query_times: {times_per_n_query}')
-        df = pd.DataFrame({'results': results_current})
-        df.to_csv(f'annlite_{n_examples}.csv')
-        results[n_examples] = results_current
+            times_per_n_query = []
+            with f:
+                for n_query in n_queries:
+                    da_queries = create_test_data(D, n_query)
+                    t_qs = []
+                    for _ in range(R):
+                        t0 = time.time()
+                        resp = f.post(
+                            on='/search',
+                            inputs=da_queries,
+                            return_results=True,
+                        )
+                        time_taken = time.time() - t0
+                        t_qs.append(time_taken)
+                    # remove warm-up
+                    times_per_n_query.append(np.mean(t_qs[1:]))
+
+            results_current['query_times'] = times_per_n_query
+            print(f'==> query_times: {times_per_n_query}')
+            df = pd.DataFrame({'results': results_current})
+            df.to_csv(f'annlite_{n_examples}.csv')
+            results[n_examples] = results_current
 
     df = pd.DataFrame(results)
     df.to_csv('annlite.csv')
