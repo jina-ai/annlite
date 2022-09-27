@@ -143,3 +143,132 @@ cpdef precompute_adc_table(const float[:] query,
             adtable[m, ind_prototype] = dist_subprototype_to_subquery
 
     return adtable
+
+@cython.boundscheck(False)
+@cython.wraparound(False)
+cpdef batch_precompute_adc_table(const float[:, :] queries,
+                                      long d_subvector,
+                                      long n_clusters,
+                                      const float[:,:,:] codebooks):
+    """
+    Compute the  Asymmetric Distance Table between a query and a PQ space.
+
+    :param query: Memoryview a query in the original feature space (not a pqcode).
+    :param d_subvector: Number of dimensions in a subvector.
+    :param n_clusters: Number of clusters per sub-space (number of prototypes per sub-space).
+    :param codebooks: Memoryview containing the learned codevectors for each slice.
+        This is a 3D view with (slice index, prototype index, vector values).
+
+    :return: Memoryview with a 2D matrix containing the Asymmetric Distance Computation.
+
+    This function is equivalent to
+        '''
+        def numpy_adc_table(query, n_subvectors, n_clusters, d_subvector, codebooks):
+        adtable = np.empty((n_subvectors, n_clusters), dtype=np.float32)
+        for m in range(n_subvectors):
+            query_sub = query[m * d_subvector: (m + 1) * d_subvector]
+            adtable[m, :] = np.linalg.norm(codebooks[m] - query_sub, axis=1) ** 2
+
+        return adtable
+        '''
+    But avoids generating views and calling numpy functions.
+    """
+
+    cdef:
+        int N = queries.shape[0]
+        int D = queries.shape[1]
+        int n_subvectors = int(D/d_subvector)
+        int m, i, k, ind_prototype, j
+        float[:, :, :] adtable = np.empty((N, n_subvectors, n_clusters), dtype=np.float32)
+        float[:] query_subvec = np.empty(d_subvector, dtype=np.float32)
+        float[:] query_subcodeword = np.empty(d_subvector, dtype=np.float32)
+        float dist_subprototype_to_subquery, coord_j
+
+    for index in range(N):
+        for m in range(n_subvectors):
+
+            # load m'th subquery
+            i = 0
+            for k in range(m * d_subvector, (m + 1) * d_subvector):
+                query_subvec[i] = queries[index, k]
+                i += 1
+
+            for ind_prototype in range(n_clusters):
+
+                # load prototype ind_prototype for the m'th subspace
+                for i in range(d_subvector):
+                    query_subcodeword[i] = codebooks[m, ind_prototype, i]
+
+                # compute the distance between subprototype and subquery
+                dist_subprototype_to_subquery = 0.
+                for j in range(d_subvector):
+                    coord_j = query_subcodeword[j] - query_subvec[j]
+                    dist_subprototype_to_subquery += coord_j * coord_j
+
+                adtable[index, m, ind_prototype] = dist_subprototype_to_subquery
+
+    return adtable
+
+@cython.boundscheck(False)
+@cython.wraparound(False)
+cpdef batch_precompute_adc_table_ip(const float[:, :] queries,
+                                      long d_subvector,
+                                      long n_clusters,
+                                      const float[:,:,:] codebooks):
+    """
+    Compute the  Asymmetric Distance Table between a query and a PQ space.
+
+    :param query: Memoryview a query in the original feature space (not a pqcode).
+    :param d_subvector: Number of dimensions in a subvector.
+    :param n_clusters: Number of clusters per sub-space (number of prototypes per sub-space).
+    :param codebooks: Memoryview containing the learned codevectors for each slice.
+        This is a 3D view with (slice index, prototype index, vector values).
+
+    :return: Memoryview with a 2D matrix containing the Asymmetric Distance Computation.
+
+    This function is equivalent to
+        '''
+        def numpy_adc_table(query, n_subvectors, n_clusters, d_subvector, codebooks):
+        adtable = np.empty((n_subvectors, n_clusters), dtype=np.float32)
+        for m in range(n_subvectors):
+            query_sub = query[m * d_subvector: (m + 1) * d_subvector]
+            adtable[m, :] = np.linalg.norm(codebooks[m] - query_sub, axis=1) ** 2
+
+        return adtable
+        '''
+    But avoids generating views and calling numpy functions.
+    """
+
+    cdef:
+        int N = queries.shape[0]
+        int D = queries.shape[1]
+        int n_subvectors = int(D/d_subvector)
+        int m, i, k, ind_prototype, j
+        float[:, :, :] adtable = np.empty((N, n_subvectors, n_clusters), dtype=np.float32)
+        float[:] query_subvec = np.empty(d_subvector, dtype=np.float32)
+        float[:] query_subcodeword = np.empty(d_subvector, dtype=np.float32)
+        float dist_subprototype_to_subquery
+
+    for index in range(N):
+        for m in range(n_subvectors):
+
+            # load m'th subquery
+            i = 0
+            for k in range(m * d_subvector, (m + 1) * d_subvector):
+                query_subvec[i] = queries[index, k]
+                i += 1
+
+            for ind_prototype in range(n_clusters):
+
+                # load prototype ind_prototype for the m'th subspace
+                for i in range(d_subvector):
+                    query_subcodeword[i] = codebooks[m, ind_prototype, i]
+
+                # compute the distance between subprototype and subquery
+                dist_subprototype_to_subquery = 0.
+                for j in range(d_subvector):
+                    dist_subprototype_to_subquery += (query_subcodeword[j] * query_subvec[j])
+
+                adtable[index, m, ind_prototype] = dist_subprototype_to_subquery
+
+    return adtable

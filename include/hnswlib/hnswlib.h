@@ -31,6 +31,15 @@
 namespace hnswlib {
 typedef size_t labeltype;
 
+typedef struct local_state_s {
+  size_t batch_index;
+} local_state_t;
+
+typedef struct pq_local_data_s {
+  float *data;
+  size_t batch_len;
+} pq_local_data_t;
+
 template <typename T> class pairGreater {
 public:
   bool operator()(const T &p1, const T &p2) { return p1.first > p2.first; }
@@ -46,7 +55,8 @@ template <typename T> static void readBinaryPOD(std::istream &in, T &podRef) {
 }
 
 template <typename MTYPE>
-using DISTFUNC = MTYPE (*)(const void *, const void *, const void *);
+using DISTFUNC = MTYPE (*)(const void *, const void *, const void *,
+                           const local_state_t *);
 
 template <typename MTYPE> class SpaceInterface {
 public:
@@ -55,6 +65,10 @@ public:
 
   virtual DISTFUNC<MTYPE> get_dist_func() = 0;
 
+  virtual void attach_local_data(const void *) = 0;
+
+  virtual void detach_local_data() = 0;
+
   virtual void *get_dist_func_param() = 0;
 
   virtual ~SpaceInterface() {}
@@ -62,13 +76,15 @@ public:
 
 template <typename dist_t> class AlgorithmInterface {
 public:
-  virtual void addPoint(const void *datapoint, labeltype label) = 0;
+  virtual void addPoint(const void *datapoint, labeltype label,
+                        size_t batch_index) = 0;
   virtual std::priority_queue<std::pair<dist_t, labeltype>>
-  searchKnn(const void *, size_t) const = 0;
+  searchKnn(const void *, size_t, size_t) const = 0;
 
   // Return k nearest neighbor in the order of closer fist
   virtual std::vector<std::pair<dist_t, labeltype>>
-  searchKnnCloserFirst(const void *query_data, size_t k) const;
+  searchKnnCloserFirst(const void *query_data, size_t k,
+                       size_t batch_index) const;
 
   virtual void saveIndex(const std::string &location) = 0;
   virtual ~AlgorithmInterface() {}
@@ -77,11 +93,12 @@ public:
 template <typename dist_t>
 std::vector<std::pair<dist_t, labeltype>>
 AlgorithmInterface<dist_t>::searchKnnCloserFirst(const void *query_data,
-                                                 size_t k) const {
+                                                 size_t k,
+                                                 size_t batch_index) const {
   std::vector<std::pair<dist_t, labeltype>> result;
 
   // here searchKnn returns the result in the order of further first
-  auto ret = searchKnn(query_data, k);
+  auto ret = searchKnn(query_data, k, batch_index);
   {
     size_t sz = ret.size();
     result.resize(sz);
