@@ -98,6 +98,7 @@ class DocStorage:
         self._init_db(create_if_missing=True, **self._kwargs)
 
     def close(self):
+        self._db.flush(wait=True)
         self._db.close()
 
     def __len__(self):
