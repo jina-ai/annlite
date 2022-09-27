@@ -78,15 +78,13 @@ results = []
 
 for n_cells in [1, 8, 16, 32, 64, 128]:
 
-    with tempfile.TemporaryDirectory() as tmpdirname:
+    with tempfile.TemporaryDirectory() as tmpdir:
 
         pq = AnnLite(
             D,
             metric='euclidean',
             n_cells=n_cells,
-            max_connection=16,
-            ef_search=50,
-            data_path=tmpdirname,
+            data_path=tmpdir,
         )
 
         t0 = time.time()

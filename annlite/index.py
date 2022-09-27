@@ -540,7 +540,6 @@ class AnnLite(CellContainer):
     def clear(self):
         """Clear the whole database"""
         for cell_id in range(self.n_cells):
-            logger.debug(f'Clearing cell {cell_id}')
             self.vec_index(cell_id).reset()
             self.cell_table(cell_id).clear()
             self.doc_store(cell_id).clear()

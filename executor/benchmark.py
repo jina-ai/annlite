@@ -1,3 +1,6 @@
+import tempfile
+import time
+
 import numpy as np
 from jina import DocumentArray
 from jina.logging.profile import TimeContext
@@ -15,45 +18,50 @@ from annlite.executor import AnnLiteIndexer
 times = {}
 
 for n_i in n_index:
-    idxer = AnnLiteIndexer(
-        n_dim=D,
-        initial_size=n_i,
-        n_cells=n_cells,
-    )
+    with tempfile.TemporaryDirectory() as tempdir:
+        idxer = AnnLiteIndexer(
+            n_dim=D,
+            initial_size=n_i,
+            n_cells=n_cells,
+            data_path=str(tempdir),
+        )
 
-    # build index docs
-    i_embs = np.random.random([n_i, D]).astype(np.float32)
+        # build index docs
+        i_embs = np.random.random([n_i, D]).astype(np.float32)
 
-    if n_cells > 1:
-        idxer._index.vq_codec.fit(i_embs)
+        if n_cells > 1:
+            idxer._index.vq_codec.fit(i_embs)
 
-    da = DocumentArray.empty(n_i)
-    da.embeddings = i_embs
+        da = DocumentArray.empty(n_i)
+        da.embeddings = i_embs
 
-    with TimeContext(f'indexing {n_i} docs') as t_i:
-        for _batch in da.batch(batch_size=B):
-            idxer.index(_batch)
+        with TimeContext(f'indexing {n_i} docs') as t_i:
+            for _batch in da.batch(batch_size=B):
+                idxer.index(_batch)
 
-    times[n_i] = {}
-    times[n_i]['index'] = t_i.duration
+        times[n_i] = {}
+        times[n_i]['index'] = t_i.duration
 
-    for n_q in n_query:
-        q_embs = np.random.random([n_q, D]).astype(np.float32)
-        qa = DocumentArray.empty(n_q)
-        qa.embeddings = q_embs
+        # waiting for the index to be ready
+        time.sleep(5)
 
-        t_qs = []
-        for _ in range(R):
-            with TimeContext(f'searching {n_q} docs') as t_q:
-                idxer.search(qa)
-            t_qs.append(t_q.duration)
-            # # check if it return the full doc
-            # assert qa[0].matches
-            # assert qa[0].matches.embeddings.shape
-        times[n_i][f'query_{n_q}'] = np.mean(t_qs[1:])  # remove warm-up
+        for n_q in n_query:
+            q_embs = np.random.random([n_q, D]).astype(np.float32)
+            qa = DocumentArray.empty(n_q)
+            qa.embeddings = q_embs
 
-    idxer.clear()
-    idxer.close()
+            t_qs = []
+            for _ in range(R):
+                with TimeContext(f'searching {n_q} docs') as t_q:
+                    idxer.search(qa)
+                t_qs.append(t_q.duration)
+                # # check if it return the full doc
+                # assert qa[0].matches
+                # assert qa[0].matches.embeddings.shape
+            times[n_i][f'query_{n_q}'] = np.mean(t_qs[1:])  # remove warm-up
+
+        idxer.clear()
+        idxer.close()
 
 print('|Stored data| Indexing time | Query size=1 | Query size=8 | Query size=64|')
 print('|---' * (len(list(times.values())[0]) + 1) + '|')
