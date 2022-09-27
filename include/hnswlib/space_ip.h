@@ -70,7 +70,7 @@ static float InnerProductSIMD4Ext(const void *pVect1v, const void *pVect2v,
 #elif defined(USE_SSE)
 
 static float InnerProductSIMD4Ext(const void *pVect1v, const void *pVect2v,
-                                  const void *qty_ptr, ,
+                                  const void *qty_ptr,
                                   const local_state_t *local_state) {
   float PORTABLE_ALIGN32 TmpRes[8];
   float *pVect1 = (float *)pVect1v;
