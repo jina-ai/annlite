@@ -1,5 +1,6 @@
 import hashlib
 import logging
+import os
 import warnings
 from pathlib import Path
 from typing import TYPE_CHECKING, Dict, List, Optional, Union
@@ -69,6 +70,7 @@ class AnnLite(CellContainer):
         columns: Optional[Union[Dict, List]] = None,
         filterable_attrs: Optional[Dict] = None,
         data_path: Union[Path, str] = Path('./data'),
+        restore_key: Optional[str] = None,
         create_if_missing: bool = True,
         read_only: bool = False,
         verbose: bool = False,
@@ -179,8 +181,8 @@ class AnnLite(CellContainer):
                     break
             logger.info(f'Total training data size: {total_size}')
 
-        if self.total_docs > 0:
-            self._rebuild_index()
+        if self.total_docs > 0 or restore_key:
+            self.restore(restore_key)
 
     def _sanity_check(self, x: 'np.ndarray'):
         assert x.ndim == 2, 'inputs must be a 2D array'
@@ -267,7 +269,7 @@ class AnnLite(CellContainer):
         if auto_save:
             self.dump_model()
 
-    def index(self, docs: 'DocumentArray', upload=False, **kwargs):
+    def index(self, docs: 'DocumentArray', **kwargs):
         """Add the documents to the index.
 
         :param docs: the document array to be indexed.
@@ -288,12 +290,11 @@ class AnnLite(CellContainer):
             if self.vq_codec
             else np.zeros(n_data, dtype=np.int64)
         )
-        return super(AnnLite, self).insert(x, assigned_cells, docs, upload)
+        return super(AnnLite, self).insert(x, assigned_cells, docs)
 
     def update(
         self,
         docs: 'DocumentArray',
-        upload: bool = False,
         raise_errors_on_not_found: bool = False,
         insert_if_not_found: bool = True,
         **kwargs,
@@ -324,7 +325,6 @@ class AnnLite(CellContainer):
             x,
             assigned_cells,
             docs,
-            upload,
             raise_errors_on_not_found=raise_errors_on_not_found,
             insert_if_not_found=insert_if_not_found,
         )
@@ -522,7 +522,6 @@ class AnnLite(CellContainer):
     def delete(
         self,
         docs: Union['DocumentArray', List[str]],
-        upload: bool = False,
         raise_errors_on_not_found: bool = False,
     ):
         """Delete entries from the index by id
@@ -532,9 +531,7 @@ class AnnLite(CellContainer):
         """
 
         super().delete(
-            docs if isinstance(docs, list) else docs[:, 'id'],
-            upload,
-            raise_errors_on_not_found,
+            docs if isinstance(docs, list) else docs[:, 'id'], raise_errors_on_not_found
         )
 
     def clear(self):
@@ -638,6 +635,20 @@ class AnnLite(CellContainer):
         except Exception:
             print('Unknown error')
 
+    def backup(self, target: Optional[str] = None):
+        # self.dump_index()
+        if not os.path.exists(target):
+            self._backup_index_to_remote(target)
+
+    def restore(self, source: Optional[str] = None):
+        if not source:
+            raise RuntimeError(f'Please assign the value of `source`.')
+
+        if os.path.exists(source):
+            self._rebuild_index_from_local()
+        else:
+            self._rebuild_index_from_remote(source)
+
     def dump_model(self):
         logger.info(f'Save the parameters to {self.model_path}')
         self.model_path.mkdir(parents=True, exist_ok=True)
@@ -666,7 +677,20 @@ class AnnLite(CellContainer):
         self.dump_model()
         self.dump_index()
 
-    def _rebuild_index(self):
+    def _backup_index_to_remote(self, target: str):
+        # check if already exists
+        art_list = self.remote_store.list_artifacts()
+        target_list = [art['data']['metadata']['name'] for art in art_list]
+        if target in target_list:
+            raise RuntimeError(
+                f'The documents already exist in hubble. Please: (1) Delete the existed documents '
+                'from hubble (2) Rename and upload.'
+            )
+        else:
+            logger.info(f'Upload the indexer to remote')
+            # upload
+
+    def _rebuild_index_from_local(self):
         if self.snapshot_path:
             logger.info(f'Load the indexer from snapshot {self.snapshot_path}')
             for cell_id in range(self.n_cells):
@@ -674,10 +698,6 @@ class AnnLite(CellContainer):
                     self.snapshot_path / f'cell_{cell_id}.hnsw'
                 )
                 self.cell_table(cell_id).load(self.snapshot_path / f'cell_{cell_id}.db')
-        elif self.remote_store:
-            logger.info(f'Load the indexer from hubstore')
-            for cell_id in range(self.n_cells):
-                super(AnnLite, self)._load_from_storage(cell_id)
         else:
             logger.info(f'Rebuild the indexer from scratch')
             for cell_id in range(self.n_cells):
@@ -695,6 +715,10 @@ class AnnLite(CellContainer):
                     assigned_cells = np.ones(len(docs), dtype=np.int64) * cell_id
                     super().insert(x, assigned_cells, docs, only_index=True)
                 logger.debug(f'Rebuild the index of cell-{cell_id} done')
+
+    def _rebuild_index_from_remote(self, source: str):
+        logger.info(f'Load the indexer from remote store')
+        # download and load
 
     @property
     def is_trained(self):

@@ -1,10 +1,7 @@
-import io
-import pickle
 import warnings
 from pathlib import Path
 from typing import TYPE_CHECKING, Dict, List, Optional, Tuple
 
-import hubble
 import numpy as np
 from docarray import Document, DocumentArray
 from loguru import logger
@@ -266,7 +263,6 @@ class CellContainer:
         data: 'np.ndarray',
         cells: 'np.ndarray',
         docs: 'DocumentArray',
-        upload: bool = False,
         only_index: bool = False,
     ):
         assert len(docs) == len(data)
@@ -308,41 +304,6 @@ class CellContainer:
                     )
         logger.debug(f'{len(docs)} new docs added')
 
-        if upload:
-            for cell_id in unique_cells:
-                self._upload_to_storage(cell_id)
-            logger.debug(f'{len(docs)} new docs stored')
-
-    # TODO: storage related: support more than 1
-    def _upload_to_storage(self, cell_id: 'int'):
-        remote_store = hubble.Client(max_retries=None, jsonify=None)
-        table_data = self.cell_table(cell_id).fetchtable.encode(encoding='utf8')
-        remote_store.upload_artifact(f=io.BytesIO(table_data))
-        index = pickle.dumps(self.vec_index(cell_id))
-        remote_store.upload_artifact(f=io.BytesIO(index))
-
-    def _load_from_storage(self, cell_id: int):
-        remote_store = hubble.Client(max_retries=None, jsonify=True)
-        id_list = remote_store.list_artifacts()['data']
-
-        assert len(id_list) > 0, 'No stored content found.'
-        table_data = (
-            remote_store.download_artifact(id=id_list[0]['_id'], f=io.BytesIO())
-            .getvalue()
-            .decode(encoding='utf8')
-        )
-        index_data = remote_store.download_artifact(
-            id=id_list[1]['_id'], f=io.BytesIO()
-        ).getvalue()
-        self._cell_tables[cell_id].insert(table_data.split('\n'))
-        self._vec_indexes[cell_id] = pickle.loads(index_data)
-
-    def _delete_from_storage(self):
-        remote_store = hubble.Client(max_retries=None, jsonify=True)
-        id_list = remote_store.list_artifacts()['data']
-        for id in id_list:
-            remote_store.delete_artifact(id=id['_id'])
-
     def _add_vecs(self, data: 'np.ndarray', cells: 'np.ndarray', offsets: 'np.ndarray'):
         assert data.shape[0] == cells.shape[0]
         assert data.shape[1] == self.n_dim
@@ -361,7 +322,6 @@ class CellContainer:
         data: 'np.ndarray',
         cells: 'np.ndarray',
         docs: 'DocumentArray',
-        upload: bool = False,
         insert_if_not_found: bool = True,
         raise_errors_on_not_found: bool = False,
     ):
@@ -383,9 +343,6 @@ class CellContainer:
                 self.doc_store(cell_id).update([doc])
                 self.meta_table.add_address(doc.id, cell_id, _offset)
                 update_success += 1
-                if upload:
-                    self._delete_from_storage()
-                    self._upload_to_storage(_cell_id)
             elif _cell_id is None:
                 if raise_errors_on_not_found and not insert_if_not_found:
                     raise Exception(
@@ -421,7 +378,7 @@ class CellContainer:
             new_cells = np.array(new_cells, dtype=np.int64)
 
             self._delete_from_storage()
-            self.insert(new_data, new_cells, new_docs, upload)
+            self.insert(new_data, new_cells, new_docs)
 
         logger.debug(
             f'total items for updating: {len(docs)}, ' f'success: {update_success}'
@@ -431,7 +388,6 @@ class CellContainer:
         self,
         ids: List[str],
         raise_errors_on_not_found: bool = False,
-        upload: bool = False,
     ):
         delete_success = 0
 
@@ -444,9 +400,6 @@ class CellContainer:
                 self.doc_store(cell_id).delete([doc_id])
                 self.meta_table.delete_address(doc_id)
                 delete_success += 1
-                if upload:
-                    self._delete_from_storage()
-                    self._upload_to_storage(cell_id)
             else:
                 if raise_errors_on_not_found:
                     raise Exception(
