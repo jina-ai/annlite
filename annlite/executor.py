@@ -107,7 +107,8 @@ class AnnLiteIndexer(Executor):
         # together and perform batch indexing at once
         self._start_index_loop()
 
-        self.restore(restore_key)
+        if restore_key:
+            self.restore(restore_key)
 
     @requests(on='/index')
     def index(
@@ -292,14 +293,12 @@ class AnnLiteIndexer(Executor):
                 )
             self._index._annlite.backup(target, self.runtime_args.shard_id)
 
-    @requests(on='/restore')
-    def restore(self, source: Optional[str] = None, parameters: Dict = {}, **kwargs):
+    def restore(self, source: str):
         """
         Restore data from local or remote.
         Use api of <class 'annlite.index.AnnLite'>
         """
 
-        source = source or parameters.pop('source', None)
         with self._index_lock:
             if len(self._data_buffer) > 0:
                 raise RuntimeError(

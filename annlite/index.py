@@ -1,11 +1,9 @@
 import hashlib
 import logging
-import os
 import warnings
 from pathlib import Path
 from typing import TYPE_CHECKING, Dict, List, Optional, Union
 
-import hubble
 import numpy as np
 from docarray.math.ndarray import to_numpy_array
 from loguru import logger
@@ -622,8 +620,10 @@ class AnnLite(CellContainer):
 
     @property
     def remote_store(self):
-        client = hubble.Client(max_retries=None, jsonify=True)
         try:
+            import hubble
+
+            client = hubble.Client(max_retries=None, jsonify=True)
             client.get_user_info()
             return client
         except hubble.excepts.AuthenticationRequiredError:
