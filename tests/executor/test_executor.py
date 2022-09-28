@@ -188,3 +188,31 @@ def test_clear(tmpfile):
         status = f.post(on='/status', return_results=True)[0]
         assert int(status.tags['total_docs']) == 0
         assert int(status.tags['index_size']) == 0
+
+
+def test_remote_storage(tmpfile):
+    docs = gen_docs(N)
+    f = Flow().add(
+        uses=AnnLiteIndexer,
+        uses_with={
+            'n_dim': D,
+        },
+        workspace=tmpfile,
+        shards=1,
+    )
+    with f:
+        f.post(on='/index', inputs=docs)
+        time.sleep(2)
+        f.post(on='/backup', parameters={'target': 'backup_docs'})
+        time.sleep(2)
+
+    f = Flow().add(
+        uses=AnnLiteIndexer,
+        uses_with={'n_dim': D, 'restore_key': 'backup_docs'},
+        workspace=tmpfile,
+    )
+    time.sleep(2)
+    status = f.post(on='/status', return_results=True)[0]
+
+    assert int(status.tags['total_docs']) == N
+    assert int(status.tags['index_size']) == N
