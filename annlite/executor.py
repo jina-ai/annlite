@@ -290,7 +290,7 @@ class AnnLiteIndexer(Executor):
                     f'Cannot backup documents while the pending documents in the buffer are not indexed yet. '
                     'Please wait for the pending documents to be indexed.'
                 )
-            self._index._annlite.backup(target)
+            self._index._annlite.backup(target, self.runtime_args.shard_id)
 
     @requests(on='/restore')
     def restore(self, source: Optional[str] = None, parameters: Dict = {}, **kwargs):
@@ -306,7 +306,7 @@ class AnnLiteIndexer(Executor):
                     f'Cannot restore documents while the pending documents in the buffer are not indexed yet. '
                     'Please wait for the pending documents to be indexed.'
                 )
-            self._index._annlite.restore(source)
+            self._index._annlite.restore(source, self.runtime_args.shard_id)
 
     @requests(on='/filter')
     def filter(self, parameters: Dict, **kwargs):

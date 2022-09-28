@@ -631,18 +631,18 @@ class AnnLite(CellContainer):
         except Exception:
             print('Unknown error')
 
-    def backup(self, target: Optional[str] = None):
+    def backup(self, target: Optional[str] = None, shard_id: Optional[int] = None):
         if not target:
             self.dump_index()
         else:
-            self._backup_index_to_remote(target)
+            self._backup_index_to_remote(target, shard_id)
 
-    def restore(self, source: Optional[str] = None):
+    def restore(self, source: Optional[str] = None, shard_id: Optional[int] = None):
         if not source:
             if self.total_docs > 0:
                 self._rebuild_index_from_local()
         else:
-            self._rebuild_index_from_remote(source)
+            self._rebuild_index_from_remote(source, shard_id)
 
     def dump_model(self):
         logger.info(f'Save the parameters to {self.model_path}')
@@ -673,7 +673,7 @@ class AnnLite(CellContainer):
         self.dump_model()
         self.dump_index()
 
-    def _backup_index_to_remote(self, target: str):
+    def _backup_index_to_remote(self, target: str, shard_id: int):
         art_list = self.remote_store.list_artifacts(filter={'metaData.name': target})
         if len(art_list['data']) > 0:
             raise RuntimeError(
@@ -681,7 +681,6 @@ class AnnLite(CellContainer):
                 '(1) Delete the existed documents from hubble (2) Rename and upload again.'
             )
         else:
-            shard_id = str(self.data_path).split('/')[-1]
             logger.info(
                 f'Upload the indexer [name: {target}, shard_id: {shard_id}] to remote'
             )
@@ -735,8 +734,7 @@ class AnnLite(CellContainer):
                     super().insert(x, assigned_cells, docs, only_index=True)
                 logger.debug(f'Rebuild the index of cell-{cell_id} done')
 
-    def _rebuild_index_from_remote(self, source: str):
-        shard_id = str(self.data_path).split('/')[-1]
+    def _rebuild_index_from_remote(self, source: str, shard_id: int):
         art_list = self.remote_store.list_artifacts(
             filter={'metaData.name': source, 'metaData.shards': shard_id}
         )
