@@ -107,8 +107,7 @@ class AnnLiteIndexer(Executor):
         # together and perform batch indexing at once
         self._start_index_loop()
 
-        if restore_key:
-            self.restore(restore_key)
+        self.restore(restore_key)
 
     @requests(on='/index')
     def index(
@@ -278,12 +277,13 @@ class AnnLiteIndexer(Executor):
             flat_docs.match(self._index, **match_args)
 
     @requests(on='/backup')
-    def backup(self, target: Optional[str] = None, **kwargs):
+    def backup(self, target: Optional[str] = None, parameters: Dict = {}, **kwargs):
         """
         Backup data to local or remote.
         Use api of <class 'annlite.index.AnnLite'>
         """
 
+        target = target or parameters.pop('target', None)
         with self._index_lock:
             if len(self._data_buffer) > 0:
                 raise RuntimeError(
@@ -293,13 +293,20 @@ class AnnLiteIndexer(Executor):
             self._index._annlite.backup(target)
 
     @requests(on='/restore')
-    def restore(self, source: str, **kwargs):
+    def restore(self, source: Optional[str] = None, parameters: Dict = {}, **kwargs):
         """
         Restore data from local or remote.
         Use api of <class 'annlite.index.AnnLite'>
         """
 
-        self._index._annlite.restore(source)
+        source = source or parameters.pop('source', None)
+        with self._index_lock:
+            if len(self._data_buffer) > 0:
+                raise RuntimeError(
+                    f'Cannot restore documents while the pending documents in the buffer are not indexed yet. '
+                    'Please wait for the pending documents to be indexed.'
+                )
+            self._index._annlite.restore(source)
 
     @requests(on='/filter')
     def filter(self, parameters: Dict, **kwargs):

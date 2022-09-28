@@ -70,7 +70,6 @@ class AnnLite(CellContainer):
         columns: Optional[Union[Dict, List]] = None,
         filterable_attrs: Optional[Dict] = None,
         data_path: Union[Path, str] = Path('./data'),
-        restore_key: Optional[str] = None,
         create_if_missing: bool = True,
         read_only: bool = False,
         verbose: bool = False,
@@ -180,9 +179,6 @@ class AnnLite(CellContainer):
                 if total_size >= MAX_TRAINING_DATA_SIZE:
                     break
             logger.info(f'Total training data size: {total_size}')
-
-        if self.total_docs > 0 or restore_key:
-            self.restore(restore_key)
 
     def _sanity_check(self, x: 'np.ndarray'):
         assert x.ndim == 2, 'inputs must be a 2D array'
@@ -626,7 +622,7 @@ class AnnLite(CellContainer):
 
     @property
     def remote_store(self):
-        client = hubble.Client(max_retries=None, jsonify=None)
+        client = hubble.Client(max_retries=None, jsonify=True)
         try:
             client.get_user_info()
             return client
@@ -636,16 +632,15 @@ class AnnLite(CellContainer):
             print('Unknown error')
 
     def backup(self, target: Optional[str] = None):
-        # self.dump_index()
-        if not os.path.exists(target):
+        if not target:
+            self.dump_index()
+        else:
             self._backup_index_to_remote(target)
 
     def restore(self, source: Optional[str] = None):
         if not source:
-            raise RuntimeError(f'Please assign the value of `source`.')
-
-        if os.path.exists(source):
-            self._rebuild_index_from_local()
+            if self.total_docs > 0:
+                self._rebuild_index_from_local()
         else:
             self._rebuild_index_from_remote(source)
 
@@ -671,24 +666,48 @@ class AnnLite(CellContainer):
             logger.error(f'Failed to dump the indexer, {ex!r}')
             import shutil
 
-            shutil.rmtree(self.index_path)
+            if not self.index_path:
+                shutil.rmtree(self.index_path)
 
     def dump(self):
         self.dump_model()
         self.dump_index()
 
     def _backup_index_to_remote(self, target: str):
-        # check if already exists
-        art_list = self.remote_store.list_artifacts()
-        target_list = [art['data']['metadata']['name'] for art in art_list]
-        if target in target_list:
+        art_list = self.remote_store.list_artifacts(filter={'metaData.name': target})
+        if len(art_list['data']) > 0:
             raise RuntimeError(
-                f'The documents already exist in hubble. Please: (1) Delete the existed documents '
-                'from hubble (2) Rename and upload.'
+                f'The documents with the same name already exist. Please: '
+                '(1) Delete the existed documents from hubble (2) Rename and upload again.'
             )
         else:
-            logger.info(f'Upload the indexer to remote')
-            # upload
+            shard_id = str(self.data_path).split('/')[-1]
+            logger.info(
+                f'Upload the indexer [name: {target}, shard_id: {shard_id}] to remote'
+            )
+            self.dump_index()
+            for cell_id in range(self.n_cells):
+                self.remote_store.upload_artifact(
+                    f=str(self.index_path / f'cell_{cell_id}.hnsw'),
+                    metadata={
+                        'name': target,
+                        'type': 'hnsw',
+                        'cell': cell_id,
+                        'shards': shard_id,
+                    },
+                )
+                self.remote_store.upload_artifact(
+                    f=str(self.index_path / f'cell_{cell_id}.db'),
+                    metadata={
+                        'name': target,
+                        'type': 'cell_table',
+                        'cell': cell_id,
+                        'shards': shard_id,
+                    },
+                )
+            import shutil
+
+            shutil.rmtree(self.index_path)
 
     def _rebuild_index_from_local(self):
         if self.snapshot_path:
@@ -717,8 +736,47 @@ class AnnLite(CellContainer):
                 logger.debug(f'Rebuild the index of cell-{cell_id} done')
 
     def _rebuild_index_from_remote(self, source: str):
-        logger.info(f'Load the indexer from remote store')
-        # download and load
+        shard_id = str(self.data_path).split('/')[-1]
+        art_list = self.remote_store.list_artifacts(
+            filter={'metaData.name': source, 'metaData.shards': shard_id}
+        )
+        if len(art_list['data']) == 0:
+            # raise RuntimeError(f'The indexer [name: {source}, shard_id: {shard_id}] not found.')
+            ## if rasing error then executor will not exit.
+            logger.info(
+                f'The indexer [name: {source}, shard_id: {shard_id}] not found. '
+            )
+        else:
+            logger.info(
+                f'Load the indexer [name: {source}, shard: {shard_id}] from remote store'
+            )
+            restore_path = self.data_path / 'restore'
+            restore_path.mkdir(parents=True)
+            for art in art_list['data']:
+                for cell_id in range(self.n_cells):
+                    if (
+                        art['metaData']['cell'] == cell_id
+                        and art['metaData']['shards'] == shard_id
+                    ):
+                        if art['metaData']['type'] == 'hnsw':
+                            self.remote_store.download_artifact(
+                                id=art['_id'],
+                                f=str(restore_path / f'cell_{cell_id}.hnsw'),
+                            )
+                            self.vec_index(cell_id).load(
+                                restore_path / f'cell_{cell_id}.hnsw'
+                            )
+                        else:
+                            self.remote_store.download_artifact(
+                                id=art['_id'],
+                                f=str(restore_path / f'cell_{cell_id}.db'),
+                            )
+                            self.cell_table(cell_id).load(
+                                restore_path / f'cell_{cell_id}.db'
+                            )
+            import shutil
+
+            shutil.rmtree(restore_path)
 
     @property
     def is_trained(self):
