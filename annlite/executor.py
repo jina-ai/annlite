@@ -299,13 +299,7 @@ class AnnLiteIndexer(Executor):
         Use api of <class 'annlite.index.AnnLite'>
         """
 
-        with self._index_lock:
-            if len(self._data_buffer) > 0:
-                raise RuntimeError(
-                    f'Cannot restore documents while the pending documents in the buffer are not indexed yet. '
-                    'Please wait for the pending documents to be indexed.'
-                )
-            self._index._annlite.restore(source, self.runtime_args.shard_id)
+        self._index._annlite.restore(source, self.runtime_args.shard_id)
 
     @requests(on='/filter')
     def filter(self, parameters: Dict, **kwargs):
