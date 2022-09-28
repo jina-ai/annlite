@@ -377,7 +377,6 @@ class CellContainer:
             new_data = np.stack(new_data)
             new_cells = np.array(new_cells, dtype=np.int64)
 
-            self._delete_from_storage()
             self.insert(new_data, new_cells, new_docs)
 
         logger.debug(
