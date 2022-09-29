@@ -626,10 +626,8 @@ class AnnLite(CellContainer):
             client = hubble.Client(max_retries=None, jsonify=True)
             client.get_user_info()
             return client
-        except hubble.excepts.AuthenticationRequiredError:
-            print('Please login first.')
-        except Exception:
-            print('Unknown error')
+        except Exception as ex:
+            logger.error(f'Not login to hubble yet, {ex!r}')
 
     def backup(self, target: Optional[str] = None, shard_id: Optional[int] = None):
         if not target:
