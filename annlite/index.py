@@ -631,13 +631,13 @@ class AnnLite(CellContainer):
             logger.error(f'Not login to hubble yet.')
             raise ex
 
-    def backup(self, parameters: Optional[Dict] = None):
+    def backup(self, parameters: Optional[Dict] = {}):
         if 'target' not in parameters:
             self.dump_index()
         else:
             self._backup_index_to_remote(parameters)
 
-    def restore(self, parameters: Optional[Dict] = None):
+    def restore(self, parameters: Optional[Dict] = {}):
         if 'source' not in parameters:
             if self.total_docs > 0:
                 self._rebuild_index_from_local()
