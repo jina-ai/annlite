@@ -1,4 +1,6 @@
+import os
 import time
+from unittest.mock import patch
 
 import numpy as np
 import pytest
@@ -190,7 +192,10 @@ def test_clear(tmpfile):
         assert int(status.tags['index_size']) == 0
 
 
+@patch.dict(os.environ, {'JINA_AUTH_TOKEN': ''})
 def test_remote_storage(tmpfile):
+    os.environ['JINA_AUTH_TOKEN'] = 'token-env'
+
     docs = gen_docs(N)
     f = Flow().add(
         uses=AnnLiteIndexer,

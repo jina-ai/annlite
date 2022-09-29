@@ -666,7 +666,7 @@ class AnnLite(CellContainer):
             logger.error(f'Failed to dump the indexer, {ex!r}')
             import shutil
 
-            if not self.index_path:
+            if self.index_path:
                 shutil.rmtree(self.index_path)
 
     def dump(self):
@@ -692,8 +692,9 @@ class AnnLite(CellContainer):
                         'name': target,
                         'type': 'hnsw',
                         'cell': cell_id,
-                        'shards': shard_id,
+                        'shard': shard_id,
                     },
+                    show_progress=True,
                 )
                 self.remote_store.upload_artifact(
                     f=str(self.index_path / f'cell_{cell_id}.db'),
@@ -701,8 +702,9 @@ class AnnLite(CellContainer):
                         'name': target,
                         'type': 'cell_table',
                         'cell': cell_id,
-                        'shards': shard_id,
+                        'shard': shard_id,
                     },
+                    show_progress=True,
                 )
             import shutil
 
@@ -736,11 +738,9 @@ class AnnLite(CellContainer):
 
     def _rebuild_index_from_remote(self, source: str, shard_id: int):
         art_list = self.remote_store.list_artifacts(
-            filter={'metaData.name': source, 'metaData.shards': shard_id}
+            filter={'metaData.name': source, 'metaData.shard': shard_id}
         )
         if len(art_list['data']) == 0:
-            # raise RuntimeError(f'The indexer [name: {source}, shard_id: {shard_id}] not found.')
-            ## if rasing error then executor will not exit.
             logger.info(
                 f'The indexer [name: {source}, shard_id: {shard_id}] not found. '
             )
@@ -754,12 +754,13 @@ class AnnLite(CellContainer):
                 for cell_id in range(self.n_cells):
                     if (
                         art['metaData']['cell'] == cell_id
-                        and art['metaData']['shards'] == shard_id
+                        and art['metaData']['shard'] == shard_id
                     ):
                         if art['metaData']['type'] == 'hnsw':
                             self.remote_store.download_artifact(
                                 id=art['_id'],
                                 f=str(restore_path / f'cell_{cell_id}.hnsw'),
+                                show_progress=True,
                             )
                             self.vec_index(cell_id).load(
                                 restore_path / f'cell_{cell_id}.hnsw'
@@ -768,6 +769,7 @@ class AnnLite(CellContainer):
                             self.remote_store.download_artifact(
                                 id=art['_id'],
                                 f=str(restore_path / f'cell_{cell_id}.db'),
+                                show_progress=True,
                             )
                             self.cell_table(cell_id).load(
                                 restore_path / f'cell_{cell_id}.db'
