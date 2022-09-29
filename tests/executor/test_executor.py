@@ -202,8 +202,8 @@ def test_clear(tmpfile):
 
 @patch.dict(os.environ, {'JINA_AUTH_TOKEN': ''})
 def test_remote_storage(tmpfile):
-    clear_hubble()
     os.environ['JINA_AUTH_TOKEN'] = '9bdfd52b39e8c32722208da4d7f4396c'
+    clear_hubble()
 
     docs = gen_docs(N)
     f = Flow().add(
@@ -217,14 +217,12 @@ def test_remote_storage(tmpfile):
     with f:
         f.post(on='/index', inputs=docs)
         time.sleep(2)
-        f.post(
-            on='/backup', parameters={'backup_loc': 'remote', 'target': 'backup_docs'}
-        )
+        f.post(on='/backup', parameters={'target': 'backup_docs'})
         time.sleep(2)
 
     f = Flow().add(
         uses=AnnLiteIndexer,
-        uses_with={'n_dim': D, 'restore_loc': 'remote', 'restore_key': 'backup_docs'},
+        uses_with={'n_dim': D, 'restore_key': 'backup_docs'},
         workspace=tmpfile,
         shards=1,
     )
@@ -233,7 +231,6 @@ def test_remote_storage(tmpfile):
 
     assert int(status.tags['total_docs']) == N
     assert int(status.tags['index_size']) == N
-    time.sleep(5)
 
 
 @patch.dict(os.environ, {'JINA_AUTH_TOKEN': ''})
@@ -253,7 +250,7 @@ def test_remote_storage_with_shards(tmpfile):
         time.sleep(2)
         f.post(
             on='/backup',
-            parameters={'backup_loc': 'remote', 'target': 'backup_docs_with_shards'},
+            parameters={'target': 'backup_docs_with_shards'},
         )
         time.sleep(2)
 
@@ -261,7 +258,6 @@ def test_remote_storage_with_shards(tmpfile):
         uses=AnnLiteIndexer,
         uses_with={
             'n_dim': D,
-            'restore_loc': 'remote',
             'restore_key': 'backup_docs_with_shards',
         },
         workspace=tmpfile,
@@ -272,7 +268,6 @@ def test_remote_storage_with_shards(tmpfile):
 
     assert int(status.tags['total_docs']) == N
     assert int(status.tags['index_size']) == N
-    time.sleep(5)
     clear_hubble()
 
 
@@ -289,12 +284,12 @@ def test_local_storage(tmpfile):
     with f:
         f.post(on='/index', inputs=docs)
         time.sleep(2)
-        f.post(on='/backup', parameters={'backup_loc': 'local'})
+        f.post(on='/backup')
         time.sleep(2)
 
     f = Flow().add(
         uses=AnnLiteIndexer,
-        uses_with={'n_dim': D, 'restore_loc': 'local'},
+        uses_with={'n_dim': D},
         workspace=tmpfile,
         shards=1,
     )
@@ -318,12 +313,12 @@ def test_local_storage_with_shards(tmpfile):
     with f:
         f.post(on='/index', inputs=docs)
         time.sleep(2)
-        f.post(on='/backup', parameters={'backup_loc': 'local'})
+        f.post(on='/backup')
         time.sleep(2)
 
     f = Flow().add(
         uses=AnnLiteIndexer,
-        uses_with={'n_dim': D, 'restore_loc': 'local'},
+        uses_with={'n_dim': D},
         workspace=tmpfile,
         shards=3,
     )

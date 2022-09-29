@@ -1,5 +1,6 @@
 import hashlib
 import logging
+import os
 import warnings
 from pathlib import Path
 from typing import TYPE_CHECKING, Dict, List, Optional, Union
@@ -563,35 +564,6 @@ class AnnLite(CellContainer):
 
         return x
 
-    def _zip_shard(self, data_path: Union['str', 'Path'], zipname: str):
-        try:
-            import os
-            import zipfile
-        except Exception as ex:
-            logger.error(f'Package named `os`,`zipfile` need to be installed, {ex!r}')
-
-        data_path = str(data_path)
-        output_path = os.path.join(data_path, zipname)
-        z = zipfile.ZipFile(output_path, 'w', zipfile.ZIP_DEFLATED)
-        for path, dirnames, filenames in os.walk(data_path):
-            fpath = path.replace(data_path, '')
-            for filename in filenames:
-                if filename.startswith('shard') or filename.startswith('LOG'):
-                    continue
-                z.write(os.path.join(path, filename), os.path.join(fpath, filename))
-        z.close()
-        return output_path
-
-    def _unzip_shard(self, filename: str):
-        try:
-            import os
-            import zipfile
-        except Exception as ex:
-            logger.error(f'Package named `os`,`zipfile` need to be installed, {ex!r}')
-
-        with zipfile.ZipFile(filename) as f:
-            f.extractall()
-
     @property
     def params_hash(self):
         model_metas = (
@@ -656,42 +628,21 @@ class AnnLite(CellContainer):
             client.get_user_info()
             return client
         except Exception as ex:
-            logger.error(f'Not login to hubble yet, {ex!r}')
+            logger.error(f'Not login to hubble yet.')
+            raise ex
 
-    def backup(
-        self,
-        backup_loc: Optional[str] = None,
-        target: Optional[str] = None,
-        shard_id: Optional[int] = None,
-    ):
-        if backup_loc not in ['local', 'remote']:
-            raise RuntimeError(f'You can only set `backup_loc` to `local` or `remote`.')
-        if backup_loc == 'local':
+    def backup(self, target: Optional[str] = None):
+        if not target:
             self.dump_index()
-        elif target:
-            self._backup_index_to_remote(target, shard_id)
         else:
-            raise RuntimeError(f'The `target` must be set when you backup to remote.')
+            self._backup_index_to_remote(target)
 
-    def restore(
-        self,
-        restore_loc: Optional[str] = None,
-        source: Optional[str] = None,
-        shard_id: Optional[int] = None,
-    ):
-        if restore_loc not in ['local', 'remote']:
-            raise RuntimeError(
-                f'You can only set `restore_loc` to `local` or `remote`.'
-            )
-        if restore_loc == 'local':
+    def restore(self, source: Optional[str] = None):
+        if not source:
             if self.total_docs > 0:
                 self._rebuild_index_from_local()
-        elif source:
-            self._rebuild_index_from_remote(source, shard_id)
         else:
-            raise RuntimeError(
-                f'The `source` must be specified when you restore from remote.'
-            )
+            self._rebuild_index_from_remote(source)
 
     def dump_model(self):
         logger.info(f'Save the parameters to {self.model_path}')
@@ -722,7 +673,8 @@ class AnnLite(CellContainer):
         self.dump_model()
         self.dump_index()
 
-    def _backup_index_to_remote(self, target: str, shard_id: int):
+    def _backup_index_to_remote(self, target: str):
+        shard_id = target.split('_')[-1]
         art_list = self.remote_store.list_artifacts(filter={'metaData.name': target})
         if len(art_list['data']) > 0:
             raise RuntimeError(
@@ -760,10 +712,14 @@ class AnnLite(CellContainer):
             shutil.rmtree(self.index_path)
 
             logger.info(
-                f'Zip data folder [name: {target}, shard_id: {shard_id}] and upload.'
+                f'Upload database [name: {target}, shard_id: {shard_id}] to remote.'
             )
-            zipname = f'shard_{shard_id}.zip' if shard_id else 'shard.zip'
-            output_path = self._zip_shard(self.data_path, zipname)
+            output_path = shutil.make_archive(
+                os.path.join(str(self.data_path.parent), f'shard_{shard_id}'),
+                'zip',
+                str(self.data_path.parent),
+                str(shard_id),
+            )
             self.remote_store.upload_artifact(
                 f=output_path,
                 metadata={
@@ -801,7 +757,10 @@ class AnnLite(CellContainer):
                     super().insert(x, assigned_cells, docs, only_index=True)
                 logger.debug(f'Rebuild the index of cell-{cell_id} done')
 
-    def _rebuild_index_from_remote(self, source: str, shard_id: int):
+    def _rebuild_index_from_remote(self, source: str):
+        import shutil
+
+        shard_id = source.split('_')[-1]
         art_list = self.remote_store.list_artifacts(
             filter={'metaData.name': source, 'metaData.shard': shard_id}
         )
@@ -839,22 +798,21 @@ class AnnLite(CellContainer):
                             self.cell_table(cell_id).load(
                                 restore_path / f'cell_{cell_id}.db'
                             )
-                import os
-
                 if (
                     art['metaData']['type'] == 'shard_data'
                     and art['metaData']['shard'] == shard_id
                 ):
                     if len(os.listdir(self.data_path)) == 0:
+                        input_path = str(
+                            self.data_path.parent / f'shard_{shard_id}.zip'
+                        )
                         self.remote_store.download_artifact(
                             id=art['_id'],
-                            f=str(self.data_path / f'shard_{shard_id}.zip'),
+                            f=input_path,
                             show_progress=True,
                         )
-                        self._unzip_shard(self.data_path / f'shard_{shard_id}.zip')
-
-            import shutil
-
+                        shutil.unpack_archive(input_path, self.data_path.parent)
+                        Path(input_path).unlink()
             shutil.rmtree(restore_path)
 
     @property
