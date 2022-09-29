@@ -234,7 +234,9 @@ def test_remote_storage(tmpfile):
     assert int(status.tags['index_size']) == N
 
 
+@patch.dict(os.environ, {'JINA_AUTH_TOKEN': ''})
 def test_remote_storage_with_shards(tmpfile):
+    os.environ['JINA_AUTH_TOKEN'] = '9bdfd52b39e8c32722208da4d7f4396c'
     docs = gen_docs(N)
     f = Flow().add(
         uses=AnnLiteIndexer,
