@@ -2,6 +2,7 @@ import os
 import time
 from unittest.mock import patch
 
+import hubble
 import numpy as np
 import pytest
 from jina import Document, DocumentArray, Executor, Flow
@@ -42,6 +43,13 @@ def docs_with_tags(N):
     da = DocumentArray(docs)
 
     return da
+
+
+def clear_hubble():
+    client = hubble.Client()
+    art_list = client.list_artifacts()
+    for art in art_list['data']:
+        client.delete_artifact(id=art['_id'])
 
 
 def test_index(tmpfile):
@@ -208,13 +216,111 @@ def test_remote_storage(tmpfile):
     with f:
         f.post(on='/index', inputs=docs)
         time.sleep(2)
-        f.post(on='/backup', parameters={'target': 'backup_docs'})
+        f.post(
+            on='/backup', parameters={'backup_loc': 'remote', 'target': 'backup_docs'}
+        )
         time.sleep(2)
 
     f = Flow().add(
         uses=AnnLiteIndexer,
-        uses_with={'n_dim': D, 'restore_key': 'backup_docs'},
+        uses_with={'n_dim': D, 'restore_loc': 'remote', 'restore_key': 'backup_docs'},
         workspace=tmpfile,
+        shards=1,
+    )
+    with f:
+        status = f.post(on='/status', return_results=True)[0]
+
+    assert int(status.tags['total_docs']) == N
+    assert int(status.tags['index_size']) == N
+
+
+def test_remote_storage_with_shards(tmpfile):
+    docs = gen_docs(N)
+    f = Flow().add(
+        uses=AnnLiteIndexer,
+        uses_with={
+            'n_dim': D,
+        },
+        workspace=tmpfile,
+        shards=3,
+    )
+    with f:
+        f.post(on='/index', inputs=docs)
+        time.sleep(2)
+        f.post(
+            on='/backup',
+            parameters={'backup_loc': 'remote', 'target': 'backup_docs_with_shards'},
+        )
+        time.sleep(2)
+
+    f = Flow().add(
+        uses=AnnLiteIndexer,
+        uses_with={
+            'n_dim': D,
+            'restore_loc': 'remote',
+            'restore_key': 'backup_docs_with_shards',
+        },
+        workspace=tmpfile,
+        shards=3,
+    )
+    with f:
+        status = f.post(on='/status', return_results=True)[0]
+
+    assert int(status.tags['total_docs']) == N
+    assert int(status.tags['index_size']) == N
+    clear_hubble()
+
+
+def test_local_storage(tmpfile):
+    docs = gen_docs(N)
+    f = Flow().add(
+        uses=AnnLiteIndexer,
+        uses_with={
+            'n_dim': D,
+        },
+        workspace=tmpfile,
+        shards=1,
+    )
+    with f:
+        f.post(on='/index', inputs=docs)
+        time.sleep(2)
+        f.post(on='/backup', parameters={'backup_loc': 'local'})
+        time.sleep(2)
+
+    f = Flow().add(
+        uses=AnnLiteIndexer,
+        uses_with={'n_dim': D, 'restore_loc': 'local'},
+        workspace=tmpfile,
+        shards=1,
+    )
+    with f:
+        status = f.post(on='/status', return_results=True)[0]
+
+    assert int(status.tags['total_docs']) == N
+    assert int(status.tags['index_size']) == N
+
+
+def test_local_storage_with_shards(tmpfile):
+    docs = gen_docs(N)
+    f = Flow().add(
+        uses=AnnLiteIndexer,
+        uses_with={
+            'n_dim': D,
+        },
+        workspace=tmpfile,
+        shards=3,
+    )
+    with f:
+        f.post(on='/index', inputs=docs)
+        time.sleep(2)
+        f.post(on='/backup', parameters={'backup_loc': 'local'})
+        time.sleep(2)
+
+    f = Flow().add(
+        uses=AnnLiteIndexer,
+        uses_with={'n_dim': D, 'restore_loc': 'local'},
+        workspace=tmpfile,
+        shards=3,
     )
     with f:
         status = f.post(on='/status', return_results=True)[0]

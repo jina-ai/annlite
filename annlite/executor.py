@@ -20,6 +20,8 @@ class AnnLiteIndexer(Executor):
     :param limit: Number of results to get for each query document in search
     :param match_args: the arguments to `DocumentArray`'s match function
     :param data_path: the workspace of the AnnLiteIndexer but not support when shards > 1.
+    :param restore_loc: the location which you want to restore indexer from: `local`, `remote`.
+    :param restore_key: the name of indexer you want to restore from hub.
     :param ef_construction: The construction time/accuracy trade-off
     :param ef_search: The query time accuracy/speed trade-off
     :param max_connection: The maximum number of outgoing connections in the
@@ -40,6 +42,7 @@ class AnnLiteIndexer(Executor):
         limit: int = 10,
         match_args: Optional[Dict] = None,
         data_path: Optional[str] = None,
+        restore_loc: Optional[str] = 'local',
         restore_key: Optional[str] = None,
         ef_construction: Optional[int] = None,
         ef_search: Optional[int] = None,
@@ -107,8 +110,7 @@ class AnnLiteIndexer(Executor):
         # together and perform batch indexing at once
         self._start_index_loop()
 
-        if restore_key:
-            self.restore(restore_key)
+        self.restore(restore_loc, restore_key)
 
     @requests(on='/index')
     def index(
@@ -282,8 +284,13 @@ class AnnLiteIndexer(Executor):
         """
         Backup data to local or remote.
         Use api of <class 'annlite.index.AnnLite'>
+
+        Keys accepted:
+            - 'backup_loc' (str): the location which you want to backup indexer to, only 'local' or 'remote'
+            - 'target' (str): the name of indexer you want to set only when `backup_loc` is set to `remote`
         """
 
+        backup_loc = parameters.pop('backup_loc', None)
         target = parameters.pop('target', None)
         with self._index_lock:
             if len(self._data_buffer) > 0:
@@ -291,15 +298,15 @@ class AnnLiteIndexer(Executor):
                     f'Cannot backup documents while the pending documents in the buffer are not indexed yet. '
                     'Please wait for the pending documents to be indexed.'
                 )
-            self._index._annlite.backup(target, self.runtime_args.shard_id)
+            self._index._annlite.backup(backup_loc, target, self.runtime_args.shard_id)
 
-    def restore(self, source: str):
+    def restore(self, restore_loc: str, source: str):
         """
         Restore data from local or remote.
         Use api of <class 'annlite.index.AnnLite'>
         """
 
-        self._index._annlite.restore(source, self.runtime_args.shard_id)
+        self._index._annlite.restore(restore_loc, source, self.runtime_args.shard_id)
 
     @requests(on='/filter')
     def filter(self, parameters: Dict, **kwargs):

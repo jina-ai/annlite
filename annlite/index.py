@@ -629,18 +629,40 @@ class AnnLite(CellContainer):
         except Exception as ex:
             logger.error(f'Not login to hubble yet, {ex!r}')
 
-    def backup(self, target: Optional[str] = None, shard_id: Optional[int] = None):
-        if not target:
+    def backup(
+        self,
+        backup_loc: Optional[str] = None,
+        target: Optional[str] = None,
+        shard_id: Optional[int] = None,
+    ):
+        if backup_loc not in ['local', 'remote']:
+            raise RuntimeError(f'You can only set `backup_loc` to `local` or `remote`.')
+        if backup_loc == 'local':
             self.dump_index()
-        else:
+        elif target:
             self._backup_index_to_remote(target, shard_id)
+        else:
+            raise RuntimeError(f'The `target` must be set when you backup to remote.')
 
-    def restore(self, source: Optional[str] = None, shard_id: Optional[int] = None):
-        if not source:
+    def restore(
+        self,
+        restore_loc: Optional[str] = None,
+        source: Optional[str] = None,
+        shard_id: Optional[int] = None,
+    ):
+        if restore_loc not in ['local', 'remote']:
+            raise RuntimeError(
+                f'You can only set `restore_loc` to `local` or `remote`.'
+            )
+        if restore_loc == 'local':
             if self.total_docs > 0:
                 self._rebuild_index_from_local()
-        else:
+        elif source:
             self._rebuild_index_from_remote(source, shard_id)
+        else:
+            raise RuntimeError(
+                f'The `source` must be specified when you restore from remote.'
+            )
 
     def dump_model(self):
         logger.info(f'Save the parameters to {self.model_path}')
