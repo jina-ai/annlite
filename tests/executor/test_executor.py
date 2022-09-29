@@ -216,8 +216,8 @@ def test_remote_storage(tmpfile):
         uses_with={'n_dim': D, 'restore_key': 'backup_docs'},
         workspace=tmpfile,
     )
-    time.sleep(2)
-    status = f.post(on='/status', return_results=True)[0]
+    with f:
+        status = f.post(on='/status', return_results=True)[0]
 
     assert int(status.tags['total_docs']) == N
     assert int(status.tags['index_size']) == N

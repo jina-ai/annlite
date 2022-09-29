@@ -278,13 +278,13 @@ class AnnLiteIndexer(Executor):
             flat_docs.match(self._index, **match_args)
 
     @requests(on='/backup')
-    def backup(self, target: Optional[str] = None, parameters: Dict = {}, **kwargs):
+    def backup(self, parameters: Dict = {}, **kwargs):
         """
         Backup data to local or remote.
         Use api of <class 'annlite.index.AnnLite'>
         """
 
-        target = target or parameters.pop('target', None)
+        target = parameters.pop('target', None)
         with self._index_lock:
             if len(self._data_buffer) > 0:
                 raise RuntimeError(
