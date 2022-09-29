@@ -46,7 +46,7 @@ def docs_with_tags(N):
 
 
 def clear_hubble():
-    client = hubble.Client()
+    client = hubble.Client(max_retries=None, jsonify=True)
     art_list = client.list_artifacts()
     for art in art_list['data']:
         client.delete_artifact(id=art['_id'])

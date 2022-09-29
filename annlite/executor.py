@@ -41,7 +41,6 @@ class AnnLiteIndexer(Executor):
         limit: int = 10,
         match_args: Optional[Dict] = None,
         data_path: Optional[str] = None,
-        restore_loc: Optional[str] = 'local',
         restore_key: Optional[str] = None,
         ef_construction: Optional[int] = None,
         ef_search: Optional[int] = None,
@@ -105,11 +104,10 @@ class AnnLiteIndexer(Executor):
         }
         self._index = DocumentArray(storage='annlite', config=config)
 
+        self.restore(restore_key)
         # start indexing thread in background to group indexing requests
         # together and perform batch indexing at once
         self._start_index_loop()
-
-        self.restore(restore_key)
 
     @requests(on='/index')
     def index(

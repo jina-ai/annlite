@@ -712,7 +712,7 @@ class AnnLite(CellContainer):
             shutil.rmtree(self.index_path)
 
             logger.info(
-                f'Upload database [name: {target}, shard_id: {shard_id}] to remote.'
+                f'Upload the database [name: {target}, shard_id: {shard_id}] to remote.'
             )
             output_path = shutil.make_archive(
                 os.path.join(str(self.data_path.parent), f'shard_{shard_id}'),
@@ -802,6 +802,9 @@ class AnnLite(CellContainer):
                     art['metaData']['type'] == 'shard_data'
                     and art['metaData']['shard'] == shard_id
                 ):
+                    logger.info(
+                        f'Load the database [name: {source}, shard: {shard_id}] from remote store'
+                    )
                     if len(os.listdir(self.data_path)) == 0:
                         input_path = str(
                             self.data_path.parent / f'shard_{shard_id}.zip'
