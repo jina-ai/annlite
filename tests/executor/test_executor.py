@@ -233,6 +233,35 @@ def test_remote_storage(tmpfile):
     assert int(status.tags['index_size']) == N
 
 
+def test_local_storage(tmpfile):
+    docs = gen_docs(N)
+    f = Flow().add(
+        uses=AnnLiteIndexer,
+        uses_with={
+            'n_dim': D,
+        },
+        workspace=tmpfile,
+        shards=1,
+    )
+    with f:
+        f.post(on='/index', inputs=docs)
+        time.sleep(2)
+        f.post(on='/backup')
+        time.sleep(2)
+
+    f = Flow().add(
+        uses=AnnLiteIndexer,
+        uses_with={'n_dim': D},
+        workspace=tmpfile,
+        shards=1,
+    )
+    with f:
+        status = f.post(on='/status', return_results=True)[0]
+
+    assert int(status.tags['total_docs']) == N
+    assert int(status.tags['index_size']) == N
+
+
 @patch.dict(os.environ, {'JINA_AUTH_TOKEN': ''})
 def test_remote_storage_with_shards(tmpfile):
     os.environ['JINA_AUTH_TOKEN'] = '9bdfd52b39e8c32722208da4d7f4396c'
@@ -269,35 +298,6 @@ def test_remote_storage_with_shards(tmpfile):
     assert int(status.tags['total_docs']) == N
     assert int(status.tags['index_size']) == N
     clear_hubble()
-
-
-def test_local_storage(tmpfile):
-    docs = gen_docs(N)
-    f = Flow().add(
-        uses=AnnLiteIndexer,
-        uses_with={
-            'n_dim': D,
-        },
-        workspace=tmpfile,
-        shards=1,
-    )
-    with f:
-        f.post(on='/index', inputs=docs)
-        time.sleep(2)
-        f.post(on='/backup')
-        time.sleep(2)
-
-    f = Flow().add(
-        uses=AnnLiteIndexer,
-        uses_with={'n_dim': D},
-        workspace=tmpfile,
-        shards=1,
-    )
-    with f:
-        status = f.post(on='/status', return_results=True)[0]
-
-    assert int(status.tags['total_docs']) == N
-    assert int(status.tags['index_size']) == N
 
 
 def test_local_storage_with_shards(tmpfile):

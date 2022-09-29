@@ -631,18 +631,18 @@ class AnnLite(CellContainer):
             logger.error(f'Not login to hubble yet.')
             raise ex
 
-    def backup(self, target: Optional[str] = None):
-        if not target:
+    def backup(self, parameters: Optional[Dict] = None):
+        if 'target' not in parameters:
             self.dump_index()
         else:
-            self._backup_index_to_remote(target)
+            self._backup_index_to_remote(parameters)
 
-    def restore(self, source: Optional[str] = None):
-        if not source:
+    def restore(self, parameters: Optional[Dict] = None):
+        if 'source' not in parameters:
             if self.total_docs > 0:
                 self._rebuild_index_from_local()
         else:
-            self._rebuild_index_from_remote(source)
+            self._rebuild_index_from_remote(parameters)
 
     def dump_model(self):
         logger.info(f'Save the parameters to {self.model_path}')
@@ -673,8 +673,9 @@ class AnnLite(CellContainer):
         self.dump_model()
         self.dump_index()
 
-    def _backup_index_to_remote(self, target: str):
-        shard_id = target.split('_')[-1]
+    def _backup_index_to_remote(self, parameters: Dict):
+        target = parameters['target']
+        shard_id = parameters.get('shard_id', None)
         art_list = self.remote_store.list_artifacts(filter={'metaData.name': target})
         if len(art_list['data']) > 0:
             raise RuntimeError(
@@ -682,9 +683,7 @@ class AnnLite(CellContainer):
                 '(1) Delete the existed documents from hubble (2) Rename and upload again.'
             )
         else:
-            logger.info(
-                f'Upload the indexer [name: {target}, shard_id: {shard_id}] to remote'
-            )
+            logger.info(f'Upload the indexer `{target}_{shard_id}` to remote')
             self.dump_index()
             for cell_id in range(self.n_cells):
                 self.remote_store.upload_artifact(
@@ -711,9 +710,7 @@ class AnnLite(CellContainer):
 
             shutil.rmtree(self.index_path)
 
-            logger.info(
-                f'Upload the database [name: {target}, shard_id: {shard_id}] to remote.'
-            )
+            logger.info(f'Upload the database `{target}_{shard_id}` to remote.')
             output_path = shutil.make_archive(
                 os.path.join(str(self.data_path.parent), f'shard_{shard_id}'),
                 'zip',
@@ -757,21 +754,18 @@ class AnnLite(CellContainer):
                     super().insert(x, assigned_cells, docs, only_index=True)
                 logger.debug(f'Rebuild the index of cell-{cell_id} done')
 
-    def _rebuild_index_from_remote(self, source: str):
+    def _rebuild_index_from_remote(self, parameters: Dict):
         import shutil
 
-        shard_id = source.split('_')[-1]
+        source = parameters['source']
+        shard_id = parameters.get('shard_id', None)
         art_list = self.remote_store.list_artifacts(
             filter={'metaData.name': source, 'metaData.shard': shard_id}
         )
         if len(art_list['data']) == 0:
-            logger.info(
-                f'The indexer [name: {source}, shard_id: {shard_id}] not found. '
-            )
+            logger.info(f'The indexer `{source}_{shard_id}` not found. ')
         else:
-            logger.info(
-                f'Load the indexer [name: {source}, shard: {shard_id}] from remote store'
-            )
+            logger.info(f'Load the indexer `{source}_{shard_id}` from remote store')
             restore_path = self.data_path / 'restore'
             restore_path.mkdir(parents=True)
             for art in art_list['data']:
@@ -803,7 +797,7 @@ class AnnLite(CellContainer):
                     and art['metaData']['shard'] == shard_id
                 ):
                     logger.info(
-                        f'Load the database [name: {source}, shard: {shard_id}] from remote store'
+                        f'Load the database `{source}_{shard_id}` from remote store'
                     )
                     if len(os.listdir(self.data_path)) == 0:
                         input_path = str(
