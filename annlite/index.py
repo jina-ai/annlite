@@ -563,6 +563,35 @@ class AnnLite(CellContainer):
 
         return x
 
+    def _zip_shard(self, data_path: Union['str', 'Path'], zipname: str):
+        try:
+            import os
+            import zipfile
+        except Exception as ex:
+            logger.error(f'Package named `os`,`zipfile` need to be installed, {ex!r}')
+
+        data_path = str(data_path)
+        output_path = os.path.join(data_path, zipname)
+        z = zipfile.ZipFile(output_path, 'w', zipfile.ZIP_DEFLATED)
+        for path, dirnames, filenames in os.walk(data_path):
+            fpath = path.replace(data_path, '')
+            for filename in filenames:
+                if filename.startswith('shard') or filename.startswith('LOG'):
+                    continue
+                z.write(os.path.join(path, filename), os.path.join(fpath, filename))
+        z.close()
+        return output_path
+
+    def _unzip_shard(self, filename: str):
+        try:
+            import os
+            import zipfile
+        except Exception as ex:
+            logger.error(f'Package named `os`,`zipfile` need to be installed, {ex!r}')
+
+        with zipfile.ZipFile(filename) as f:
+            f.extractall()
+
     @property
     def params_hash(self):
         model_metas = (
@@ -730,6 +759,22 @@ class AnnLite(CellContainer):
 
             shutil.rmtree(self.index_path)
 
+            logger.info(
+                f'Zip data folder [name: {target}, shard_id: {shard_id}] and upload.'
+            )
+            zipname = f'shard_{shard_id}.zip' if shard_id else 'shard.zip'
+            output_path = self._zip_shard(self.data_path, zipname)
+            self.remote_store.upload_artifact(
+                f=output_path,
+                metadata={
+                    'name': target,
+                    'type': 'shard_data',
+                    'cell': 'all',
+                    'shard': shard_id,
+                },
+            )
+            Path(output_path).unlink()
+
     def _rebuild_index_from_local(self):
         if self.snapshot_path:
             logger.info(f'Load the indexer from snapshot {self.snapshot_path}')
@@ -794,6 +839,20 @@ class AnnLite(CellContainer):
                             self.cell_table(cell_id).load(
                                 restore_path / f'cell_{cell_id}.db'
                             )
+                import os
+
+                if (
+                    art['metaData']['type'] == 'shard_data'
+                    and art['metaData']['shard'] == shard_id
+                ):
+                    if len(os.listdir(self.data_path)) == 0:
+                        self.remote_store.download_artifact(
+                            id=art['_id'],
+                            f=str(self.data_path / f'shard_{shard_id}.zip'),
+                            show_progress=True,
+                        )
+                        self._unzip_shard(self.data_path / f'shard_{shard_id}.zip')
+
             import shutil
 
             shutil.rmtree(restore_path)
