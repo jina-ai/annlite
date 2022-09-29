@@ -202,6 +202,7 @@ def test_clear(tmpfile):
 
 @patch.dict(os.environ, {'JINA_AUTH_TOKEN': ''})
 def test_remote_storage(tmpfile):
+    clear_hubble()
     os.environ['JINA_AUTH_TOKEN'] = '9bdfd52b39e8c32722208da4d7f4396c'
 
     docs = gen_docs(N)
@@ -232,6 +233,7 @@ def test_remote_storage(tmpfile):
 
     assert int(status.tags['total_docs']) == N
     assert int(status.tags['index_size']) == N
+    time.sleep(5)
 
 
 @patch.dict(os.environ, {'JINA_AUTH_TOKEN': ''})
@@ -270,6 +272,7 @@ def test_remote_storage_with_shards(tmpfile):
 
     assert int(status.tags['total_docs']) == N
     assert int(status.tags['index_size']) == N
+    time.sleep(5)
     clear_hubble()
 
 
