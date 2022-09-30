@@ -295,10 +295,15 @@ def test_remote_storage_with_shards(tmpfile):
         polling={'/index': 'ANY', '/search': 'ALL', '/backup': 'ALL', '/status': 'ALL'},
     )
     with f:
-        status = f.post(on='/status', return_results=True)[0]
+        status = f.post(on='/status', return_results=True)
 
-    assert int(status.tags['total_docs']) == N
-    assert int(status.tags['index_size']) == N
+    total_docs = 0
+    index_size = 0
+    for stat in status:
+        total_docs += stat.tags['total_docs']
+        index_size += stat.tags['index_size']
+    assert total_docs == N
+    assert index_size == N
     clear_hubble()
 
 
@@ -327,7 +332,12 @@ def test_local_storage_with_shards(tmpfile):
         polling={'/index': 'ANY', '/search': 'ALL', '/backup': 'ALL', '/status': 'ALL'},
     )
     with f:
-        status = f.post(on='/status', return_results=True)[0]
+        status = f.post(on='/status', return_results=True)
 
-    assert int(status.tags['total_docs']) == N
-    assert int(status.tags['index_size']) == N
+    total_docs = 0
+    index_size = 0
+    for stat in status:
+        total_docs += stat.tags['total_docs']
+        index_size += stat.tags['index_size']
+    assert total_docs == N
+    assert index_size == N
