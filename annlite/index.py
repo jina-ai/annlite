@@ -710,7 +710,7 @@ class AnnLite(CellContainer):
 
             logger.info(f'Upload the database `{target_name}` to remote.')
             output_path = shutil.make_archive(
-                os.path.join(str(self.data_path.parent), 'database'),
+                os.path.join(str(self.data_path.parent), f'{target_name}'),
                 'zip',
                 str(self.data_path.parent),
                 str(self.data_path).split('/')[-1],
@@ -787,7 +787,7 @@ class AnnLite(CellContainer):
                 if art['metaData']['type'] == 'database':
                     logger.info(f'Load the database `{source_name}` from remote store')
                     if len(os.listdir(self.data_path)) == 0:
-                        input_path = str(self.data_path.parent / 'database.zip')
+                        input_path = str(self.data_path.parent / f'{source_name}.zip')
                         self.remote_store_client.download_artifact(
                             id=art['_id'],
                             f=input_path,
