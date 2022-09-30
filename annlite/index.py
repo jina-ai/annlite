@@ -620,7 +620,7 @@ class AnnLite(CellContainer):
         return None
 
     @property
-    def remote_store(self):
+    def remote_store_client(self):
         try:
             import hubble
 
@@ -676,7 +676,9 @@ class AnnLite(CellContainer):
     def _backup_index_to_remote(self, parameters: Dict):
         target = parameters['target']
         shard_id = parameters.get('shard_id', None)
-        art_list = self.remote_store.list_artifacts(filter={'metaData.name': target})
+        art_list = self.remote_store_client.list_artifacts(
+            filter={'metaData.name': target}
+        )
         if len(art_list['data']) > 0:
             raise RuntimeError(
                 f'The documents with the same name already exist. Please: '
@@ -686,7 +688,7 @@ class AnnLite(CellContainer):
             logger.info(f'Upload the indexer `{target}_{shard_id}` to remote')
             self.dump_index()
             for cell_id in range(self.n_cells):
-                self.remote_store.upload_artifact(
+                self.remote_store_client.upload_artifact(
                     f=str(self.index_path / f'cell_{cell_id}.hnsw'),
                     metadata={
                         'name': target,
@@ -696,7 +698,7 @@ class AnnLite(CellContainer):
                     },
                     show_progress=True,
                 )
-                self.remote_store.upload_artifact(
+                self.remote_store_client.upload_artifact(
                     f=str(self.index_path / f'cell_{cell_id}.db'),
                     metadata={
                         'name': target,
@@ -717,7 +719,7 @@ class AnnLite(CellContainer):
                 str(self.data_path.parent),
                 str(shard_id),
             )
-            self.remote_store.upload_artifact(
+            self.remote_store_client.upload_artifact(
                 f=output_path,
                 metadata={
                     'name': target,
@@ -759,7 +761,7 @@ class AnnLite(CellContainer):
 
         source = parameters['source']
         shard_id = parameters.get('shard_id', None)
-        art_list = self.remote_store.list_artifacts(
+        art_list = self.remote_store_client.list_artifacts(
             filter={'metaData.name': source, 'metaData.shard': shard_id}
         )
         if len(art_list['data']) == 0:
@@ -775,7 +777,7 @@ class AnnLite(CellContainer):
                         and art['metaData']['shard'] == shard_id
                     ):
                         if art['metaData']['type'] == 'hnsw':
-                            self.remote_store.download_artifact(
+                            self.remote_store_client.download_artifact(
                                 id=art['_id'],
                                 f=str(restore_path / f'cell_{cell_id}.hnsw'),
                                 show_progress=True,
@@ -783,8 +785,8 @@ class AnnLite(CellContainer):
                             self.vec_index(cell_id).load(
                                 restore_path / f'cell_{cell_id}.hnsw'
                             )
-                        else:
-                            self.remote_store.download_artifact(
+                        elif art['metaData']['type'] == 'cell_table':
+                            self.remote_store_client.download_artifact(
                                 id=art['_id'],
                                 f=str(restore_path / f'cell_{cell_id}.db'),
                                 show_progress=True,
@@ -803,7 +805,7 @@ class AnnLite(CellContainer):
                         input_path = str(
                             self.data_path.parent / f'shard_{shard_id}.zip'
                         )
-                        self.remote_store.download_artifact(
+                        self.remote_store_client.download_artifact(
                             id=art['_id'],
                             f=input_path,
                             show_progress=True,

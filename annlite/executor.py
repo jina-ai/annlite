@@ -20,7 +20,7 @@ class AnnLiteIndexer(Executor):
     :param limit: Number of results to get for each query document in search
     :param match_args: the arguments to `DocumentArray`'s match function
     :param data_path: the workspace of the AnnLiteIndexer but not support when shards > 1.
-    :param restore_key: the name of indexer you want to restore from hub.
+    :param restore_key: the name of indexer you want to restore from hub (will restore from local if not set).
     :param ef_construction: The construction time/accuracy trade-off
     :param ef_search: The query time accuracy/speed trade-off
     :param max_connection: The maximum number of outgoing connections in the
