@@ -105,9 +105,7 @@ class AnnLiteIndexer(Executor):
         self._index = DocumentArray(storage='annlite', config=config)
 
         if restore_key:
-            self.restore(
-                {'source': restore_key, 'shard_id': self.runtime_args.shard_id}
-            )
+            self.restore(source_name=f'{restore_key}_{self.runtime_args.shard_id}')
         else:
             self.restore()
         # start indexing thread in background to group indexing requests
@@ -282,7 +280,7 @@ class AnnLiteIndexer(Executor):
             flat_docs.match(self._index, **match_args)
 
     @requests(on='/backup')
-    def backup(self, parameters: Dict = {}, **kwargs):
+    def backup(self, target_name: Optional[str] = None, **kwargs):
         """
         Backup data to local or remote.
         Use api of <class 'annlite.index.AnnLite'>
@@ -291,23 +289,23 @@ class AnnLiteIndexer(Executor):
             - 'target' (str): the name of indexer you want to backup as
         """
 
-        if 'target' in parameters:
-            parameters.update({'shard_id': self.runtime_args.shard_id})
+        if target_name:
+            target_name = f'{target_name}_{self.runtime_args.shard_id}'
         with self._index_lock:
             if len(self._data_buffer) > 0:
                 raise RuntimeError(
                     f'Cannot backup documents while the pending documents in the buffer are not indexed yet. '
                     'Please wait for the pending documents to be indexed.'
                 )
-            self._index._annlite.backup(parameters)
+            self._index._annlite.backup(target_name)
 
-    def restore(self, parameters: Dict = {}):
+    def restore(self, source_name: Optional[str] = None):
         """
         Restore data from local or remote.
         Use api of <class 'annlite.index.AnnLite'>
         """
 
-        self._index._annlite.restore(parameters)
+        self._index._annlite.restore(source_name)
 
     @requests(on='/filter')
     def filter(self, parameters: Dict, **kwargs):

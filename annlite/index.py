@@ -631,18 +631,18 @@ class AnnLite(CellContainer):
             logger.error(f'Not login to hubble yet.')
             raise ex
 
-    def backup(self, parameters: Optional[Dict] = {}):
-        if 'target' not in parameters:
+    def backup(self, target_name: Optional[str] = None):
+        if not target_name:
             self.dump_index()
         else:
-            self._backup_index_to_remote(parameters)
+            self._backup_index_to_remote(target_name)
 
-    def restore(self, parameters: Optional[Dict] = {}):
-        if 'source' not in parameters:
+    def restore(self, source_name: Optional[str] = None):
+        if not source_name:
             if self.total_docs > 0:
                 self._rebuild_index_from_local()
         else:
-            self._rebuild_index_from_remote(parameters)
+            self._rebuild_index_from_remote(source_name)
 
     def dump_model(self):
         logger.info(f'Save the parameters to {self.model_path}')
@@ -673,11 +673,9 @@ class AnnLite(CellContainer):
         self.dump_model()
         self.dump_index()
 
-    def _backup_index_to_remote(self, parameters: Dict):
-        target = parameters['target']
-        shard_id = parameters.get('shard_id', None)
+    def _backup_index_to_remote(self, target_name: str):
         art_list = self.remote_store_client.list_artifacts(
-            filter={'metaData.name': target}
+            filter={'metaData.name': target_name}
         )
         if len(art_list['data']) > 0:
             raise RuntimeError(
@@ -685,26 +683,24 @@ class AnnLite(CellContainer):
                 '(1) Delete the existed documents from hubble (2) Rename and upload again.'
             )
         else:
-            logger.info(f'Upload the indexer `{target}_{shard_id}` to remote')
+            logger.info(f'Upload the indexer `{target_name}` to remote')
             self.dump_index()
             for cell_id in range(self.n_cells):
                 self.remote_store_client.upload_artifact(
                     f=str(self.index_path / f'cell_{cell_id}.hnsw'),
                     metadata={
-                        'name': target,
+                        'name': target_name,
                         'type': 'hnsw',
                         'cell': cell_id,
-                        'shard': shard_id,
                     },
                     show_progress=True,
                 )
                 self.remote_store_client.upload_artifact(
                     f=str(self.index_path / f'cell_{cell_id}.db'),
                     metadata={
-                        'name': target,
+                        'name': target_name,
                         'type': 'cell_table',
                         'cell': cell_id,
-                        'shard': shard_id,
                     },
                     show_progress=True,
                 )
@@ -712,20 +708,19 @@ class AnnLite(CellContainer):
 
             shutil.rmtree(self.index_path)
 
-            logger.info(f'Upload the database `{target}_{shard_id}` to remote.')
+            logger.info(f'Upload the database `{target_name}` to remote.')
             output_path = shutil.make_archive(
-                os.path.join(str(self.data_path.parent), f'shard_{shard_id}'),
+                os.path.join(str(self.data_path.parent), 'database'),
                 'zip',
                 str(self.data_path.parent),
-                str(shard_id),
+                str(self.data_path).split('/')[-1],
             )
             self.remote_store_client.upload_artifact(
                 f=output_path,
                 metadata={
-                    'name': target,
-                    'type': 'shard_data',
+                    'name': target_name,
+                    'type': 'database',
                     'cell': 'all',
-                    'shard': shard_id,
                 },
             )
             Path(output_path).unlink()
@@ -756,26 +751,21 @@ class AnnLite(CellContainer):
                     super().insert(x, assigned_cells, docs, only_index=True)
                 logger.debug(f'Rebuild the index of cell-{cell_id} done')
 
-    def _rebuild_index_from_remote(self, parameters: Dict):
+    def _rebuild_index_from_remote(self, source_name: str):
         import shutil
 
-        source = parameters['source']
-        shard_id = parameters.get('shard_id', None)
         art_list = self.remote_store_client.list_artifacts(
-            filter={'metaData.name': source, 'metaData.shard': shard_id}
+            filter={'metaData.name': source_name}
         )
         if len(art_list['data']) == 0:
-            logger.info(f'The indexer `{source}_{shard_id}` not found. ')
+            logger.info(f'The indexer `{source_name}` not found. ')
         else:
-            logger.info(f'Load the indexer `{source}_{shard_id}` from remote store')
+            logger.info(f'Load the indexer `{source_name}` from remote store')
             restore_path = self.data_path / 'restore'
             restore_path.mkdir(parents=True)
             for art in art_list['data']:
                 for cell_id in range(self.n_cells):
-                    if (
-                        art['metaData']['cell'] == cell_id
-                        and art['metaData']['shard'] == shard_id
-                    ):
+                    if art['metaData']['cell'] == cell_id:
                         if art['metaData']['type'] == 'hnsw':
                             self.remote_store_client.download_artifact(
                                 id=art['_id'],
@@ -794,17 +784,10 @@ class AnnLite(CellContainer):
                             self.cell_table(cell_id).load(
                                 restore_path / f'cell_{cell_id}.db'
                             )
-                if (
-                    art['metaData']['type'] == 'shard_data'
-                    and art['metaData']['shard'] == shard_id
-                ):
-                    logger.info(
-                        f'Load the database `{source}_{shard_id}` from remote store'
-                    )
+                if art['metaData']['type'] == 'database':
+                    logger.info(f'Load the database `{source_name}` from remote store')
                     if len(os.listdir(self.data_path)) == 0:
-                        input_path = str(
-                            self.data_path.parent / f'shard_{shard_id}.zip'
-                        )
+                        input_path = str(self.data_path.parent / 'database.zip')
                         self.remote_store_client.download_artifact(
                             id=art['_id'],
                             f=input_path,
