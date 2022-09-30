@@ -280,7 +280,7 @@ class AnnLiteIndexer(Executor):
             flat_docs.match(self._index, **match_args)
 
     @requests(on='/backup')
-    def backup(self, target_name: Optional[str] = None, **kwargs):
+    def backup(self, parameters: Optional[Dict] = {}, **kwargs):
         """
         Backup data to local or remote.
         Use api of <class 'annlite.index.AnnLite'>
@@ -289,6 +289,7 @@ class AnnLiteIndexer(Executor):
             - 'target' (str): the name of indexer you want to backup as
         """
 
+        target_name = parameters.get('target_name', None)
         if target_name:
             target_name = f'{target_name}_{self.runtime_args.shard_id}'
         with self._index_lock:

@@ -202,7 +202,7 @@ def test_clear(tmpfile):
 
 @patch.dict(os.environ, {'JINA_AUTH_TOKEN': ''})
 def test_remote_storage(tmpfile):
-    os.environ['JINA_AUTH_TOKEN'] = '9bdfd52b39e8c32722208da4d7f4396c'
+    os.environ['JINA_AUTH_TOKEN'] = 'ed17d158d95d3f53f60eed445d783c80'
     clear_hubble()
 
     docs = gen_docs(N)
@@ -217,7 +217,7 @@ def test_remote_storage(tmpfile):
     with f:
         f.post(on='/index', inputs=docs)
         time.sleep(2)
-        f.post(on='/backup', parameters={'target': 'backup_docs'})
+        f.post(on='/backup', parameters={'target_name': 'backup_docs'})
         time.sleep(2)
 
     f = Flow().add(
@@ -264,7 +264,7 @@ def test_local_storage(tmpfile):
 
 @patch.dict(os.environ, {'JINA_AUTH_TOKEN': ''})
 def test_remote_storage_with_shards(tmpfile):
-    os.environ['JINA_AUTH_TOKEN'] = '9bdfd52b39e8c32722208da4d7f4396c'
+    os.environ['JINA_AUTH_TOKEN'] = 'ed17d158d95d3f53f60eed445d783c80'
     docs = gen_docs(N)
     f = Flow().add(
         uses=AnnLiteIndexer,
@@ -280,7 +280,7 @@ def test_remote_storage_with_shards(tmpfile):
         time.sleep(2)
         f.post(
             on='/backup',
-            parameters={'target': 'backup_docs_with_shards'},
+            parameters={'target_name': 'backup_docs_with_shards'},
         )
         time.sleep(2)
 
