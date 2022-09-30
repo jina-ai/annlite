@@ -273,7 +273,7 @@ def test_remote_storage_with_shards(tmpfile):
         },
         workspace=tmpfile,
         shards=3,
-        polling={'/index': 'ALL', '/backup': 'ALL', '/status': 'ALL'},
+        polling={'/index': 'ANY', '/search': 'ALL', '/backup': 'ALL', '/status': 'ALL'},
     )
     with f:
         f.post(on='/index', inputs=docs)
@@ -292,7 +292,7 @@ def test_remote_storage_with_shards(tmpfile):
         },
         workspace=tmpfile,
         shards=3,
-        polling={'/index': 'ALL', '/backup': 'ALL', '/status': 'ALL'},
+        polling={'/index': 'ANY', '/search': 'ALL', '/backup': 'ALL', '/status': 'ALL'},
     )
     with f:
         status = f.post(on='/status', return_results=True)[0]
@@ -311,7 +311,7 @@ def test_local_storage_with_shards(tmpfile):
         },
         workspace=tmpfile,
         shards=3,
-        polling={'/index': 'ALL', '/backup': 'ALL', '/status': 'ALL'},
+        polling={'/index': 'ANY', '/search': 'ALL', '/backup': 'ALL', '/status': 'ALL'},
     )
     with f:
         f.post(on='/index', inputs=docs)
@@ -324,7 +324,7 @@ def test_local_storage_with_shards(tmpfile):
         uses_with={'n_dim': D},
         workspace=tmpfile,
         shards=3,
-        polling={'/index': 'ALL', '/backup': 'ALL', '/status': 'ALL'},
+        polling={'/index': 'ANY', '/search': 'ALL', '/backup': 'ALL', '/status': 'ALL'},
     )
     with f:
         status = f.post(on='/status', return_results=True)[0]
