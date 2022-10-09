@@ -786,15 +786,14 @@ class AnnLite(CellContainer):
                             )
                 if art['metaData']['type'] == 'database':
                     logger.info(f'Load the database `{source_name}` from remote store')
-                    if len(os.listdir(self.data_path)) == 0:
-                        input_path = str(self.data_path.parent / f'{source_name}.zip')
-                        self.remote_store_client.download_artifact(
-                            id=art['_id'],
-                            f=input_path,
-                            show_progress=True,
-                        )
-                        shutil.unpack_archive(input_path, self.data_path.parent)
-                        Path(input_path).unlink()
+                    input_path = str(self.data_path.parent / f'{source_name}.zip')
+                    self.remote_store_client.download_artifact(
+                        id=art['_id'],
+                        f=input_path,
+                        show_progress=True,
+                    )
+                    shutil.unpack_archive(input_path, self.data_path.parent)
+                    Path(input_path).unlink()
             shutil.rmtree(restore_path)
 
     @property
