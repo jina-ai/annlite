@@ -284,16 +284,21 @@ def clear_hubble():
 
 
 @patch.dict(os.environ, {'JINA_AUTH_TOKEN': ''})
-def test_remote_storage(annlite_with_data):
+def test_remote_storage(tmpdir):
     os.environ['JINA_AUTH_TOKEN'] = 'ed17d158d95d3f53f60eed445d783c80'
     clear_hubble()
 
-    annlite_with_data.backup(target_name='backup_docs')
+    X = np.random.random((N, D))
+    docs = DocumentArray([Document(id=f'{i}', embedding=X[i]) for i in range(N)])
+    index = AnnLite(n_dim=D, data_path=tmpdir / 'workspace1')
+    index.index(docs)
 
-    annlite_with_data.clear()
-    annlite_with_data.restore(source_name='backup_docs')
+    index.backup(target_name='backup_docs')
+
+    index = AnnLite(n_dim=D, data_path=tmpdir / 'workspace2')
+    index.restore(source_name='backup_docs')
 
     clear_hubble()
-    status = annlite_with_data.stat
+    status = index.stat
     assert int(status['total_docs']) == N
     assert int(status['index_size']) == N
