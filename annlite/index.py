@@ -674,10 +674,6 @@ class AnnLite(CellContainer):
         self.dump_index()
 
     def _backup_index_to_remote(self, target_name: str):
-        import shutil
-
-        self.close()
-
         art_list = self.remote_store_client.list_artifacts(
             filter={'metaData.name': target_name}
         )
@@ -687,23 +683,6 @@ class AnnLite(CellContainer):
                 '(1) Delete the existed documents from hubble (2) Rename and upload again.'
             )
         else:
-            logger.info(f'Upload the database `{target_name}` to remote.')
-            output_path = shutil.make_archive(
-                os.path.join(str(self.data_path.parent), f'{target_name}'),
-                'zip',
-                str(self.data_path.parent),
-                str(self.data_path).split('/')[-1],
-            )
-            self.remote_store_client.upload_artifact(
-                f=output_path,
-                metadata={
-                    'name': target_name,
-                    'type': 'database',
-                    'cell': 'all',
-                },
-            )
-            Path(output_path).unlink()
-
             logger.info(f'Upload the indexer `{target_name}` to remote')
             self.dump_index()
             for cell_id in range(self.n_cells):
@@ -725,7 +704,26 @@ class AnnLite(CellContainer):
                     },
                     show_progress=True,
                 )
+            import shutil
+
             shutil.rmtree(self.index_path)
+
+            logger.info(f'Upload the database `{target_name}` to remote.')
+            output_path = shutil.make_archive(
+                os.path.join(str(self.data_path.parent), f'{target_name}'),
+                'zip',
+                str(self.data_path.parent),
+                str(self.data_path).split('/')[-1],
+            )
+            self.remote_store_client.upload_artifact(
+                f=output_path,
+                metadata={
+                    'name': target_name,
+                    'type': 'database',
+                    'cell': 'all',
+                },
+            )
+            Path(output_path).unlink()
 
     def _rebuild_index_from_local(self):
         if self.snapshot_path:
@@ -795,7 +793,6 @@ class AnnLite(CellContainer):
                         show_progress=True,
                     )
                     shutil.unpack_archive(input_path, self.data_path.parent)
-                    self._rebuild_database()
                     Path(input_path).unlink()
             shutil.rmtree(restore_path)
 

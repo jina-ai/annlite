@@ -40,7 +40,6 @@ class CellContainer:
         self.n_cells = n_cells
         self.n_components = projector_codec.n_components if projector_codec else None
         self.data_path = data_path
-        self.serialize_config = serialize_config
 
         self._pq_codec = pq_codec
         self._projector_codec = projector_codec
@@ -412,19 +411,6 @@ class CellContainer:
         logger.debug(
             f'total items for updating: {len(ids)}, ' f'success: {delete_success}'
         )
-
-    def _rebuild_database(self):
-        """rebuild doc_store and meta_table after annlite download databse from hubble"""
-
-        self._doc_stores = [
-            DocStorage(
-                self.data_path / f'cell_{_}',
-                serialize_config=self.serialize_config or {},
-                lock=True,
-            )
-            for _ in range(self.n_cells)
-        ]
-        self._meta_table = MetaTable('metas', data_path=self.data_path, in_memory=False)
 
     def _get_doc_by_id(self, doc_id: str):
         cell_id = 0
