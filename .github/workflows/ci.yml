@@ -134,7 +134,7 @@ jobs:
           fail_ci_if_error: false
           token: ${{ secrets.CODECOV_TOKEN }} # not required for public repos
 
-  core_test_win:
+  core-test-win:
     needs: prep-testbed
     runs-on: windows-latest
     strategy:
@@ -162,23 +162,10 @@ jobs:
           pytest --suppress-no-test-exit-code --cov=annlite --cov-report=xml -v -s -m "not gpu" -k "test"
           echo "::set-output name=codecov_flag::annlite"
         timeout-minutes: 30
-      - name: Check codecov file
-        id: check_files
-        uses: andstor/file-existence-action@v1
-        with:
-          files: "coverage.xml"
-      - name: Upload coverage from test to Codecov
-        uses: codecov/codecov-action@v2
-        if: steps.check_files.outputs.files_exists == 'true' && ${{ matrix.python-version }} == '3.7'
-        with:
-          file: coverage.xml
-          flags: ${{ steps.test.outputs.codecov_flag }}
-          fail_ci_if_error: false
-          token: ${{ secrets.CODECOV_TOKEN }} # not required for public repos
 
   # just for blocking the merge until all parallel core-test are successful
   success-all-test:
-    needs: core-test
+    needs: [core-test, core-test-win]
     if: always()
     runs-on: ubuntu-latest
     steps:
