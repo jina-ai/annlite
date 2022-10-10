@@ -1,11 +1,15 @@
 import operator
+import os
 import random
+from unittest.mock import patch
 
+import hubble
 import numpy as np
 import pytest
 from docarray import Document, DocumentArray
 
 from annlite import AnnLite
+from annlite.hub import gen_docs
 
 N = 1000  # number of data points
 Nq = 5
@@ -271,3 +275,28 @@ def test_search_numpy_membership_filter(
                 for doc_id in doc_ids_query_k
             ]
         )
+
+
+def clear_hubble():
+    client = hubble.Client(max_retries=None, jsonify=True)
+    art_list = client.list_artifacts(filter={'metaData.name': 'backup_docs'})
+    for art in art_list['data']:
+        client.delete_artifact(id=art['_id'])
+
+
+@patch.dict(os.environ, {'JINA_AUTH_TOKEN': ''})
+def test_remote_storage(annlite_index):
+    os.environ['JINA_AUTH_TOKEN'] = 'ed17d158d95d3f53f60eed445d783c80'
+    clear_hubble()
+
+    docs = gen_docs(N)
+    annlite_index.index(docs)
+    annlite_index.backup(target_name='backup_docs')
+
+    annlite_index.clear()
+    annlite_index.restore(source_name='backup_docs')
+
+    clear_hubble()
+    status = annlite_index.stat
+    assert int(status['total_docs']) == N
+    assert int(status['index_size']) == N
