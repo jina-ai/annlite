@@ -87,8 +87,8 @@ jobs:
         id: test
         shell: pwsh
         run: |
-          pytest --suppress-no-test-exit-code --cov=annlite --cov-report=xml \
-            -v -s -m "not gpu" ${{ matrix.test-path }}
+          cd tests/
+          pytest --suppress-no-test-exit-code --cov=annlite --cov-report=xml -v -s -m "not gpu" -k "test"
           echo "::set-output name=codecov_flag::annlite"
         timeout-minutes: 30
       - name: Check codecov file
