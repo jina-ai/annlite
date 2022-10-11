@@ -414,7 +414,7 @@ class MetaTable(Table):
     def iter_addresses(
         self, time_since: 'datetime.datetime' = datetime.datetime(2020, 2, 2, 0, 0)
     ):
-        sql = f'SELECT _doc_id, cell_id, offset from {self.name} WHERE time_at > ? AND _deleted = 0 ORDER BY time_at ASC;'
+        sql = f'SELECT _doc_id, cell_id, offset from {self.name} WHERE time_at >= ? AND _deleted = 0 ORDER BY time_at ASC;'
 
         cursor = self._conn.cursor()
         for doc_id, cell_id, offset in cursor.execute(sql, (time_since,)):
