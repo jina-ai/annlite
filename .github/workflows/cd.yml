@@ -85,9 +85,9 @@ jobs:
           pip install -e ".[test]"
       - name: Test
         id: test
+        shell: pwsh
         run: |
-          set PYTHONIOENCODING='utf-8'
-          echo %PYTHONIOENCODING%
+          $env:PYTHONIOENCODING='utf-8'
           cd tests/
           pytest --suppress-no-test-exit-code --cov=annlite --cov-report=xml -v -s -m "not gpu" -k "test"
           echo "::set-output name=codecov_flag::annlite"
