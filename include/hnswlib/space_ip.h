@@ -15,8 +15,8 @@ namespace hnswlib {
     }
 
     static float
-    InnerProductDistance(const void *pVect1, const void *pVect2, const void *qty_ptr) {
-        return 1.0f - InnerProduct(pVect1, pVect2, qty_ptr);
+    InnerProductDistance(const void *pVect1, const void *pVect2, const void *qty_ptr, const local_state_t *local_state) {
+        return 1.0f - InnerProduct(pVect1, pVect2, qty_ptr, local_state);
     }
 
 #if defined(USE_AVX)
@@ -135,8 +135,8 @@ namespace hnswlib {
     }
 
     static float
-    InnerProductDistanceSIMD4ExtSSE(const void *pVect1v, const void *pVect2v, const void *qty_ptr) {
-        return 1.0f - InnerProductSIMD4ExtSSE(pVect1v, pVect2v, qty_ptr);
+    InnerProductDistanceSIMD4ExtSSE(const void *pVect1v, const void *pVect2v, const void *qty_ptr, const local_state_t *local_state) {
+        return 1.0f - InnerProductSIMD4ExtSSE(pVect1v, pVect2v, qty_ptr, local_state);
     }
 
 #endif
@@ -274,8 +274,8 @@ namespace hnswlib {
     }
 
     static float
-    InnerProductDistanceSIMD16ExtSSE(const void *pVect1v, const void *pVect2v, const void *qty_ptr) {
-        return 1.0f - InnerProductSIMD16ExtSSE(pVect1v, pVect2v, qty_ptr);
+    InnerProductDistanceSIMD16ExtSSE(const void *pVect1v, const void *pVect2v, const void *qty_ptr, const local_state_t *local_state) {
+        return 1.0f - InnerProductSIMD16ExtSSE(pVect1v, pVect2v, qty_ptr, local_state);
     }
 
 #endif
