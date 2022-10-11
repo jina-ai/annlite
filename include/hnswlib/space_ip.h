@@ -23,7 +23,7 @@ namespace hnswlib {
 
 // Favor using AVX if available.
     static float
-    InnerProductSIMD4Ext(const void *pVect1v, const void *pVect2v, const void *qty_ptr, const local_state_t *local_state) {
+    InnerProductSIMD4ExtAVX(const void *pVect1v, const void *pVect2v, const void *qty_ptr, const local_state_t *local_state) {
         float PORTABLE_ALIGN32 TmpRes[8];
         float *pVect1 = (float *) pVect1v;
         float *pVect2 = (float *) pVect2v;
@@ -70,8 +70,8 @@ namespace hnswlib {
     }
 
     static float
-    InnerProductDistanceSIMD4ExtAVX(const void *pVect1v, const void *pVect2v, const void *qty_ptr) {
-        return 1.0f - InnerProductSIMD4ExtAVX(pVect1v, pVect2v, qty_ptr);
+    InnerProductDistanceSIMD4ExtAVX(const void *pVect1v, const void *pVect2v, const void *qty_ptr, const local_state_t *local_state) {
+        return 1.0f - InnerProductSIMD4ExtAVX(pVect1v, pVect2v, qty_ptr, local_state);
     }
 
 #endif
@@ -145,7 +145,7 @@ namespace hnswlib {
 #if defined(USE_AVX512)
 
     static float
-    InnerProductSIMD16ExtAVX512(const void *pVect1v, const void *pVect2v, const void *qty_ptr) {
+    InnerProductSIMD16ExtAVX512(const void *pVect1v, const void *pVect2v, const void *qty_ptr, const local_state_t *local_state) {
         float PORTABLE_ALIGN64 TmpRes[16];
         float *pVect1 = (float *) pVect1v;
         float *pVect2 = (float *) pVect2v;
@@ -175,8 +175,8 @@ namespace hnswlib {
     }
 
     static float
-    InnerProductDistanceSIMD16ExtAVX512(const void *pVect1v, const void *pVect2v, const void *qty_ptr) {
-        return 1.0f - InnerProductSIMD16ExtAVX512(pVect1v, pVect2v, qty_ptr);
+    InnerProductDistanceSIMD16ExtAVX512(const void *pVect1v, const void *pVect2v, const void *qty_ptr, const local_state_t *local_state) {
+        return 1.0f - InnerProductSIMD16ExtAVX512(pVect1v, pVect2v, qty_ptr, local_state);
     }
 
 #endif
@@ -220,8 +220,8 @@ namespace hnswlib {
     }
 
     static float
-    InnerProductDistanceSIMD16ExtAVX(const void *pVect1v, const void *pVect2v, const void *qty_ptr) {
-        return 1.0f - InnerProductSIMD16ExtAVX(pVect1v, pVect2v, qty_ptr);
+    InnerProductDistanceSIMD16ExtAVX(const void *pVect1v, const void *pVect2v, const void *qty_ptr, const local_state_t *local_state) {
+        return 1.0f - InnerProductSIMD16ExtAVX(pVect1v, pVect2v, qty_ptr, local_state);
     }
 
 #endif
