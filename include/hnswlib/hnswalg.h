@@ -28,6 +28,7 @@ namespace hnswlib {
                 link_list_locks_(max_elements), link_list_update_locks_(max_update_element_locks), element_levels_(max_elements) {
             max_elements_ = max_elements;
 
+            has_deletions_ = false;
             num_deleted_ = 0;
             data_size_ = s->get_data_size();
             fstdistfunc_ = s->get_dist_func();
@@ -118,6 +119,8 @@ namespace hnswlib {
         std::vector<int> element_levels_;
 
         size_t data_size_;
+
+        bool has_deletions_;
 
         size_t label_offset_;
         DISTFUNC<dist_t> fstdistfunc_;
@@ -237,7 +240,7 @@ namespace hnswlib {
         mutable std::atomic<long> metric_distance_computations;
         mutable std::atomic<long> metric_hops;
 
-        template <bool has_deletions, bool collect_metrics=false>
+        template <bool has_deletions, bool collect_metrics=false >
         std::priority_queue<std::pair<dist_t, tableint>, std::vector<std::pair<dist_t, tableint>>, CompareByFirst>
         searchBaseLayerST(tableint ep_id, const void *data_point, size_t ef, const local_state_t *local_state_ptr) const {
             VisitedList *vl = visited_list_pool_->getFreeVisitedList();
@@ -249,7 +252,7 @@ namespace hnswlib {
 
             dist_t lowerBound;
             if (!has_deletions || !isMarkedDeleted(ep_id)) {
-                dist_t dist = fstdistfunc_(data_point, getDataByInternalId(ep_id), dist_func_param_);
+                dist_t dist = fstdistfunc_(data_point, getDataByInternalId(ep_id), dist_func_param_, local_state_ptr);
                 lowerBound = dist;
                 top_candidates.emplace(dist, ep_id);
                 candidate_set.emplace(-dist, ep_id);
@@ -1291,71 +1294,71 @@ namespace hnswlib {
             return result;
         };
 
-  std::priority_queue<std::pair<dist_t, labeltype>>
-  searchKnnWithFilter(const void *query_data, const binary_fuse16_t *filter,
-                      size_t k, size_t batch_index) const {
-    std::priority_queue<std::pair<dist_t, labeltype>> result;
-    if (cur_element_count == 0)
-      return result;
-    local_state_t local_state;
-    local_state.batch_index = batch_index;
+        std::priority_queue<std::pair<dist_t, labeltype>>
+        searchKnnWithFilter(const void *query_data, const binary_fuse16_t *filter,
+                            size_t k, size_t batch_index) const {
+            std::priority_queue<std::pair<dist_t, labeltype>> result;
+            if (cur_element_count == 0)
+            return result;
+            local_state_t local_state;
+            local_state.batch_index = batch_index;
 
-    tableint currObj = enterpoint_node_;
-    dist_t curdist =
-        fstdistfunc_(query_data, getDataByInternalId(enterpoint_node_),
-                     dist_func_param_, &local_state);
+            tableint currObj = enterpoint_node_;
+            dist_t curdist =
+                fstdistfunc_(query_data, getDataByInternalId(enterpoint_node_),
+                            dist_func_param_, &local_state);
 
-    for (int level = maxlevel_; level > 0; level--) {
-      bool changed = true;
-      while (changed) {
-        changed = false;
-        unsigned int *data;
+            for (int level = maxlevel_; level > 0; level--) {
+            bool changed = true;
+            while (changed) {
+                changed = false;
+                unsigned int *data;
 
-        data = (unsigned int *)get_linklist(currObj, level);
-        int size = getListCount(data);
-        metric_hops++;
-        metric_distance_computations += size;
+                data = (unsigned int *)get_linklist(currObj, level);
+                int size = getListCount(data);
+                metric_hops++;
+                metric_distance_computations += size;
 
-        tableint *datal = (tableint *)(data + 1);
-        for (int i = 0; i < size; i++) {
-          tableint cand = datal[i];
-          if (cand < 0 || cand > max_elements_)
-            throw std::runtime_error("cand error");
-          dist_t d = fstdistfunc_(query_data, getDataByInternalId(cand),
-                                  dist_func_param_, &local_state);
+                tableint *datal = (tableint *)(data + 1);
+                for (int i = 0; i < size; i++) {
+                tableint cand = datal[i];
+                if (cand < 0 || cand > max_elements_)
+                    throw std::runtime_error("cand error");
+                dist_t d = fstdistfunc_(query_data, getDataByInternalId(cand),
+                                        dist_func_param_, &local_state);
 
-          if (d < curdist) {
-            curdist = d;
-            currObj = cand;
-            changed = true;
-          }
-        }
-      }
-    }
+                if (d < curdist) {
+                    curdist = d;
+                    currObj = cand;
+                    changed = true;
+                }
+                }
+            }
+            }
 
-    std::priority_queue<std::pair<dist_t, tableint>,
-                        std::vector<std::pair<dist_t, tableint>>,
-                        CompareByFirst>
-        top_candidates;
-    if (has_deletions_) {
-      top_candidates = searchBaseLayerSTWithFilter<true, true>(
-          currObj, query_data, filter, std::max(ef_, k), &local_state);
-    } else {
-      top_candidates = searchBaseLayerSTWithFilter<false, true>(
-          currObj, query_data, filter, std::max(ef_, k), &local_state);
-    }
+            std::priority_queue<std::pair<dist_t, tableint>,
+                                std::vector<std::pair<dist_t, tableint>>,
+                                CompareByFirst>
+                top_candidates;
+            if (has_deletions_) {
+            top_candidates = searchBaseLayerSTWithFilter<true, true>(
+                currObj, query_data, filter, std::max(ef_, k), &local_state);
+            } else {
+            top_candidates = searchBaseLayerSTWithFilter<false, true>(
+                currObj, query_data, filter, std::max(ef_, k), &local_state);
+            }
 
-    while (top_candidates.size() > k) {
-      top_candidates.pop();
-    }
-    while (top_candidates.size() > 0) {
-      std::pair<dist_t, tableint> rez = top_candidates.top();
-      result.push(std::pair<dist_t, labeltype>(rez.first,
-                                               getExternalLabel(rez.second)));
-      top_candidates.pop();
-    }
-    return result;
-  };
+            while (top_candidates.size() > k) {
+            top_candidates.pop();
+            }
+            while (top_candidates.size() > 0) {
+            std::pair<dist_t, tableint> rez = top_candidates.top();
+            result.push(std::pair<dist_t, labeltype>(rez.first,
+                                                    getExternalLabel(rez.second)));
+            top_candidates.pop();
+            }
+            return result;
+        };
 
         void checkIntegrity(){
             int connections_checked=0;
