@@ -1,18 +1,19 @@
 [build-system]
 requires = [
+    "hatchling",
     "setuptools>=42",
     "cython",
     "numpy>=1.10.1",
     "pybind11>=2..9.0",
     ]
-build-backend = "setuptools.build_meta"
+build-backend = "hatchling.build"
 
 [project]
 name = "annlite"
 dynamic = ["version"]
 description = "Fast and Light Approximate Nearest Neighbor Search Library integrated with the Jina Ecosystem"
 readme = "README.md"
-#license-files = { paths = ["LICENSE"] }
+license-files = { paths = ["LICENSE"] }
 requires-python = ">=3.7"
 authors = [
     { name = "Jina AI", email = "team@jina.ai" },
