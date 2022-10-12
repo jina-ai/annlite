@@ -164,7 +164,7 @@ jobs:
       matrix:
         os: [windows-latest]
         cibw_arch: ["AMD64"]
-        cpython-verison: ["cp37-*"]
+        cpython-version: ["cp37-*"]
         python-version: [3.7]
     steps:
       - name: Set up Python ${{ matrix.python-version}}
