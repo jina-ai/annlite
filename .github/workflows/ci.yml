@@ -93,52 +93,34 @@ jobs:
     outputs:
       matrix: ${{ steps.set-matrix.outputs.matrix }}
 
-  build-wheels:
+  core-test-nix:
+    needs: prep-testbed
     runs-on: ${{ matrix.os }}
-    strategy:
-      matrix:
-        os: [ubuntu-latest, windows-latest]
-        cibw_arch: ["native", "aarch64"]
-        python_version: ["cp37-*"]
-        exclude:
-          - os: windows-latest
-            cibw_arch: "aarch64"
-        fail-fast: false
-    steps:
-    - uses: actions/checkout@v3
-    - name: Build wheels
-      uses: pypa/cibuildwheel@v2.6.0
-      with:
-        package-dir: python
-      env:
-        CIBW_ENVIRONMENT: >
-          STAN_BACKEND="${{ env.STAN_BACKEND }}"
-        CIBW_MANYLINUX_X86_64_IMAGE: manylinux2014
-        CIBW_BUILD: ${{ matrix.python_version }}
-        CIBW_SKIP: "*musllinux*"
-        CIBW_ARCHS: ${{ matrix.cibw_arch }}
-        CIBW_BUILD_FRONTEND: build
-
-    - name: Upload wheel as artifact
-    - uses: actions/upload-artifact@v3
-      with:
-        name: artifact-${{ matrix.os }}-${{ matrix.cibw_arch }}-wheel
-        path: ./**/*.whl
-
-  core-test:
-    needs: [prep-testbed, build-wheels]
-    runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
+        os: ubuntu-latest
+        cibw_arch: ["native", "aarch64"]
+        py: ["cp37-*"]
         python-version: [3.7]
         test-path: ${{fromJson(needs.prep-testbed.outputs.matrix)}}
     steps:
-      - uses: actions/checkout@v2
       - name: Set up Python ${{ matrix.python-version }}
         uses: actions/setup-python@v2
         with:
           python-version: ${{ matrix.python-version }}
+      - uses: actions/checkout@v2
+      - name: Build Wheel
+        uses: pypa/cibuildwheel@2.6.0
+        with:
+          package-dir: python
+        CIBW_ENVIRONMENT: >
+          STAN_BACKEND="${{ env.STAN_BACKEND }}"
+        CIBW_MANYLINUX_X86_64_IMAGE: manylinux2014
+        CIBW_BUILD: ${{ matrix.py }}
+        CIBW_SKIP: "*musllinux*"
+        CIBW_ARCHS: ${{ matrix.cibw_arch }}
+        CIBW_BUILD_FRONTEND: build
       - name: Prepare enviroment
         run: |
           ls
@@ -147,7 +129,7 @@ jobs:
           python -m pip install --upgrade pip
           python -m pip install wheel
           pip install --pre docarray
-          pip install -e ".[test]"
+#          pip install -e ".[test]"
       - name: Test
         id: test
         run: |
