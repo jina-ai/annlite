@@ -119,13 +119,14 @@ jobs:
         uses: pypa/cibuildwheel@2.6.0
         with:
           package-dir: python
-        CIBW_ENVIRONMENT: >
-          STAN_BACKEND="${{ env.STAN_BACKEND }}"
-        CIBW_MANYLINUX_X86_64_IMAGE: manylinux2014
-        CIBW_BUILD: ${{ matrix.py }}
-        CIBW_SKIP: "*musllinux*"
-        CIBW_ARCHS: ${{ matrix.cibw_arch }}
-        CIBW_BUILD_FRONTEND: build
+        env:
+          CIBW_ENVIRONMENT: >
+            STAN_BACKEND="${{ env.STAN_BACKEND }}"
+          CIBW_MANYLINUX_X86_64_IMAGE: manylinux2014
+          CIBW_BUILD: ${{ matrix.py }}
+          CIBW_SKIP: "*musllinux*"
+          CIBW_ARCHS: ${{ matrix.cibw_arch }}
+          CIBW_BUILD_FRONTEND: build
       - name: Install AnnLite
         run: |
           ls
