@@ -1,0 +1,46 @@
+name: build hatch
+
+on:
+  push:
+    branches:
+      - main
+    
+jobs:
+  build_wheels:
+    name: Build wheels
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v3
+    - uses: actions/setup-python@v3
+    - name: Install hatch
+      run: |
+        python -m pip install --upgrade pip
+        python -m pip install -U hatch
+    - name: Build wheels
+      run: hatch build -t wheel
+
+    - uses: actions/upload-artifact@v3
+      with:
+        name: artifacts
+        path: dist/*.whl
+        if-no-files-found: error
+
+  publish:
+    name: Publish release
+    needs:
+    - build
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/download-artiifact@v3
+      with:
+        name: artifacts
+        path: dist
+
+    - name: Push build artifacts to PyPI
+      uses: pypa/gh-action-pypi-publish@1.5.1
+      with:
+        skip_existing: true
+        # user: __token__
+        passward: ${{ secrets.PYPI_API_TOKEN_HATCHING }}
