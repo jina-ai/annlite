@@ -1,6 +1,11 @@
 [build-system]
-requires = ["hatchling"]
-build-backend = "hatchling.build"
+requires = [
+    "setuptools>=42",
+    "cython",
+    "numpy>=1.10.1",
+    "pybind11>=2..9.0",
+    ]
+build-backend = "setuptools.build_meta"
 
 [project]
 name = "annlite"
@@ -73,6 +78,8 @@ exclude = [
     "executor",
 ]
 
+#[tool.hatch.build.hooks.custom]
+#path = "hatch_build.py"
+
+
 [tool.hatch.build.targets.wheel]
-
-
