@@ -1,86 +1,11 @@
 [build-system]
 requires = [
-    "hatchling",
     "setuptools>=42",
+    "wheel",
     "cython",
-    "numpy>=1.10.1",
-    "pybind11>=2..9.0",
-    ]
-build-backend = "hatchling.build"
-
-[project]
-name = "annlite"
-dynamic = ["version"]
-description = "Fast and Light Approximate Nearest Neighbor Search Library integrated with the Jina Ecosystem"
-readme = "README.md"
-license-files = { paths = ["LICENSE"] }
-requires-python = ">=3.7"
-authors = [
-    { name = "Jina AI", email = "team@jina.ai" },
-]
-keywords = [
-    "approximate-nearest-neighbor",
-    "hnsw",
-    "product-quantization",
-]
-classifiers = [
-    "Intended Audience :: Developers",
-    "Intended Audience :: Science/Research",
-    "License :: OSI Approved :: Apache Software License",
-    "Operating System :: OS Independent",
-    "Programming Language :: Python :: 3.7",
-    "Programming Language :: Python :: 3.8",
-    "Programming Language :: Python :: 3.9",
-    "Topic :: Scientific/Engineering :: Artificial Intelligence",
-]
-dependencies = [
-    "click",
-    "cython",
-    "docarray>=0.13.16",
-    "docarray[common]>=0.13.16",
-    "loguru",
-    "numpy",
-    "rocksdict>=0.2.16",
-    "scikit-learn",
+    "numpy>=1.10.0",
+    "pybind11>=2.9.0",
 ]
 
-[project.optional-dependencies]
-test = [
-    "black",
-    "jina",
-    "pytest",
-    "pytest-cov",
-    "pytest-custom_exit_code",
-    "pytest-mock",
-    "pytest-repeat",
-    "pytest-reraise",
-    "pytest-timeout",
-]
+build-backend = "setuptools.build_meta"
 
-[project.urls]
-Download = "https://github.com/jina-ai/pqlite/tags"
-Homepage = "https://github.com/jina-ai/annlite"
-
-[tool.hatch.version]
-path = "annlite/__init__.py"
-
-[tool.hatch.build.targets.sdist]
-include = [
-    "/annlite",
-]
-exclude = [
-    "*.tests",
-    "*.tests.*",
-    "tests.*",
-    "tests",
-    "test",
-    "docs",
-    "src",
-    "executor",
-]
-
-#[tool.hatch.build.hooks.custom]
-#path = "hatch_build.py"
-
-
-[tool.hatch.build.targets.wheel]
