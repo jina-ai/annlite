@@ -116,6 +116,7 @@ jobs:
           python -m pip install cibuildwheel
           pip install pytest pytest-html pytest-cov pytest-mock \
           pytest-repeat pytest-custom-exit-code pytest-timeout pytest-reraise
+          pip install jina
           pip install --pre docarray
       - name: Build wheel
         uses: pypa/cibuildwheel@2.6.0
@@ -136,9 +137,7 @@ jobs:
         id: test
         run: |
           cd ..
-          ls
           cp -r annlite/tests/ ./
-          ls
           pytest --suppress-no-test-exit-code --cov=annlite --cov-report=xml \
           -v -s -m "not gpu" ${{ matrix.test-path }}
           echo "::set-output name=codecov_flag::annlite"
