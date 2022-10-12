@@ -133,10 +133,7 @@ jobs:
       - name: Test
         id: test
         run: |
-          ls
-          cd ..
-          pytest --suppress-no-test-exit-code --cov=annlite --cov-report=xml \
-            -v -s -m "not gpu" ${{ matrix.test-path }}
+          pytest --suppress-no-test-exit-code --cov=annlite --cov-report=xml -v -s -m "not gpu" ${{ matrix.test-path }}
           echo "::set-output name=codecov_flag::annlite"
         timeout-minutes: 30
       - name: Check codecov file
