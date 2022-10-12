@@ -99,7 +99,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: ubuntu-latest
+        os: [ubuntu-latest]
         cibw_arch: ["native", "aarch64"]
         py: ["cp37-*"]
         python-version: [3.7]
