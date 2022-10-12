@@ -137,7 +137,8 @@ jobs:
         run: |
           pip show annlite
           python -c "import sys; print(sys.path)"
-          cd tests/
+          python -c "import docarray; print(docarray.__path__)"
+          cd
           python -c "import annlite; print(annlite.__path__)"
           pytest --suppress-no-test-exit-code --cov=annlite --cov-report=xml \
           -v -s -m "not gpu" ${{ matrix.test-path }}

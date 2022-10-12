@@ -4,9 +4,7 @@ import random
 import numpy as np
 import pytest
 from docarray import Document, DocumentArray
-import annlite
-print(annlite.__file__)
-print(annlite.__path__)
+
 from annlite import AnnLite
 
 N = 1000  # number of data points
