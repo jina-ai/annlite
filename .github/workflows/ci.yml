@@ -135,6 +135,7 @@ jobs:
       - name: Test
         id: test
         run: |
+          pip show annlite
           cd ..
           pytest --suppress-no-test-exit-code --cov=annlite --cov-report=xml \
           -v -s -m "not gpu" ${{ matrix.test-path }}
