@@ -13,7 +13,7 @@
       // highly unlikely
 #endif
 #ifdef _MSC_VER
-#include <cstdiio>
+#include <cstdio>
 #include <intrin.h>
 #endif
 

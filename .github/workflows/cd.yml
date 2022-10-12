@@ -23,29 +23,48 @@ jobs:
 
   core-test:
     needs: prep-testbed
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
-        python-version: [3.7]
+        os: [ubuntu-latest, macos-latest]
+        python-version: [["cp37-*", 3.7], ["cp38-*", 3.8], ["cp39-*", 3.9], ["cp310-*", 3.10]]
         test-path: ${{fromJson(needs.prep-testbed.outputs.matrix)}}
     steps:
-      - uses: actions/checkout@v2
-      - name: Set up Python ${{ matrix.python-version }}
+      - name: Set up Python ${{ matrix.python-version }}[1]
         uses: actions/setup-python@v2
         with:
-          python-version: ${{ matrix.python-version }}
+          python-version: ${{ matrix.python-version }}[1]
+      - uses: actions/checkout@v2
       - name: Prepare enviroment
         run: |
           python -m pip install --upgrade pip
-          python -m pip install wheel
+          python -m pip install cibuildwheel
+          pip install pytest pytest-html pytest-cov pytest-mock \
+          pytest-repeat pytest-custom-exit-code pytest-timeout pytest-reraise
+          pip install jina
           pip install --pre docarray
-          pip install -e ".[test]"
+      - name: Build wheel
+        uses: pypa/cibuildwheel@2.6.0
+        with:
+          package-dir: ./
+        env:
+          CIBW_ENVIRONMENT: >
+            STAN_BACKEND="${{ env.STAN_BACKEND }}"
+          CIBW_MANYLINUX_X86_64_IMAGE: manylinux2014
+          CIBW_BUILD: ${{ matrix.python-version }}[0]
+          CIBW_SKIP: "*musllinux*"
+          CIBW_BUILD_FRONTEND: build
+      - name: Install annlite
+        run: |
+          pip install wheelhouse/*.whl
       - name: Test
         id: test
         run: |
-          pytest --cov=annlite --cov-report=xml \
-            -v -s -m "not gpu" ${{ matrix.test-path }}
+          cd ..
+          mv annlite/tests/ ./
+          pytest --suppress-no-test-exit-code --cov=annlite --cov-report=xml \
+          -v -s -m "not gpu" ${{ matrix.test-path }}
           echo "::set-output name=codecov_flag::annlite"
         timeout-minutes: 30
       - name: Check codecov file
@@ -54,40 +73,56 @@ jobs:
         with:
           files: "coverage.xml"
       - name: Upload coverage from test to Codecov
-        uses: codecov/codecov-action@v1
+        uses: codecov/codecov-action@v2
         if: steps.check_files.outputs.files_exists == 'true' && ${{ matrix.python-version }} == '3.7'
         with:
           file: coverage.xml
-          name: ${{ matrix.test-path }}-codecov
           flags: ${{ steps.test.outputs.codecov_flag }}
           fail_ci_if_error: false
           token: ${{ secrets.CODECOV_TOKEN }} # not required for public repos
 
   core-test-win:
     needs: prep-testbed
-    runs-on: windows-latest
+    runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
-        python-version: [3.7]
+        os: [windows-latest]
+        python-verison: [["cp37-*", 3.7], ["cp38-*", 3.8], ["cp39-*", 3.9], ["cp310-*", 3.10]]
     steps:
-      - uses: actions/checkout@v3
-      - name: Set up Python ${{ matrix.python-version}}
+      - name: Set up Python ${{ matrix.python-version}}[1]
         uses: actions/setup-python@v3
         with:
-          python-version: ${{ matrix.python-versionn}}
+          python-version: ${{ matrix.python-versionn}}[1]
+      - uses: actions/checkout@v3
       - name: Prepare environment
         shell: pwsh
         run: |
+          systeminfo
           python -m pip install --upgrade pip
-          python -m pip install wheel
+          python -m pip install cibuildwheel
+          pip install pytest pytest-html pytest-cov pytest-mock pytest-repeat pytest-custom-exit-code pytest-timeout pytest-reraise
+          pip install jina
           pip install --pre docarray
-          pip install -e ".[test]"
+      - name: Build wheel
+        uses: pypa/cibuildwheel@2.6.0
+        with:
+          package-dir: ./
+        env:
+          CIBW_ENVIRONMENT: >
+            STAN_BACKEND="${{ env.STAN_BACKEND }}"
+          CIBW_BUILD: ${{ matrix.python-version }}[0]
+          CIBW_BUILD_FRONTEND: build
+      - name: Install annlite
+        run: |
+          pip install wheelhouse/*.whl
       - name: Test
         id: test
         shell: pwsh
         run: |
           $env:PYTHONIOENCODING='utf-8'
+          cd ..
+          move annlite/tests/ ./
           cd tests/
           pytest -v -s -m "not gpu" -k "test"
           echo "::set-output name=codecov_flag::annlite"
