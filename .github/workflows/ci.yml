@@ -93,7 +93,7 @@ jobs:
     outputs:
       matrix: ${{ steps.set-matrix.outputs.matrix }}
 
-  core-test-nix:
+  core-test:
     needs: prep-testbed
     runs-on: ${{ matrix.os }}
     strategy:
