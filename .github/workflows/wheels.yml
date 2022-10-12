@@ -1,4 +1,4 @@
-name: build hatch
+name: Build CI wheels
 
 on:
   push:
@@ -12,38 +12,54 @@ jobs:
     strategy:
       matrix:
         os: [ubuntu-latest, windows-latest, macOS-latest]
+        cibw_arch: ["native", "aarch64"]
+        python_version: ["cp37-*", "cp38-*", "cp39-*", "cp310-*"]
+        exclude:
+          - os: macos-latest
+            cibw_arch: "aarch64"
+          - os: windows-latest
+            cibw_arch: "aarch64"
+        fail-fast: false
 
     steps:
     - uses: actions/checkout@v3
-    - uses: actions/setup-python@v3
-    - name: Install cibuildwheel
-      run: |
-        python -m pip install --upgrade pip
-        python -m pip install -U cibuildwheel
+    
     - name: Build wheels
-      run: python -m cibuildwheel --output-dir dist
+      uses: pypa/cibuildwheel@v2.6.0
+      with:
+        package-dir: python
+      env:
+        CIBW_ENVIRONMENT: >
+          STAN_BACKEND="${{ env.STAN_BACKEND }}"
+        CIBW_MANYLINUX_X86_64_IMAGE: manylinux2014
+        CIBW_BUILD: ${{ matrix.python_version }}
+        CIBW_SKIP: "*musllinux*"
+        CIBW_ARCHS: ${{ matrix.cibw_arch }}
+        CIBW_BUILD_FRONTEND: build
 
+    - name: Upload wheel as artifact
     - uses: actions/upload-artifact@v3
       with:
-        name: artifacts
-        path: dist/*.whl
-        if-no-files-found: error
+        name: artifact-${{ matrix.os }}-${{ matrix.cibw_arch }}-wheel
+        path: ./**/*.whl
 
-  publish:
-    name: Publish release
-    needs:
-    - build
+  Upload:
+    name: Publish release to PyPI
+    needs: [build_wheels]
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/download-artiifact@v3
-      with:
-        name: artifacts
-        path: dist
+    - name: Download all artifacts
+    - uses: actions/download-artifact@v3
 
-    - name: Push build artifacts to PyPI
+    - name: Copy artifacts to dist/ folder
+      run: |
+        find . -name 'artifact-*' -exec unzip '{}' \;
+        mkdir -p dist/
+        find . -name '*.whl' -exec mv '{}' dist/ \;
+
+    - name: Push to PyPI
       uses: pypa/gh-action-pypi-publish@1.5.1
       with:
-        skip_existing: true
-        user: __token__
+        user: ${{ secrets.PYPI_USERNAME }}
         passward: ${{ secrets.PYPI_API_TOKEN_HATCHING }}
