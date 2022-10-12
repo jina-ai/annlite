@@ -1,6 +1,7 @@
 import operator
 import random
-
+import sys
+del sys.path[0]
 import numpy as np
 import pytest
 from docarray import Document, DocumentArray
