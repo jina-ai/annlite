@@ -137,7 +137,7 @@ jobs:
         id: test
         run: |
           cd ..
-          cp -r annlite/tests/ ./
+          mv annlite/tests/ ./
           pytest --suppress-no-test-exit-code --cov=annlite --cov-report=xml \
           -v -s -m "not gpu" ${{ matrix.test-path }}
           echo "::set-output name=codecov_flag::annlite"
@@ -163,7 +163,7 @@ jobs:
       fail-fast: false
       matrix:
         os: [windows-latest]
-        cibw_arch: ["x86", "amd64", "arm64"]
+        cibw_arch: ["x86", "ARM64", "AMD64"]
         cpython-verison: ["cp37-*"]
         python-version: [3.7]
     steps:
@@ -187,9 +187,7 @@ jobs:
         env:
           CIBW_ENVIRONMENT: >
             STAN_BACKEND="${{ env.STAN_BACKEND }}"
-          CIBW_MANYLINUX_X86_64_IMAGE: manylinux2014
           CIBW_BUILD: ${{ matrix.cpython-version }}
-          CIBW_SKIP: "*musllinux*"
           CIBW_ARCHS: ${{ matrix.cibw_arch }}
           CIBW_BUILD_FRONTEND: build
       - name: Install annlite
