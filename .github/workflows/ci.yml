@@ -136,7 +136,6 @@ jobs:
         id: test
         run: |
           pip show annlite
-          cd ..
           pytest --suppress-no-test-exit-code --cov=annlite --cov-report=xml \
           -v -s -m "not gpu" ${{ matrix.test-path }}
           echo "::set-output name=codecov_flag::annlite"
