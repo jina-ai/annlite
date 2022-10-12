@@ -62,4 +62,4 @@ jobs:
       uses: pypa/gh-action-pypi-publish@1.5.1
       with:
         user: ${{ secrets.PYPI_USERNAME }}
-        passward: ${{ secrets.PYPI_API_TOKEN_HATCHING }}
+        passward: ${{ secrets.PYPI_API_TOKEN }}
