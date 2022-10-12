@@ -118,7 +118,7 @@ jobs:
       - name: Build Wheel
         uses: pypa/cibuildwheel@2.6.0
         with:
-          package-dir: python
+          package-dir: annlite
         env:
           CIBW_ENVIRONMENT: >
             STAN_BACKEND="${{ env.STAN_BACKEND }}"
