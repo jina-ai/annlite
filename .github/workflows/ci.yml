@@ -130,6 +130,7 @@ jobs:
       - name: Install AnnLite
         run: |
           ls
+          pip install wheelhouse/*.whl
       - name: Test
         id: test
         run: |
