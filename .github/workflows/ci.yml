@@ -93,8 +93,40 @@ jobs:
     outputs:
       matrix: ${{ steps.set-matrix.outputs.matrix }}
 
+  build-wheels:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+        cibw_arch: ["native", "aarch64"]
+        python_version: ["cp37-*"]
+        exclude:
+          - os: windows-latest
+            cibw_arch: "aarch64"
+        fail-fast: false
+    steps:
+    - uses: actions/checkout@v3
+    - name: Build wheels
+      uses: pypa/cibuildwheel@v2.6.0
+      with:
+        package-dir: python
+      env:
+        CIBW_ENVIRONMENT: >
+          STAN_BACKEND="${{ env.STAN_BACKEND }}"
+        CIBW_MANYLINUX_X86_64_IMAGE: manylinux2014
+        CIBW_BUILD: ${{ matrix.python_version }}
+        CIBW_SKIP: "*musllinux*"
+        CIBW_ARCHS: ${{ matrix.cibw_arch }}
+        CIBW_BUILD_FRONTEND: build
+
+    - name: Upload wheel as artifact
+    - uses: actions/upload-artifact@v3
+      with:
+        name: artifact-${{ matrix.os }}-${{ matrix.cibw_arch }}-wheel
+        path: ./**/*.whl
+
   core-test:
-    needs: prep-testbed
+    needs: [prep-testbed, build-wheels]
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -109,6 +141,9 @@ jobs:
           python-version: ${{ matrix.python-version }}
       - name: Prepare enviroment
         run: |
+          ls
+          cd dist/
+          ls
           python -m pip install --upgrade pip
           python -m pip install wheel
           pip install --pre docarray
