@@ -194,7 +194,7 @@ jobs:
         run: |
           ls
           ls wheelhouse/
-          python -m pip install --find-links=wheelhouse/ annlite
+          python -m pip install --find-links=./wheelhouse/ annlite
       - name: Test
         id: test
         shell: pwsh
