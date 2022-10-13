@@ -194,7 +194,8 @@ jobs:
       - name: Install annlite
         shell: pwsh
         run: |
-          pip install --no-index --find-links=wheelhouse/ annlite
+           cd wheelhouse/
+          pip install --no-index --find-links=./ annlite
       - name: Test
         id: test
         shell: pwsh
