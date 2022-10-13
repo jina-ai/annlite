@@ -145,11 +145,11 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
       - uses: actions/checkout@v3
-      - name: Prepare enviroment
-        uses: actions/download-artifact@v3
+      - uses: actions/download-artifact@v3
         with:
           name: artifact
           path: dist
+      - name: Prepare enviroment
         run: |
           python -m pip install --upgrade pip
           pip install jina
