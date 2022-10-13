@@ -134,23 +134,29 @@ jobs:
 
   prerelease:
     needs: [core-test, core-test-win]
-    runs-on: ${{ matrix.os }}
+    runs-on: ubuntu-latest
     strategy:
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
-    
+        cibw_arch: ["auto64"]
+        cpython-version: ["cp37-*", "cp38-*", "cp39-*", "cp310-*"]
     steps:
       - uses: actions/checkout@v2
         with:
           fetch-depth: 100
       - uses: actions/setup-python@v3
-
-      - name: Install cibuildwheel
-        run: python - m pip install cibuildwheel
-
       - name: Build wheels
-        run: python -m cibuildwheel --output-dir dist/
-        
+        uses: pypa/cibuildwheel@2.6.0
+        with:
+          package-dir: ./
+        env:
+          CIBW_ENVIRONMENT: >
+            STAN_BACKEND="${{ env.STAN_BACKEND }}"
+          CIBW_BUILD: ${{ matrix.cpython-version }}
+          CIBW_ARCHS: ${{ matrix.cibw_arch }}
+          CIBW_BUILD_FRONTEND: build
+      - name: Move wheels to dist
+        run: mv wheelhouse/*.whl dist/
       - name: Pre-release (.devN)
         run: |
           git fetch --depth=1 origin +refs/tags/*:refs/tags/*
