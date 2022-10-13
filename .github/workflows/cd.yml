@@ -28,7 +28,7 @@ jobs:
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
         cibw_arch: ["auto64"]
-        cpython-version: ["cp37-*"]
+        cpython-version: ["cp37-*", "cp38-*", "cp39-*", "cp310-*"]
     steps:
       - uses: actions/checkout@v3
       - name: Build wheels
@@ -66,13 +66,13 @@ jobs:
       matrix:
         # TODO: macos arm64
         os: [ubuntu-latest, windows-latest, macos-latest]
-        python-version: [3.7]
+        python-version: [[3.7, "cp37"], [3.8, "cp38"], [3.9, "cp38"], [3.10, "cp310"]]
         test-path: ${{fromJson(needs.prep-testbed.outputs.matrix)}}
     steps:
-      - name: Set up Python ${{ matrix.python-version }}
+      - name: Set up Python ${{ matrix.python-version }}[0]
         uses: actions/setup-python@v3
         with:
-          python-version: ${{ matrix.python-version }}
+          python-version: ${{ matrix.python-version }}[0]
       - uses: actions/checkout@v3
       - uses: actions/download-artifact@v3
         with:
@@ -90,11 +90,11 @@ jobs:
       - name: Install annlite linux
         if: ${{ matrix.os == 'ubuntu-latest' }}
         run: |
-          pip install dist/*linux*.whl
+          pip install dist/*${{ matrix.python-version }}[1]*linux*.whl
       - name: Install annlite macos
         if: ${{ matrix.os == 'macos-latest' }}
         run: |
-          pip install dist/*macos*.whl
+          pip install dist/*${{ matrix.python-version }}[1]**macos*.whl
       - name: Install annlite win
         if: ${{ matrix.os == 'windows-latest'}}
         run: |

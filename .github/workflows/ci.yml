@@ -98,7 +98,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest]
+        os: [ubuntu-latest, windows-latest]
         cibw_arch: ["auto64"]
         cpython-version: ["cp37-*"]
     steps:
@@ -114,7 +114,6 @@ jobs:
           CIBW_BUILD: ${{ matrix.cpython-version }}
           CIBW_SKIP: "*musllinux*"
           CIBW_ARCHS: ${{ matrix.cibw_arch }}
-          # CIBW_ARCHS_MACOS: arm64
           CIBW_BUILD_FRONTEND: build
       - uses: actions/upload-artifact@v3
         with:
@@ -136,8 +135,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # TODO: macos arm64
-        os: [ubuntu-latest, windows-latest, macos-latest]
+        os: [ubuntu-latest, windows-latest]
         python-version: [3.7]
         test-path: ${{fromJson(needs.prep-testbed.outputs.matrix)}}
     steps:
@@ -159,14 +157,10 @@ jobs:
           pip install cibuildwheel
           pip install --pre docarray
           pip install pytest pytest-html pytest-cov pytest-mock pytest-repeat pytest-custom-exit-code pytest-timeout pytest-reraise
-      - name: Install annlite linux
+      - name: Install annlite unix
         if: ${{ matrix.os == 'ubuntu-latest' }}
         run: |
           pip install dist/*linux*.whl
-      - name: Install annlite macos
-        if: ${{ matrix.os == 'macos-latest' }}
-        run: |
-          pip install dist/*macos*.whl
       - name: Install annlite win
         if: ${{ matrix.os == 'windows-latest'}}
         run: |
@@ -206,6 +200,19 @@ jobs:
           flags: ${{ steps.test.outputs.codecov_flag }}
           fail_ci_if_error: false
           token: ${{ secrets.CODECOV_TOKEN }} # not required for public repos
+
+  upload-test:
+    needs: [core-test]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v3
+        with:
+          name: artifact
+          path: dist
+      - uses: pypa/gh-action-pypi-publish@v1.5.0
+        with:
+          user: __token__
+          password: ${{ secrets.PYPI_API_TOKEN_TEST }}
 
   # just for blocking the merge until all parallel core-test are successful
   success-all-test:
