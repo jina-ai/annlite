@@ -192,6 +192,8 @@ jobs:
           CIBW_BUILD_FRONTEND: build
       - name: Install annlite
         run: |
+          ls
+          ls wheelhouse/
           python -m pip install --find-links=wheelhouse/ annlite
       - name: Test
         id: test

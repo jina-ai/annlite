@@ -28,6 +28,7 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, macos-latest]
+        cibw_arch: ["auto64"]
         python-version: [["cp37-*", 3.7], ["cp38-*", 3.8], ["cp39-*", 3.9], ["cp310-*", 3.10]]
         test-path: ${{fromJson(needs.prep-testbed.outputs.matrix)}}
     steps:
@@ -54,6 +55,7 @@ jobs:
           CIBW_MANYLINUX_X86_64_IMAGE: manylinux2014
           CIBW_BUILD: ${{ matrix.python-version }}[0]
           CIBW_SKIP: "*musllinux*"
+          CIBW_ARCHS: ${{ matrix.cibw_arch }}
           CIBW_BUILD_FRONTEND: build
       - name: Install annlite
         run: |
@@ -88,6 +90,7 @@ jobs:
       fail-fast: false
       matrix:
         os: [windows-latest]
+        cibw_arch: ["auto4"]
         python-verison: [["cp37-*", 3.7], ["cp38-*", 3.8], ["cp39-*", 3.9], ["cp310-*", 3.10]]
     steps:
       - name: Set up Python ${{ matrix.python-version}}[1]
@@ -112,6 +115,7 @@ jobs:
           CIBW_ENVIRONMENT: >
             STAN_BACKEND="${{ env.STAN_BACKEND }}"
           CIBW_BUILD: ${{ matrix.python-version }}[0]
+          CIBW_ARCHS: ${{ matrix.cibw_arch }}
           CIBW_BUILD_FRONTEND: build
       - name: Install annlite
         run: |
