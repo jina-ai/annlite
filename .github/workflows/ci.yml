@@ -188,13 +188,13 @@ jobs:
         env:
           CIBW_ENVIRONMENT: >
             STAN_BACKEND="${{ env.STAN_BACKEND }}"
-          CIBW_BUILD: ${{ matrix.cpython-version }}
+          # CIBW_BUILD: ${{ matrix.cpython-version }}
           CIBW_ARCHS: ${{ matrix.cibw_arch }}
           CIBW_BUILD_FRONTEND: build
       - name: Install annlite
         shell: pwsh
         run: |
-          python -c "import platform; print(platform.machine())"
+          python --version
           pip install --no-index --find-links=wheelhouse/ annlite
       - name: Test
         id: test
