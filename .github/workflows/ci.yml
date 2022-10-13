@@ -118,7 +118,7 @@ jobs:
           pytest-repeat pytest-custom-exit-code pytest-timeout pytest-reraise
           pip install --pre docarray
       - name: Build wheel
-        uses: pypa/cibuildwheel@2.10.2
+        uses: pypa/cibuildwheel@2.6.0
         with:
           package-dir: ./
         env:
@@ -182,7 +182,7 @@ jobs:
           pip install wheel
           pip install cython
       - name: Build wheel
-        uses: pypa/cibuildwheel@2.10.2
+        uses: pypa/cibuildwheel@2.6.0
         with:
           package-dir: ./
         env:

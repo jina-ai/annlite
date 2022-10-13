@@ -46,7 +46,7 @@ jobs:
           pip install jina
           pip install --pre docarray
       - name: Build wheel
-        uses: pypa/cibuildwheel@2.10.2
+        uses: pypa/cibuildwheel@2.6.0
         with:
           package-dir: ./
         env:
@@ -108,7 +108,7 @@ jobs:
           pip install jina
           pip install --pre docarray
       - name: Build wheel
-        uses: pypa/cibuildwheel@2.10.2
+        uses: pypa/cibuildwheel@2.6.0
         with:
           package-dir: ./
         env:
@@ -146,7 +146,7 @@ jobs:
           fetch-depth: 100
       - uses: actions/setup-python@v3
       - name: Build wheels
-        uses: pypa/cibuildwheel@2.10.2
+        uses: pypa/cibuildwheel@2.6.0
         with:
           package-dir: ./
         env:
