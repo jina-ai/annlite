@@ -117,6 +117,7 @@ jobs:
           pip install pytest pytest-html pytest-cov pytest-mock \
           pytest-repeat pytest-custom-exit-code pytest-timeout pytest-reraise
           pip install --pre docarray
+          pip install jina
       - name: Build wheel
         uses: pypa/cibuildwheel@2.6.0
         with:
@@ -177,8 +178,8 @@ jobs:
           python -m pip install --upgrade pip
           python -m pip install cibuildwheel
           pip install pytest pytest-html pytest-cov pytest-mock pytest-repeat pytest-custom-exit-code pytest-timeout pytest-reraise
-          pip install jina
           pip install --pre docarray
+          pip install jina
           pip install wheel
           pip install cython
       - name: Build wheel
@@ -195,7 +196,7 @@ jobs:
       - name: Install annlite
         shell: pwsh
         run: |
-          pip install --no-index --find-links=wheelhouse/ annlite
+          pip install --find-links=wheelhouse/ annlite
       - name: Test
         id: test
         shell: pwsh
