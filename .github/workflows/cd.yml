@@ -100,6 +100,8 @@ jobs:
       - name: Test unix
         id: test_unix
         if: ${{ matrix.os == 'ubuntu-latest' || matrix.os == 'macos-latest' }}
+        env:
+          OPENBLAS_CORETYPE: ARMV8
         run: |
           cd ..
           mv annlite/tests/ ./
