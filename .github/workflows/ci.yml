@@ -170,7 +170,7 @@ jobs:
       - name: Set up Python ${{ matrix.python-version}}
         uses: actions/setup-python@v3
         with:
-          python-version: ${{ matrix.python-versionn}}
+          python-version: ${{ matrix.python-version}}
       - uses: actions/checkout@v3
       - name: Prepare environment
         shell: pwsh
@@ -195,7 +195,6 @@ jobs:
       - name: Install annlite
         shell: pwsh
         run: |
-          python --version
           pip install --no-index --find-links=wheelhouse/ annlite
       - name: Test
         id: test
