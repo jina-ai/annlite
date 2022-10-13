@@ -42,7 +42,6 @@ jobs:
           CIBW_BUILD: ${{ matrix.cpython-version }}
           CIBW_SKIP: "*musllinux*"
           CIBW_ARCHS: ${{ matrix.cibw_arch }}
-          # CIBW_ARCHS_MACOS: arm64
           CIBW_BUILD_FRONTEND: build
       - uses: actions/upload-artifact@v3
         with:
@@ -64,7 +63,6 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # TODO: macos arm64
         os: [ubuntu-latest, windows-latest, macos-latest]
         python-version: [[3.7, "cp37"], [3.8, "cp38"], [3.9, "cp38"], [3.10, "cp310"]]
         test-path: ${{fromJson(needs.prep-testbed.outputs.matrix)}}
@@ -147,3 +145,20 @@ jobs:
         with:
           user: __token__
           password: ${{ secrets.PYPI_API_TOKEN_TEST }}
+
+  prerelease:
+    needs: [core-test]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 100
+      - name: Pre-release (.devN)
+        run: |
+          git fetch --depth=1 origin +refs/tags/*:refs/tags/*
+          pip instal twine wheel build
+          ./scipts/release.sh
+        env:
+          TWINE_USERNAME: ${{ secrets.TWINE_USERNAME }}
+          TWINE_PASSWORD: ${{ secrets.TWINE_PASSWORD }}
+          JINA_SLACK_WEBHOOK: ${{ secrets.JINA_SLACK_WEBHOOK }}
