@@ -156,7 +156,7 @@ jobs:
       - name: Pre-release (.devN)
         run: |
           git fetch --depth=1 origin +refs/tags/*:refs/tags/*
-          pip instal twine wheel build
+          pip install twine wheel build
           ./scipts/release.sh
         env:
           TWINE_USERNAME: ${{ secrets.TWINE_USERNAME }}
