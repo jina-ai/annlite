@@ -194,7 +194,7 @@ jobs:
       - name: Install annlite
         shell: pwsh
         run: |
-          python -C "import platform; print(platform.machine)"
+          python -c "import platform; print(platform.machine)"
           pip install --no-index --find-links=wheelhouse/ annlite
       - name: Test
         id: test
