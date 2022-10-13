@@ -47,16 +47,6 @@ jobs:
         with:
           path: ./wheelhouse/*.whl
 
-  build-sdist:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v3
-      - name: Build sdist
-        run: pipx run build --sdist
-      - uses: actions/upload-artifact@v3
-        with:
-          path: dist/*.tar.gz
-
   core-test:
     needs: [prep-testbed, build-wheels, build-sdist]
     runs-on: ${{ matrix.os }}
