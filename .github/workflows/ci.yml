@@ -116,10 +116,9 @@ jobs:
           python -m pip install cibuildwheel
           pip install pytest pytest-html pytest-cov pytest-mock \
           pytest-repeat pytest-custom-exit-code pytest-timeout pytest-reraise
-          pip install jina
           pip install --pre docarray
       - name: Build wheel
-        uses: pypa/cibuildwheel@2.6.0
+        uses: pypa/cibuildwheel@2.10.2
         with:
           package-dir: ./
         env:
@@ -175,7 +174,6 @@ jobs:
       - name: Prepare environment
         shell: pwsh
         run: |
-          cython --version
           python -m pip install --upgrade pip
           python -m pip install cibuildwheel
           pip install pytest pytest-html pytest-cov pytest-mock pytest-repeat pytest-custom-exit-code pytest-timeout pytest-reraise
@@ -184,7 +182,7 @@ jobs:
           pip install wheel
           pip install cython
       - name: Build wheel
-        uses: pypa/cibuildwheel@2.6.0
+        uses: pypa/cibuildwheel@2.10.2
         with:
           package-dir: ./
         env:
