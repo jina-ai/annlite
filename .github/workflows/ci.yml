@@ -150,8 +150,6 @@ jobs:
           path: dist
       - name: Prepare enviroment
         run: |
-          ls
-          ls dist/
           python -m pip install --upgrade pip
           pip install jina
           pip install cibuildwheel

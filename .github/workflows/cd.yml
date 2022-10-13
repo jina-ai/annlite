@@ -80,8 +80,6 @@ jobs:
           path: dist
       - name: Prepare enviroment
         run: |
-          ls
-          ls dist/
           python -m pip install --upgrade pip
           pip install jina
           pip install cibuildwheel
@@ -135,37 +133,15 @@ jobs:
           fail_ci_if_error: false
           token: ${{ secrets.CODECOV_TOKEN }} # not required for public repos
 
-  prerelease:
-    needs: [core-test, core-test-win]
+  upload-pypi:
+    needs: [core-test]
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest]
-        cibw_arch: ["auto64"]
-        cpython-version: ["cp37-*", "cp38-*", "cp39-*", "cp310-*"]
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/download-artifact@v3
         with:
-          fetch-depth: 100
-      - uses: actions/setup-python@v3
-      - name: Build wheels
-        uses: pypa/cibuildwheel@2.6.0
+          name: artifact
+          path: dist
+      - uses: pypa/gh-action-pypi-publish@v1.5.0
         with:
-          package-dir: ./
-        env:
-          CIBW_ENVIRONMENT: >
-            STAN_BACKEND="${{ env.STAN_BACKEND }}"
-          CIBW_BUILD: ${{ matrix.cpython-version }}
-          CIBW_ARCHS: ${{ matrix.cibw_arch }}
-          CIBW_BUILD_FRONTEND: build
-      - name: Move wheels to dist
-        run: mv wheelhouse/*.whl dist/
-      - name: Pre-release (.devN)
-        run: |
-          git fetch --depth=1 origin +refs/tags/*:refs/tags/*
-          pip install twine wheel build
-          ./scripts/release.sh
-        env:
-          TWINE_USERNAME: ${{ secrets.TWINE_USERNAME }}
-          TWINE_PASSWORD: ${{ secrets.TWINE_PASSWORD }}
-          JINA_SLACK_WEBHOOK: ${{ secrets.JINA_SLACK_WEBHOOK }}
+          user: __token__
+          password: ${{ secrets.PYPI_API_TOKEN_TEST }}
