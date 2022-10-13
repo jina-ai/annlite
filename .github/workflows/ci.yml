@@ -114,6 +114,7 @@ jobs:
           CIBW_BUILD: ${{ matrix.cpython-version }}
           CIBW_SKIP: "*musllinux*"
           CIBW_ARCHS: ${{ matrix.cibw_arch }}
+          # CIBW_ARCHS_MACOS: arm64
           CIBW_BUILD_FRONTEND: build
       - uses: actions/upload-artifact@v3
         with:
@@ -158,10 +159,14 @@ jobs:
           pip install cibuildwheel
           pip install --pre docarray
           pip install pytest pytest-html pytest-cov pytest-mock pytest-repeat pytest-custom-exit-code pytest-timeout pytest-reraise
-      - name: Install annlite unix
-        if: ${{ matrix.os == 'ubuntu-latest' || matrix.os == 'macos-latest' }}
+      - name: Install annlite linux
+        if: ${{ matrix.os == 'ubuntu-latest' }}
         run: |
-          pip install dist/*.whl
+          pip install dist/*linux*.whl
+      - name: Install annlite macos
+        if: ${{ matrix.os == 'macos-latest' }}
+        run: |
+          pip install dist/*macos*.whl
       - name: Install annlite win
         if: ${{ matrix.os == 'windows-latest'}}
         run: |
