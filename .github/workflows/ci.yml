@@ -99,7 +99,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, windows-latest]
+        os: [ubuntu-latest, windows-latest, macos-latest]
         cibw_arch: ["auto64"]
         cpython-version: ["cp37-*"]
         python-version: [3.7]
@@ -130,7 +130,7 @@ jobs:
           CIBW_ARCHS: ${{ matrix.cibw_arch }}
           CIBW_BUILD_FRONTEND: build
       - name: Install annlite unix
-        if: ${{ matrix.os == 'ubuntu-latest'}}
+        if: ${{ matrix.os == 'ubuntu-latest' }} || ${{ matrix.os == 'macos-latest' }}
         run: |
           pip install wheelhouse/*.whl
       - name: Install annlite win
@@ -139,6 +139,7 @@ jobs:
           pip install --find-links=wheelhouse/ annlite
       - name: Test unix
         id: test_unix
+        if: ${{ matrix.os == 'ubuntu-latest' }} || ${{ matrix.os == 'macos-latest' }}
         run: |
           cd ..
           mv annlite/tests/ ./
@@ -148,6 +149,7 @@ jobs:
         timeout-minutes: 30
       - name: Test win
         id: test_win
+        if: ${{ matrix.os == 'windows-latest'}}
         env:
           PYTHONIOENCODING: 'utf-8'
         run: |
