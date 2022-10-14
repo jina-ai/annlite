@@ -94,7 +94,7 @@ jobs:
       matrix: ${{ steps.set-matrix.outputs.matrix }}
 
   core-test:
-    needs: [prep-testbed, build-wheels, build-sdist]
+    needs: [prep-testbed]
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
