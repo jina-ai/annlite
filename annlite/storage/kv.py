@@ -1,4 +1,5 @@
 import time
+import warnings
 from pathlib import Path
 from typing import Dict, List, Union
 
@@ -18,8 +19,6 @@ class DocStorage:
     ):
         self._path = str(path)
         self._serialize_config = serialize_config
-
-        self._is_closed = False
 
         self._kwargs = kwargs
 
@@ -48,6 +47,8 @@ class DocStorage:
 
         # get the size of the database, if it is not created, set it to 0
         self._size = len(list(self._db.keys()))
+
+        self._is_closed = False
 
     def insert(self, docs: 'DocumentArray'):
         write_batch = WriteBatch(raw_mode=True)
@@ -93,7 +94,12 @@ class DocStorage:
         return docs
 
     def clear(self):
-        self._db.close()
+        if self._is_closed:
+            warnings.warn(
+                '`DocStorage` had been closed already, will skip this close operation.'
+            )
+        else:
+            self._db.close()
         self._db.destroy(self._path)
 
         # re-initialize the database for the next usage
@@ -101,10 +107,8 @@ class DocStorage:
 
     def close(self):
         if self._is_closed:
-            import warnings
-
             warnings.warn(
-                '`DocStorage` had been closed already, will skip this operation.'
+                '`DocStorage` had been closed already, will skip this close operation.'
             )
             return
         self._db.flush(wait=True)
