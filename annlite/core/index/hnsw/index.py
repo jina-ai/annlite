@@ -134,8 +134,7 @@ class HnswIndex(BaseIndex):
             expand_steps = math.ceil(max_id / self.expand_step_size)
             self._expand_capacity(expand_steps * self.expand_step_size)
 
-        # NOTICE: We remove `pre_process_dtables` here since it is incompatible with function arguments.
-        self._index.add_items(x, ids=ids)
+        self._index.add_items(x, ids=ids, dtables=pre_process_dtables)
 
     @pre_process
     def search(
