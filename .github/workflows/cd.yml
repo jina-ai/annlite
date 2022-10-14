@@ -54,7 +54,7 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
-        python-version: [['3.7', "cp37"], ['3.8', "cp38"], ['3.9', "cp39"], ['3.10', "cp310"]]
+        python-version: [['3.7', "cp37"]]
         test-path: ${{fromJson(needs.prep-testbed.outputs.matrix)}}
     steps:
       - name: Set up Python ${{ matrix.python-version[0] }}
