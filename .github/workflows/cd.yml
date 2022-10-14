@@ -21,31 +21,92 @@ jobs:
     outputs:
       matrix: ${{ steps.set-matrix.outputs.matrix }}
 
-  core-test:
-    needs: prep-testbed
-    runs-on: ubuntu-latest
+  build-wheels:
+    runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
-        python-version: [3.7]
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        cibw_arch: ["auto64"]
+        cpython-version: ["cp37-*", "cp38-*", "cp39-*", "cp310-*"]
+    steps:
+      - uses: actions/checkout@v3
+      - name: Build wheels
+        uses: pypa/cibuildwheel@v2.10.2
+        with:
+          package-dir: ./
+        env:
+          CIBW_ENVIRONMENT: >
+            STAN_BACKEND="${{ env.STAN_BACKEND }}"
+          CIBW_MANYLINUX_X86_64_IMAGE: manylinux2014
+          CIBW_BUILD: ${{ matrix.cpython-version }}
+          CIBW_SKIP: "*musllinux*"
+          CIBW_ARCHS: ${{ matrix.cibw_arch }}
+          CIBW_BUILD_FRONTEND: build
+      - uses: actions/upload-artifact@v3
+        with:
+          path: ./wheelhouse/*.whl
+
+  core-test:
+    needs: [prep-testbed, build-wheels]
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        python-version: [['3.7', "cp37"], ['3.8', "cp38"], ['3.9', "cp39"], ['3.10', "cp310"]]
         test-path: ${{fromJson(needs.prep-testbed.outputs.matrix)}}
     steps:
-      - uses: actions/checkout@v2
-      - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v2
+      - name: Set up Python ${{ matrix.python-version[0] }}
+        uses: actions/setup-python@v4
         with:
-          python-version: ${{ matrix.python-version }}
+          python-version: ${{ matrix.python-version[0] }}
+      - uses: actions/checkout@v3
+      - uses: actions/download-artifact@v3
+        with:
+          name: artifact
+          path: dist
       - name: Prepare enviroment
         run: |
           python -m pip install --upgrade pip
-          python -m pip install wheel
+          pip install jina
+          pip install cibuildwheel
           pip install --pre docarray
-          pip install -e ".[test]"
-      - name: Test
-        id: test
+          pip install pytest pytest-html pytest-cov pytest-mock pytest-repeat pytest-custom-exit-code pytest-timeout pytest-reraise
+      - name: Install annlite linux
+        if: ${{ matrix.os == 'ubuntu-latest' }}
         run: |
-          pytest --cov=annlite --cov-report=xml \
-            -v -s -m "not gpu" ${{ matrix.test-path }}
+          pip install dist/*${{ matrix.python-version[1] }}*linux*.whl
+      - name: Install annlite macos
+        if: ${{ matrix.os == 'macos-latest' }}
+        run: |
+          pip install dist/*${{ matrix.python-version[1] }}**macos*.whl
+      - name: Install annlite win
+        if: ${{ matrix.os == 'windows-latest'}}
+        run: |
+          pip install --find-links=dist/ annlite
+      - name: Test unix
+        id: test_unix
+        if: ${{ matrix.os == 'ubuntu-latest' || matrix.os == 'macos-latest' }}
+        env:
+          OPENBLAS_CORETYPE: ARMV8
+        run: |
+          cd ..
+          mv annlite/tests/ ./
+          pytest --suppress-no-test-exit-code --cov=annlite --cov-report=xml \
+          -v -s -m "not gpu" ${{ matrix.test-path }}
+          echo "::set-output name=codecov_flag::annlite"
+        timeout-minutes: 30
+      - name: Test win
+        id: test_win
+        if: ${{ matrix.os == 'windows-latest'}}
+        env:
+          PYTHONIOENCODING: 'utf-8'
+        run: |
+          cd ..
+          move annlite/tests/ ./
+          cd tests/
+          pytest -v -s -m "not gpu" -k "test"
           echo "::set-output name=codecov_flag::annlite"
         timeout-minutes: 30
       - name: Check codecov file
@@ -54,22 +115,25 @@ jobs:
         with:
           files: "coverage.xml"
       - name: Upload coverage from test to Codecov
-        uses: codecov/codecov-action@v1
-        if: steps.check_files.outputs.files_exists == 'true' && ${{ matrix.python-version }} == '3.7'
+        uses: codecov/codecov-action@v2
+        if: steps.check_files.outputs.files_exists == 'true' && ${{ matrix.python-version[0] }} == '3.7'
         with:
           file: coverage.xml
-          name: ${{ matrix.test-path }}-codecov
           flags: ${{ steps.test.outputs.codecov_flag }}
           fail_ci_if_error: false
           token: ${{ secrets.CODECOV_TOKEN }} # not required for public repos
 
   prerelease:
-    needs: core-test
+    needs: [core-test]
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
         with:
           fetch-depth: 100
+      - uses: actions/download-artifact@v3
+        with:
+          name: artifact
+          path: dist
       - name: Pre-release (.devN)
         run: |
           git fetch --depth=1 origin +refs/tags/*:refs/tags/*

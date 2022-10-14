@@ -1,6 +1,7 @@
 import hashlib
 import logging
 import warnings
+import platform
 from pathlib import Path
 from typing import TYPE_CHECKING, Dict, List, Optional, Union
 
@@ -598,6 +599,8 @@ class AnnLite(CellContainer):
         latest_commit = self.meta_table.get_latest_commit()
         date_time = latest_commit[-1] if latest_commit else None
         if date_time:
+            if platform.system() == 'Windows':
+                return date_time.isoformat('#', 'hours')
             return date_time.isoformat('#', 'seconds')
 
         return None
