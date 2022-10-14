@@ -1,7 +1,7 @@
 import hashlib
 import logging
-import warnings
 import platform
+import warnings
 from pathlib import Path
 from typing import TYPE_CHECKING, Dict, List, Optional, Union
 
@@ -98,6 +98,8 @@ class AnnLite(CellContainer):
         self.metric = metric
 
         self._use_smart_probing = True
+
+        self._is_closed = False
 
         self.read_only = read_only
 
@@ -541,8 +543,14 @@ class AnnLite(CellContainer):
         self.meta_table.clear()
 
     def close(self):
+        if self._is_closed:
+            warnings.warn(
+                '`Annlite` had been closed already, will skip this operation.'
+            )
+            return
         for cell_id in range(self.n_cells):
             self.doc_store(cell_id).close()
+        self._is_closed = True
 
     def encode(self, x: 'np.ndarray'):
         n_data, _ = self._sanity_check(x)
