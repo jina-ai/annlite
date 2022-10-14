@@ -1,4 +1,5 @@
 import os
+import platform
 import sys
 from distutils.sysconfig import get_python_inc
 
@@ -131,6 +132,11 @@ class BuildExt(build_ext):
     }
 
     if sys.platform == 'darwin':
+        if platform.processor() in ('arm64', 'arm'):
+            c_opts['unix'].remove('-march=native')
+            # thanks to @https://github.com/drkeoni
+            # https://github.com/nmslib/nmslib/issues/476#issuecomment-876094529
+            c_opts['unix'].append('-mcpu=apple-a14')
         c_opts['unix'] += ['-stdlib=libc++', '-mmacosx-version-min=10.7']
         link_opts['unix'] += ['-stdlib=libc++', '-mmacosx-version-min=10.7']
     else:
