@@ -19,6 +19,8 @@ class DocStorage:
         self._path = str(path)
         self._serialize_config = serialize_config
 
+        self._is_closed = False
+
         self._kwargs = kwargs
 
         self._init_db(create_if_missing=create_if_missing, **self._kwargs)
@@ -98,8 +100,16 @@ class DocStorage:
         self._init_db(create_if_missing=True, **self._kwargs)
 
     def close(self):
+        if self._is_closed:
+            import warnings
+
+            warnings.warn(
+                '`DocStorage` had been closed already, will skip this operation.'
+            )
+            return
         self._db.flush(wait=True)
         self._db.close()
+        self._is_closed = True
 
     def __len__(self):
         return self._size

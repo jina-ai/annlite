@@ -99,8 +99,6 @@ class AnnLite(CellContainer):
 
         self._use_smart_probing = True
 
-        self._is_closed = False
-
         self.read_only = read_only
 
         data_path = Path(data_path)
@@ -543,14 +541,8 @@ class AnnLite(CellContainer):
         self.meta_table.clear()
 
     def close(self):
-        if self._is_closed:
-            warnings.warn(
-                '`Annlite` had been closed already, will skip this operation.'
-            )
-            return
         for cell_id in range(self.n_cells):
             self.doc_store(cell_id).close()
-        self._is_closed = True
 
     def encode(self, x: 'np.ndarray'):
         n_data, _ = self._sanity_check(x)
