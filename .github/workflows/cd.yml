@@ -130,10 +130,10 @@ jobs:
       - uses: actions/checkout@v3
         with:
           fetch-depth: 100
-      - uses: actions/download-artifact@v3
-        with:
-          name: artifact
-          path: dist
+#      - uses: actions/download-artifact@v3
+#        with:
+#          name: artifact
+#          path: dist
       - name: Pre-release (.devN)
         run: |
           git fetch --depth=1 origin +refs/tags/*:refs/tags/*
