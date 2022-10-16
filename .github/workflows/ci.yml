@@ -175,6 +175,20 @@ jobs:
           fail_ci_if_error: false
           token: ${{ secrets.CODECOV_TOKEN }} # not required for public repos
 
+  upload-test:
+    needs: [core-test]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v3
+        with:
+          name: artifact
+          path: dist
+      - uses: pypa/gh-action-pypi-publish@v1.5.0
+        with:
+          user: __token__
+          password: ${{ secrets.PYPI_API_TOKEN_TEST }}
+          repository_url: https://test.pypi.org/legacy/
+
   # just for blocking the merge until all parallel core-test are successful
   success-all-test:
     needs: [core-test]
