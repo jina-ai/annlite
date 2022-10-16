@@ -138,7 +138,7 @@ jobs:
       - name: Install annlite win
         if: ${{ matrix.os == 'windows-latest'}}
         run: |
-          pip install --find-links=wheelhouse/ annlite
+          pip install --pre --find-links=wheelhouse/ annlite
       - name: Test unix
         id: test_unix
         if: ${{ matrix.os == 'ubuntu-latest' || matrix.os == 'macos-latest' }}
