@@ -34,6 +34,7 @@ jobs:
       - name: Update version
         shell: bash
         run: |
+          python -V
           git fetch --depth=1 origin +refs/tags/*:refs/tags/*
           ./scripts/update-version.sh
       - name: Build sdist
