@@ -22,8 +22,8 @@ function clean_build {
 
 function pub_pypi {
     # publish to pypi
-    twine upload --repository testpypi dist/*
-    twine upload --repository testpypi wheelhouse/*
+    twine upload dist/*
+    twine upload wheelhouse/*
     clean_build
 }
 
@@ -44,10 +44,10 @@ function make_release_note {
 
 BRANCH=$(git rev-parse --abbrev-ref HEAD)
 
-# if [[ "$BRANCH" != "main" ]]; then
-#   printf "You are not at main branch, exit\n";
-#   exit 1;
-# fi
+if [[ "$BRANCH" != "main" ]]; then
+  printf "You are not at main branch, exit\n";
+  exit 1;
+fi
 
 LAST_UPDATE=`git show --no-notes --format=format:"%H" $BRANCH | head -n 1`
 LAST_COMMIT=`git show --no-notes --format=format:"%H" origin/$BRANCH | head -n 1`
