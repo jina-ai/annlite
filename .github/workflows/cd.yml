@@ -35,6 +35,8 @@ jobs:
           fetch-depth: 100
       - name: Update version
         run: |
+          ls
+          ls scripts/
           git fetch --depth=1 origin +refs/tags/*:refs/tags/*
           ./scripts/update-version.sh
       - name: Build sdist
