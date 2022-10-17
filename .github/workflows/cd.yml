@@ -59,7 +59,7 @@ jobs:
             ./dist/*.tar.gz
 
   core-test:
-    needs: [prep-testbed, build-wheels]
+    needs: [prep-testbed, build-package]
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
