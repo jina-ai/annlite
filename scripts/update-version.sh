@@ -21,7 +21,11 @@ function update_ver_line {
     local FILE=$3
 
     local NEW=$(echo "${NEW_LINE}" | escape_slashes)
-    sed -i '/'"${OLD_LINE_PATTERN}"'/s/.*/'"${NEW}"'/' "${FILE}"
+    if [ "$(uname)" == "Darwin" ]; then
+      sed -i '' '/'"${OLD_LINE_PATTERN}"'/s/.*/'"${NEW}"'/' "${FILE}";
+    else
+      sed -i '/'"${OLD_LINE_PATTERN}"'/s/.*/'"${NEW}"'/' "${FILE}";
+    fi
     head -n10 ${FILE}
 }
 
