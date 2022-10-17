@@ -3,7 +3,7 @@ name: CD
 on:
   push:
     branches:
-      - main
+      - fix-cd-release-version
 
 jobs:
   prep-testbed:
