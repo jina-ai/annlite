@@ -36,7 +36,7 @@ jobs:
           git fetch --depth=1 origin +refs/tags/*:refs/tags/*
           ./scripts/update-version.sh
       - name: Build sdist
-      - run: |
+        run: |
           pip install build
           python -m build --sdist
       - name: Build wheels
