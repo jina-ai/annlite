@@ -36,6 +36,7 @@ jobs:
         run: |
           brew install gnu-sed
       - name: Update version
+        shell: bash
         run: |
           git fetch --depth=1 origin +refs/tags/*:refs/tags/*
           ./scripts/update-version.sh
