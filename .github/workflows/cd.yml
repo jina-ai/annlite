@@ -83,8 +83,6 @@ jobs:
           name: artifact
       - name: Prepare enviroment
         run: |
-          ls
-          ls wheelhouse/
           python -m pip install --upgrade pip
           pip install jina
           pip install cibuildwheel
