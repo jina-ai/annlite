@@ -21,7 +21,7 @@ jobs:
     outputs:
       matrix: ${{ steps.set-matrix.outputs.matrix }}
 
-  build-wheels:
+  build-package:
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
@@ -31,6 +31,14 @@ jobs:
         cpython-version: ["cp37-*", "cp38-*", "cp39-*", "cp310-*"]
     steps:
       - uses: actions/checkout@v3
+      - name: Update version
+        run: |
+          git fetch --depth=1 origin +refs/tags/*:refs/tags/*
+          ./scripts/update-version.sh
+      - name: Build sdist
+      - run: |
+          pip install build
+          python -m build --sdist
       - name: Build wheels
         uses: pypa/cibuildwheel@v2.10.2
         with:
@@ -42,10 +50,13 @@ jobs:
           CIBW_BUILD: ${{ matrix.cpython-version }}
           CIBW_SKIP: "*musllinux*"
           CIBW_ARCHS: ${{ matrix.cibw_arch }}
+          CIBW_ARCH_MACOS: x86_64 arm64
           CIBW_BUILD_FRONTEND: build
       - uses: actions/upload-artifact@v3
         with:
-          path: ./wheelhouse/*.whl
+          path: |
+            ./wheelhouse/*.whl
+            ./dist/*.tar.gz
 
   core-test:
     needs: [prep-testbed, build-wheels]
@@ -80,7 +91,7 @@ jobs:
       - name: Install annlite macos
         if: ${{ matrix.os == 'macos-latest' }}
         run: |
-          pip install dist/*${{ matrix.python-version[1] }}**macos*.whl
+          pip install dist/*${{ matrix.python-version[1] }}**macos**x86_64*.whl
       - name: Install annlite win
         if: ${{ matrix.os == 'windows-latest'}}
         run: |
@@ -88,8 +99,6 @@ jobs:
       - name: Test unix
         id: test_unix
         if: ${{ matrix.os == 'ubuntu-latest' || matrix.os == 'macos-latest' }}
-        env:
-          OPENBLAS_CORETYPE: ARMV8
         run: |
           cd ..
           mv annlite/tests/ ./
@@ -130,16 +139,15 @@ jobs:
       - uses: actions/checkout@v3
         with:
           fetch-depth: 100
-#      - uses: actions/download-artifact@v3
-#        with:
-#          name: artifact
-#          path: dist
+     - uses: actions/download-artifact@v3
+       with:
+         name: artifact
+         path: dist
       - name: Pre-release (.devN)
         run: |
           git fetch --depth=1 origin +refs/tags/*:refs/tags/*
-          pip install twine wheel build
           ./scripts/release.sh
         env:
-          TWINE_USERNAME: ${{ secrets.TWINE_USERNAME }}
-          TWINE_PASSWORD: ${{ secrets.TWINE_PASSWORD }}
+          TWINE_USERNAME: ${{ secrets.TWINE_USERNAME_TEST }}
+          TWINE_PASSWORD: ${{ secrets.TWINE_PASSWORD_TEST }}
           JINA_SLACK_WEBHOOK: ${{ secrets.JINA_SLACK_WEBHOOK }}

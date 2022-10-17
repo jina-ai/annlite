@@ -93,17 +93,30 @@ jobs:
     outputs:
       matrix: ${{ steps.set-matrix.outputs.matrix }}
 
-  build-wheels:
+  core-test:
+    needs: [prep-testbed]
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, windows-latest]
-        cibw_arch: ["auto64"]
         cpython-version: ["cp37-*"]
+        python-version: [3.7]
+        cibw_arch: ["auto64"]
+        test-path: ${{fromJson(needs.prep-testbed.outputs.matrix)}}
     steps:
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v3
+        with:
+          python-version: ${{ matrix.python-version }}
       - uses: actions/checkout@v3
-      - name: Build wheels
+      - name: Prepare enviroment
+        run: |
+          python -m pip install --upgrade pip
+          pip install jina
+          pip install --pre docarray
+          pip install pytest pytest-html pytest-cov pytest-mock pytest-repeat pytest-custom-exit-code pytest-timeout pytest-reraise
+      - name: Build wheel
         uses: pypa/cibuildwheel@v2.10.2
         with:
           package-dir: ./
@@ -115,59 +128,17 @@ jobs:
           CIBW_SKIP: "*musllinux*"
           CIBW_ARCHS: ${{ matrix.cibw_arch }}
           CIBW_BUILD_FRONTEND: build
-      - uses: actions/upload-artifact@v3
-        with:
-          path: ./wheelhouse/*.whl
-
-  build-sdist:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v3
-      - name: Build sdist
-        run: pipx run build --sdist
-      - uses: actions/upload-artifact@v3
-        with:
-          path: dist/*.tar.gz
-
-  core-test:
-    needs: [prep-testbed, build-wheels, build-sdist]
-    runs-on: ${{ matrix.os }}
-    strategy:
-      fail-fast: false
-      matrix:
-        os: [ubuntu-latest, windows-latest]
-        python-version: [3.7]
-        test-path: ${{fromJson(needs.prep-testbed.outputs.matrix)}}
-    steps:
-      - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v3
-        with:
-          python-version: ${{ matrix.python-version }}
-      - uses: actions/checkout@v3
-      - uses: actions/download-artifact@v3
-        with:
-          name: artifact
-          path: dist
-      - name: Prepare enviroment
-        run: |
-          python -m pip install --upgrade pip
-          pip install jina
-          pip install cibuildwheel
-          pip install --pre docarray
-          pip install pytest pytest-html pytest-cov pytest-mock pytest-repeat pytest-custom-exit-code pytest-timeout pytest-reraise
       - name: Install annlite unix
         if: ${{ matrix.os == 'ubuntu-latest' }}
         run: |
-          pip install dist/*linux*.whl
+          pip install wheelhouse/*linux*.whl
       - name: Install annlite win
         if: ${{ matrix.os == 'windows-latest'}}
         run: |
-          pip install --find-links=dist/ annlite
+          pip install --pre --find-links=wheelhouse/ annlite
       - name: Test unix
         id: test_unix
         if: ${{ matrix.os == 'ubuntu-latest' || matrix.os == 'macos-latest' }}
-        env:
-          OPENBLAS_CORETYPE: ARMV8
         run: |
           cd ..
           mv annlite/tests/ ./
