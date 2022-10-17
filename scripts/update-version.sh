@@ -22,7 +22,7 @@ function update_ver_line {
 
     local NEW=$(echo "${NEW_LINE}" | escape_slashes)
     if [ "$(uname)" == "Darwin" ]; then
-      sef -i '' '/'"${OLD_LINE_PATTERN}"'/s/.*/'"${NEW}"'/' "${FILE}";
+      sed -i '' '/'"${OLD_LINE_PATTERN}"'/s/.*/'"${NEW}"'/' "${FILE}";
     else
       sed -i '/'"${OLD_LINE_PATTERN}"'/s/.*/'"${NEW}"'/' "${FILE}";
     fi
