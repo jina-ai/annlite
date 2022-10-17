@@ -39,8 +39,6 @@ jobs:
         run: |
           git fetch --depth=1 origin +refs/tags/*:refs/tags/*
           ./scripts/update-version.sh
-        env:
-          PATH: "/usr/local/opt/gnu-sed/libexec/gnubin:$PATH"
       - name: Build sdist
         run: |
           pip install build
