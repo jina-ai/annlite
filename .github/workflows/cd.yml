@@ -34,6 +34,7 @@ jobs:
         with:
           fetch-depth: 100
       - name: macos gsed-sed
+        if: ${{ matrix.os == 'macos-latest' }}
         run: |
           brew install gnu-sed
           alias sed=gsed
