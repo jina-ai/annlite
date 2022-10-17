@@ -28,10 +28,10 @@ function update_ver_line {
 
 BRANCH=$(git rev-parse --abbrev-ref HEAD)
 
-if [[ "$BRANCH" != "main" ]]; then
-  printf "You are not at main branch, exit\n";
-  exit 1;
-fi
+# if [[ "$BRANCH" != "main" ]]; then
+#   printf "You are not at main branch, exit\n";
+#   exit 1;
+# fi
 
 LAST_UPDATE=`git show --no-notes --format=format:"%H" $BRANCH | head -n 1`
 LAST_COMMIT=`git show --no-notes --format=format:"%H" origin/$BRANCH | head -n 1`
