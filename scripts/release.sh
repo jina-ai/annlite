@@ -13,10 +13,10 @@ RELEASENOTE='./node_modules/.bin/git-release-notes'
 
 
 function clean_build {
-  rm -rf dist
-  rm -rf annlite/*.so
-  rm -rf *.egg-info
-  rm -rf build
+    rm -rf dist
+    rm -rf annlite/*.so
+    rm -rf *.egg-info
+    rm -rf build
 }
 
 
