@@ -28,13 +28,16 @@ jobs:
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
         cibw_arch: ["auto64"]
-        cpython-version: ["cp37-*", "cp38-*", "cp39-*", "cp310-*"]
+        python-version: [['3.7', "cp37-*"], ['3.8', "cp38-*"], ['3.9', "cp39-*"], ['3.10', "cp310-*"]]
     steps:
       - uses: actions/checkout@v3
+      - name: Set up Python ${{ matrix.python-version[0] }}
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ matrix.python-version[0] }}
       - name: Update version
         shell: bash
         run: |
-          python -V
           git fetch --depth=1 origin +refs/tags/*:refs/tags/*
           ./scripts/update-version.sh
       - name: Build sdist
@@ -49,7 +52,7 @@ jobs:
           CIBW_ENVIRONMENT: >
             STAN_BACKEND="${{ env.STAN_BACKEND }}"
           CIBW_MANYLINUX_X86_64_IMAGE: manylinux2014
-          CIBW_BUILD: ${{ matrix.cpython-version }}
+          CIBW_BUILD: ${{ matrix.python-version[1] }}
           CIBW_SKIP: "*musllinux*"
           CIBW_ARCHS: ${{ matrix.cibw_arch }}
           CIBW_ARCH_MACOS: x86_64 arm64
