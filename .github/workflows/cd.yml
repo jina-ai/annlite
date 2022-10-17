@@ -3,7 +3,7 @@ name: CD
 on:
   push:
     branches:
-      - fix-cd-workflow
+      - main
 
 jobs:
   prep-testbed:
@@ -63,81 +63,81 @@ jobs:
             ./wheelhouse/*.whl
             ./dist/*.tar.gz
 
-  # core-test:
-  #   needs: [prep-testbed, build-package]
-  #   runs-on: ${{ matrix.os }}
-  #   strategy:
-  #     fail-fast: false
-  #     matrix:
-  #       os: [ubuntu-latest, windows-latest, macos-latest]
-  #       python-version: [['3.7', "cp37"]]
-  #       test-path: ${{fromJson(needs.prep-testbed.outputs.matrix)}}
-  #   steps:
-  #     - name: Set up Python ${{ matrix.python-version[0] }}
-  #       uses: actions/setup-python@v4
-  #       with:
-  #         python-version: ${{ matrix.python-version[0] }}
-  #     - uses: actions/checkout@v3
-  #     - uses: actions/download-artifact@v3
-  #       with:
-  #         name: artifact
-  #     - name: Prepare enviroment
-  #       run: |
-  #         python -m pip install --upgrade pip
-  #         pip install jina
-  #         pip install cibuildwheel
-  #         pip install --pre docarray
-  #         pip install pytest pytest-html pytest-cov pytest-mock pytest-repeat pytest-custom-exit-code pytest-timeout pytest-reraise
-  #     - name: Install annlite linux
-  #       if: ${{ matrix.os == 'ubuntu-latest' }}
-  #       run: |
-  #         pip install wheelhouse/*${{ matrix.python-version[1] }}**linux*.whl
-  #     - name: Install annlite macos
-  #       if: ${{ matrix.os == 'macos-latest' }}
-  #       run: |
-  #         pip install wheelhouse/*${{ matrix.python-version[1] }}**macos**x86_64*.whl
-  #     - name: Install annlite win
-  #       if: ${{ matrix.os == 'windows-latest'}}
-  #       run: |
-  #         pip install --pre --find-links=wheelhouse/ annlite
-  #     - name: Test unix
-  #       id: test_unix
-  #       if: ${{ matrix.os == 'ubuntu-latest' || matrix.os == 'macos-latest' }}
-  #       run: |
-  #         cd ..
-  #         mv annlite/tests/ ./
-  #         pytest --suppress-no-test-exit-code --cov=annlite --cov-report=xml \
-  #         -v -s -m "not gpu" ${{ matrix.test-path }}
-  #         echo "::set-output name=codecov_flag::annlite"
-  #       timeout-minutes: 30
-  #     - name: Test win
-  #       id: test_win
-  #       if: ${{ matrix.os == 'windows-latest'}}
-  #       env:
-  #         PYTHONIOENCODING: 'utf-8'
-  #       run: |
-  #         cd ..
-  #         move annlite/tests/ ./
-  #         cd tests/
-  #         pytest -v -s -m "not gpu" -k "test"
-  #         echo "::set-output name=codecov_flag::annlite"
-  #       timeout-minutes: 30
-  #     - name: Check codecov file
-  #       id: check_files
-  #       uses: andstor/file-existence-action@v1
-  #       with:
-  #         files: "coverage.xml"
-  #     - name: Upload coverage from test to Codecov
-  #       uses: codecov/codecov-action@v2
-  #       if: steps.check_files.outputs.files_exists == 'true' && ${{ matrix.python-version[0] }} == '3.7'
-  #       with:
-  #         file: coverage.xml
-  #         flags: ${{ steps.test.outputs.codecov_flag }}
-  #         fail_ci_if_error: false
-  #         token: ${{ secrets.CODECOV_TOKEN }} # not required for public repos
+  core-test:
+    needs: [prep-testbed, build-package]
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        python-version: [['3.7', "cp37"]]
+        test-path: ${{fromJson(needs.prep-testbed.outputs.matrix)}}
+    steps:
+      - name: Set up Python ${{ matrix.python-version[0] }}
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ matrix.python-version[0] }}
+      - uses: actions/checkout@v3
+      - uses: actions/download-artifact@v3
+        with:
+          name: artifact
+      - name: Prepare enviroment
+        run: |
+          python -m pip install --upgrade pip
+          pip install jina
+          pip install cibuildwheel
+          pip install --pre docarray
+          pip install pytest pytest-html pytest-cov pytest-mock pytest-repeat pytest-custom-exit-code pytest-timeout pytest-reraise
+      - name: Install annlite linux
+        if: ${{ matrix.os == 'ubuntu-latest' }}
+        run: |
+          pip install wheelhouse/*${{ matrix.python-version[1] }}**linux*.whl
+      - name: Install annlite macos
+        if: ${{ matrix.os == 'macos-latest' }}
+        run: |
+          pip install wheelhouse/*${{ matrix.python-version[1] }}**macos**x86_64*.whl
+      - name: Install annlite win
+        if: ${{ matrix.os == 'windows-latest'}}
+        run: |
+          pip install --pre --find-links=wheelhouse/ annlite
+      - name: Test unix
+        id: test_unix
+        if: ${{ matrix.os == 'ubuntu-latest' || matrix.os == 'macos-latest' }}
+        run: |
+          cd ..
+          mv annlite/tests/ ./
+          pytest --suppress-no-test-exit-code --cov=annlite --cov-report=xml \
+          -v -s -m "not gpu" ${{ matrix.test-path }}
+          echo "::set-output name=codecov_flag::annlite"
+        timeout-minutes: 30
+      - name: Test win
+        id: test_win
+        if: ${{ matrix.os == 'windows-latest'}}
+        env:
+          PYTHONIOENCODING: 'utf-8'
+        run: |
+          cd ..
+          move annlite/tests/ ./
+          cd tests/
+          pytest -v -s -m "not gpu" -k "test"
+          echo "::set-output name=codecov_flag::annlite"
+        timeout-minutes: 30
+      - name: Check codecov file
+        id: check_files
+        uses: andstor/file-existence-action@v1
+        with:
+          files: "coverage.xml"
+      - name: Upload coverage from test to Codecov
+        uses: codecov/codecov-action@v2
+        if: steps.check_files.outputs.files_exists == 'true' && ${{ matrix.python-version[0] }} == '3.7'
+        with:
+          file: coverage.xml
+          flags: ${{ steps.test.outputs.codecov_flag }}
+          fail_ci_if_error: false
+          token: ${{ secrets.CODECOV_TOKEN }} # not required for public repos
 
   prerelease:
-    # needs: [core-test]
+    needs: [core-test]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
