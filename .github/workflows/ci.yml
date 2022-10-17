@@ -128,9 +128,6 @@ jobs:
           CIBW_SKIP: "*musllinux*"
           CIBW_ARCHS: ${{ matrix.cibw_arch }}
           CIBW_BUILD_FRONTEND: build
-      - uses: actions/upload-artifact@v3
-        with:
-          path: ./wheelhouse/*.whl
       - name: Install annlite unix
         if: ${{ matrix.os == 'ubuntu-latest' }}
         run: |
