@@ -57,11 +57,11 @@ jobs:
           CIBW_ARCHS: ${{ matrix.cibw_arch }}
           CIBW_ARCH_MACOS: x86_64 arm64
           CIBW_BUILD_FRONTEND: build
-      - name: Move wheels
-        run: mv wheelhouse/*.whl dist/
+      - uses: actions/upload-artifact@v3
         with:
           path: |
-            ./dist/*
+            ./wheelhouse/*.whl
+            ./dist/*.tar.gz
 
   core-test:
     needs: [prep-testbed, build-package]
@@ -81,11 +81,10 @@ jobs:
       - uses: actions/download-artifact@v3
         with:
           name: artifact
-          path: dist
       - name: Prepare enviroment
         run: |
           ls
-          ls dist/
+          ls wheelhouse/
           python -m pip install --upgrade pip
           pip install jina
           pip install cibuildwheel
@@ -94,15 +93,15 @@ jobs:
       - name: Install annlite linux
         if: ${{ matrix.os == 'ubuntu-latest' }}
         run: |
-          pip install dist/*${{ matrix.python-version[1] }}**linux*.whl
+          pip install wheelhouse/*${{ matrix.python-version[1] }}**linux*.whl
       - name: Install annlite macos
         if: ${{ matrix.os == 'macos-latest' }}
         run: |
-          pip install dist/*${{ matrix.python-version[1] }}**macos**x86_64*.whl
+          pip install wheelhouse/*${{ matrix.python-version[1] }}**macos**x86_64*.whl
       - name: Install annlite win
         if: ${{ matrix.os == 'windows-latest'}}
         run: |
-          pip install --pre --find-links=dist/ annlite
+          pip install --pre --find-links=wheelhouse/ annlite
       - name: Test unix
         id: test_unix
         if: ${{ matrix.os == 'ubuntu-latest' || matrix.os == 'macos-latest' }}
@@ -149,7 +148,6 @@ jobs:
       - uses: actions/download-artifact@v3
         with:
           name: artifact
-          path: dist
       - name: Pre-release (.devN)
         run: |
           git fetch --depth=1 origin +refs/tags/*:refs/tags/*
