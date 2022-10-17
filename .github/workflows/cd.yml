@@ -57,16 +57,11 @@ jobs:
           CIBW_ARCHS: ${{ matrix.cibw_arch }}
           CIBW_ARCH_MACOS: x86_64 arm64
           CIBW_BUILD_FRONTEND: build
-      - name: test_files
-        run: |
-          ls
-          ls wheelhouse/
-          ls dist/
-      - uses: actions/upload-artifact@v3
+      - name: Move wheels
+        run: mv wheelhouse/*.whl dist/
         with:
           path: |
-            ./wheelhouse/*.whl
-            ./dist/*.tar.gz
+            ./dist/*
 
   core-test:
     needs: [prep-testbed, build-package]
@@ -99,7 +94,7 @@ jobs:
       - name: Install annlite linux
         if: ${{ matrix.os == 'ubuntu-latest' }}
         run: |
-          pip install dist/*${{ matrix.python-version[1] }}*linux*.whl
+          pip install dist/*${{ matrix.python-version[1] }}**linux*.whl
       - name: Install annlite macos
         if: ${{ matrix.os == 'macos-latest' }}
         run: |
