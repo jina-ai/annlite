@@ -22,19 +22,22 @@ jobs:
       matrix: ${{ steps.set-matrix.outputs.matrix }}
 
   build-package:
-    runs-on: ${{ matrix.os }}
+    runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest]
-        cibw_arch: ["auto64"]
         cpython-version: ["cp37-*", "cp38-*", "cp39-*", "cp310-*"]
+        include:
+          - os: ubuntu-latest
+            cibw_arch: x86_64
+          - os: windows-latest
+            cibw_arch: AMD64
+          - os: macos-latest
+            cibw_arch: x86_64
+          - os: macos-latest
+            cibw_arch: arm64
     steps:
       - uses: actions/checkout@v3
-      - name: macos gsed-sed
-        if: ${{ matrix.os == 'macos-latest' }}
-        run: |
-          brew install gnu-sed
       - name: Update version
         run: |
           git fetch --depth=1 origin +refs/tags/*:refs/tags/*
@@ -54,7 +57,6 @@ jobs:
           CIBW_BUILD: ${{ matrix.cpython-version }}
           CIBW_SKIP: "*musllinux*"
           CIBW_ARCHS: ${{ matrix.cibw_arch }}
-          CIBW_ARCH_MACOS: x86_64 arm64
           CIBW_BUILD_FRONTEND: build
       - uses: actions/upload-artifact@v3
         with:
