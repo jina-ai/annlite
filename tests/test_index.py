@@ -278,7 +278,7 @@ def test_search_numpy_membership_filter(
 
 def clear_hubble():
     client = hubble.Client(max_retries=None, jsonify=True)
-    art_list = client.list_artifacts(filter={'metaData.name': 'backup_docs'})
+    art_list = client.list_artifacts()
     for art in art_list['data']:
         client.delete_artifact(id=art['_id'])
 
