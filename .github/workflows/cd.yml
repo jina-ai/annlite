@@ -30,7 +30,6 @@ jobs:
         os: [ubuntu-latest, windows-latest, macos-latest]
         cibw_arch: ["auto64"]
         python-version: [['3.7', "cp37-*"], ['3.8', "cp38-*"], ['3.9', "cp39-*"], ['3.10', "cp310-*"]]
-        test-path: ${{fromJson(needs.prep-testbed.outputs.matrix)}}
     steps:
       - uses: actions/checkout@v3
         with:
@@ -89,7 +88,7 @@ jobs:
           cd ..
           mv annlite/tests/ ./
           pytest --suppress-no-test-exit-code --cov=annlite --cov-report=xml \
-          -v -s -m "not gpu" ${{ matrix.test-path }}
+          -v -s -m "not gpu" ${{fromJson(needs.prep-testbed.outputs.matrix)}}
           echo "::set-output name=codecov_flag::annlite"
         timeout-minutes: 30
       - name: Test win
