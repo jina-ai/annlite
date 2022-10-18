@@ -93,7 +93,6 @@ class AnnLite(CellContainer):
         self.n_clusters = n_clusters
         self.n_probe = max(n_probe, n_cells)
         self.n_cells = n_cells
-        self.seperator = '\\' if platform.system() == 'Windows' else '/'
 
         if isinstance(metric, str):
             metric = Metric.from_string(metric)
@@ -695,11 +694,12 @@ class AnnLite(CellContainer):
             )
         else:
             logger.info(f'Upload the database `{target_name}` to remote.')
+            seperator = '\\' if platform.system() == 'Windows' else '/'
             output_path = shutil.make_archive(
                 os.path.join(str(self.data_path.parent), f'{target_name}'),
                 'zip',
                 str(self.data_path.parent),
-                str(self.data_path).split(self.seperator)[-1],
+                str(self.data_path).split(seperator)[-1],
             )
             self.remote_store_client.upload_artifact(
                 f=output_path,
