@@ -640,8 +640,12 @@ class AnnLite(CellContainer):
     def restore(self, source_name: Optional[str] = None):
         if not source_name:
             if self.total_docs > 0:
+                logger.info(f'restore Annlite from local')
+                self.close()
                 self._rebuild_index_from_local()
         else:
+            logger.info(f'restore Annlite from artifact: {source_name}')
+            self.close()
             self._rebuild_index_from_remote(source_name)
 
     def dump_model(self):
