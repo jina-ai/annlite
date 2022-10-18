@@ -22,8 +22,8 @@ function clean_build {
 
 function pub_pypi {
     # publish to pypi
-    twine upload --repository testpypi dist/*
-    twine upload --repository testpypi wheelhouse/*
+    twine upload dist/*
+    twine upload wheelhouse/*
     clean_build
 }
 

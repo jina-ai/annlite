@@ -3,7 +3,7 @@ name: CD
 on:
   push:
     branches:
-      - fix-cd-release-version
+      - main
 
 jobs:
   prep-testbed:
@@ -56,7 +56,7 @@ jobs:
           CIBW_MANYLINUX_X86_64_IMAGE: manylinux2014
           CIBW_BUILD: ${{ matrix.python-version[1] }}
           CIBW_SKIP: "*musllinux*"
-          CIBW_ARCHS_MACOS: x86_64 arm64
+          # CIBW_ARCHS_MACOS: x86_64 arm64
           CIBW_ARCHS: ${{ matrix.cibw_arch }}
           CIBW_BUILD_FRONTEND: build
       - uses: actions/upload-artifact@v3
@@ -154,6 +154,6 @@ jobs:
           pip install twine
           ./scripts/release.sh
         env:
-          TWINE_USERNAME: ${{ secrets.TWINE_USERNAME_TEST }}
-          TWINE_PASSWORD: ${{ secrets.TWINE_PASSWORD_TEST }}
+          TWINE_USERNAME: ${{ secrets.TWINE_USERNAME }}
+          TWINE_PASSWORD: ${{ secrets.TWINE_PASSWORD }}
           JINA_SLACK_WEBHOOK: ${{ secrets.JINA_SLACK_WEBHOOK }}
