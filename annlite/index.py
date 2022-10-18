@@ -93,6 +93,7 @@ class AnnLite(CellContainer):
         self.n_clusters = n_clusters
         self.n_probe = max(n_probe, n_cells)
         self.n_cells = n_cells
+        self.seperator = '\\' if platform.system() == 'Windwos' else '/'
 
         if isinstance(metric, str):
             metric = Metric.from_string(metric)
@@ -699,7 +700,7 @@ class AnnLite(CellContainer):
                 os.path.join(str(self.data_path.parent), f'{target_name}'),
                 'zip',
                 str(self.data_path.parent),
-                str(self.data_path).split('/')[-1],
+                str(self.data_path).split(self.seperator)[-1],
             )
             self.remote_store_client.upload_artifact(
                 f=output_path,
