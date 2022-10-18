@@ -22,6 +22,7 @@ jobs:
       matrix: ${{ steps.set-matrix.outputs.matrix }}
 
   build-and-test:
+    needs: [prep-testbed]
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
