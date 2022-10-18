@@ -66,7 +66,7 @@ jobs:
           path: |
             ./wheelhouse/*.whl
             ./dist/*.tar.gz
-            
+
   core-test:
     needs: [ prep-testbed, build-wheels ]
     runs-on: ${{ matrix.os }}
@@ -158,6 +158,6 @@ jobs:
           pip install twine
           ./scripts/release.sh
         env:
-          TWINE_USERNAME: ${{ secrets.TWINE_USERNAME_TEST }}
-          TWINE_PASSWORD: ${{ secrets.TWINE_PASSWORD_TEST }}
+          TWINE_USERNAME: ${{ secrets.TWINE_USERNAME }}
+          TWINE_PASSWORD: ${{ secrets.TWINE_PASSWORD }}
           JINA_SLACK_WEBHOOK: ${{ secrets.JINA_SLACK_WEBHOOK }}
