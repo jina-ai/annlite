@@ -1,3 +1,5 @@
+from argparse import ArgumentError
+
 import numpy as np
 from scipy.cluster.vq import vq
 
@@ -5,6 +7,7 @@ from annlite import pq_bind
 
 from ...enums import Metric
 from ...math import l2_normalize
+from ...profile import time_profile
 from .base import BaseCodec
 
 # from pqlite.pq_bind import precompute_adc_table, dist_pqcodes_to_codebooks
@@ -231,7 +234,7 @@ class PQCodec(BaseCodec):
         Expect a 3-dimensional matrix is returned,
         with shape (`n_subvectors`, `n_clusters`, `d_subvector`) and dtype float32
         """
-        return self.codebooks
+        return np.ascontiguousarray(self.codebooks, dtype='float32')
 
     def get_subspace_splitting(self):
         """Return subspace splitting setting
@@ -239,6 +242,87 @@ class PQCodec(BaseCodec):
         :return: tuple of (`n_subvectors`, `n_clusters`, `d_subvector`)
         """
         return (self.n_subvectors, self.n_clusters, self.d_subvector)
+
+    # def get_dist_mat(self, x: np.ndarray):
+    #     """Return the distance tables in form of matrix for multiple queries
+
+    #     :param query: shape('N', 'D'),
+
+    #     :return: ndarray with shape('N', `n_subvectors`, `n_clusters`)
+
+    #     .. note::
+    #         _description_
+    #     """
+    #     assert x.dtype == np.float32
+    #     assert x.ndim == 2
+    #     N, D = x.shape
+    #     assert (
+    #         D == self.d_subvector * self.n_subvectors
+    #     ), 'input dimension must be Ds * M'
+    #     if self.normalize_input:
+    #         x = l2_normalize(x)
+
+    #     x = x.reshape(
+    #         N,
+    #         self.n_subvectors,
+    #         1,
+    #         self.d_subvector,
+    #     )
+    #     if self.metric == Metric.EUCLIDEAN:
+    #         # (1, n_subvectors, n_clusters, d_subvector)
+    #         codebook = self.codebooks[np.newaxis, ...]
+
+    #         # broadcast to (N, n_subvectors, n_clusters, d_subvector)
+    #         dist_vector = (x - codebook) ** 2
+
+    #         # reduce to (N, n_subvectors, n_clusters)
+    #         dist_mat = np.sum(dist_vector, axis=3)
+    #     elif self.metric in [Metric.INNER_PRODUCT, Metric.COSINE]:
+    #         # (1, n_subvectors, n_clusters, d_subvector)
+    #         codebook = self.codebooks[np.newaxis, ...]
+
+    #         # broadcast to (N, n_subvectors, n_clusters, d_subvector)
+    #         dist_vector = x * codebook
+
+    #         # reduce to (N, n_subvectors, n_clusters)
+    #         dist_mat = 1 / self.n_clusters - np.sum(dist_vector, axis=3)
+    #     else:
+    #         raise ArgumentError(f'Unable support metrics {self.metric}')
+    #     return np.ascontiguousarray(dist_mat, dtype='float32')
+
+    def get_dist_mat(self, x: np.ndarray):
+        """Return the distance tables in form of matrix for multiple queries
+
+        :param query: shape('N', 'D'),
+
+        :return: ndarray with shape('N', `n_subvectors`, `n_clusters`)
+
+        .. note::
+            _description_
+        """
+        assert x.dtype == np.float32
+        assert x.ndim == 2
+        N, D = x.shape
+        assert (
+            D == self.d_subvector * self.n_subvectors
+        ), 'input dimension must be Ds * M'
+        if self.normalize_input:
+            x = l2_normalize(x)
+
+        if self.metric == Metric.EUCLIDEAN:
+            dist_mat = pq_bind.batch_precompute_adc_table(
+                x, self.d_subvector, self.n_clusters, self.codebooks
+            )
+        elif self.metric in [Metric.INNER_PRODUCT, Metric.COSINE]:
+            dist_mat = 1 / self.n_clusters - np.array(
+                pq_bind.batch_precompute_adc_table_ip(
+                    x, self.d_subvector, self.n_clusters, self.codebooks
+                ),
+                dtype='float32',
+            )
+        else:
+            raise ArgumentError(f'Unable support metrics {self.metric}')
+        return np.ascontiguousarray(dist_mat, dtype='float32')
 
     # -------------------------------------
 
