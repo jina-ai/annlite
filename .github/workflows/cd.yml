@@ -57,7 +57,7 @@ jobs:
           CIBW_BUILD: ${{ matrix.python-version[1] }}
           CIBW_SKIP: "*musllinux*"
           CIBW_ARCHS: ${{ matrix.cibw_arch }}
-          # CIBW_ARCHS_MACOS: x86_64 arm64
+          # CIBW_ARCH_MACOS: x86_64 arm64
           CIBW_BUILD_FRONTEND: build
       - uses: actions/upload-artifact@v3
         with:
