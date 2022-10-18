@@ -74,7 +74,7 @@ jobs:
       matrix:
         os: [ ubuntu-latest, windows-latest, macos-latest ]
         cibw_arch: [ "auto64" ]
-        python-version: [ [ '3.7', "cp37-*" ], [ '3.8', "cp38-*" ], [ '3.9', "cp39-*" ], [ '3.10', "cp310-*" ] ]
+        python-version: [ [ '3.7', "cp37-*" ] ]
         test-path: ${{fromJson(needs.prep-testbed.outputs.matrix)}}
     steps:
       - uses: actions/checkout@v3
