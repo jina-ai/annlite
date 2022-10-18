@@ -94,30 +94,68 @@ jobs:
       matrix: ${{ steps.set-matrix.outputs.matrix }}
 
   core-test:
-    needs: prep-testbed
-    runs-on: ubuntu-latest
+    needs: [prep-testbed]
+    runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
+        os: [ubuntu-latest, windows-latest]
+        cpython-version: ["cp37-*"]
         python-version: [3.7]
+        cibw_arch: ["auto64"]
         test-path: ${{fromJson(needs.prep-testbed.outputs.matrix)}}
     steps:
-      - uses: actions/checkout@v2
       - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v2
+        uses: actions/setup-python@v3
         with:
           python-version: ${{ matrix.python-version }}
+      - uses: actions/checkout@v3
       - name: Prepare enviroment
         run: |
           python -m pip install --upgrade pip
-          python -m pip install wheel
+          pip install jina
           pip install --pre docarray
-          pip install -e ".[test]"
-      - name: Test
-        id: test
+          pip install pytest pytest-html pytest-cov pytest-mock pytest-repeat pytest-custom-exit-code pytest-timeout pytest-reraise
+      - name: Build wheel
+        uses: pypa/cibuildwheel@v2.10.2
+        with:
+          package-dir: ./
+        env:
+          CIBW_ENVIRONMENT: >
+            STAN_BACKEND="${{ env.STAN_BACKEND }}"
+          CIBW_MANYLINUX_X86_64_IMAGE: manylinux2014
+          CIBW_BUILD: ${{ matrix.cpython-version }}
+          CIBW_SKIP: "*musllinux*"
+          CIBW_ARCHS: ${{ matrix.cibw_arch }}
+          CIBW_BUILD_FRONTEND: build
+      - name: Install annlite unix
+        if: ${{ matrix.os == 'ubuntu-latest' }}
         run: |
+          pip install wheelhouse/*linux*.whl
+      - name: Install annlite win
+        if: ${{ matrix.os == 'windows-latest'}}
+        run: |
+          pip install --pre --find-links=wheelhouse/ annlite
+      - name: Test unix
+        id: test_unix
+        if: ${{ matrix.os == 'ubuntu-latest' || matrix.os == 'macos-latest' }}
+        run: |
+          cd ..
+          mv annlite/tests/ ./
           pytest --suppress-no-test-exit-code --cov=annlite --cov-report=xml \
-            -v -s -m "not gpu" ${{ matrix.test-path }}
+          -v -s -m "not gpu" ${{ matrix.test-path }}
+          echo "::set-output name=codecov_flag::annlite"
+        timeout-minutes: 30
+      - name: Test win
+        id: test_win
+        if: ${{ matrix.os == 'windows-latest'}}
+        env:
+          PYTHONIOENCODING: 'utf-8'
+        run: |
+          cd ..
+          move annlite/tests/ ./
+          cd tests/
+          pytest -v -s -m "not gpu" -k "test"
           echo "::set-output name=codecov_flag::annlite"
         timeout-minutes: 30
       - name: Check codecov file
@@ -136,7 +174,7 @@ jobs:
 
   # just for blocking the merge until all parallel core-test are successful
   success-all-test:
-    needs: core-test
+    needs: [core-test]
     if: always()
     runs-on: ubuntu-latest
     steps:

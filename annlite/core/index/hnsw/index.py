@@ -36,8 +36,14 @@ def pre_process(f):
             elif not self._set_backend_pq:
                 self._index.loadPQ(self.pq_codec)
                 self._set_backend_pq = True
+            kwargs['pre_process_dtables'] = self.pq_codec.get_dist_mat(x)
             x = self.pq_codec.encode(x)
-        return f(self, x, *args, **kwargs)
+
+            assert kwargs['pre_process_dtables'].dtype == 'float32'
+            assert kwargs['pre_process_dtables'].flags['C_CONTIGUOUS']
+            return f(self, x, *args, **kwargs)
+        else:
+            return f(self, x, *args, **kwargs)
 
     return pre_processed
 
@@ -116,13 +122,19 @@ class HnswIndex(BaseIndex):
         self._index.save_index(str(index_file))
 
     @pre_process
-    def add_with_ids(self, x: 'np.ndarray', ids: List[int]):
+    def add_with_ids(
+        self,
+        x: 'np.ndarray',
+        ids: List[int],
+        # kwargs maybe used by pre_process
+        pre_process_dtables=None,
+    ):
         max_id = max(ids) + 1
         if max_id > self.capacity:
             expand_steps = math.ceil(max_id / self.expand_step_size)
             self._expand_capacity(expand_steps * self.expand_step_size)
 
-        self._index.add_items(x, ids=ids)
+        self._index.add_items(x, ids=ids, dtables=pre_process_dtables)
 
     @pre_process
     def search(
@@ -130,6 +142,8 @@ class HnswIndex(BaseIndex):
         query: 'np.ndarray',
         limit: int = 10,
         indices: Optional['np.ndarray'] = None,
+        # kwargs maybe used by pre_process
+        pre_process_dtables=None,
     ):
         ef_search = max(self.ef_search, limit)
         self._index.set_ef(ef_search)
@@ -139,10 +153,12 @@ class HnswIndex(BaseIndex):
             if len(indices) < limit:
                 limit = len(indices)
             ids, dists = self._index.knn_query_with_filter(
-                query, filters=indices, k=limit
+                query, filters=indices, k=limit, dtables=pre_process_dtables
             )
         else:
-            ids, dists = self._index.knn_query(query, k=limit)
+            ids, dists = self._index.knn_query(
+                query, k=limit, dtables=pre_process_dtables
+            )
 
         # convert squared l2 into euclidean distance
         if self.metric == Metric.EUCLIDEAN:

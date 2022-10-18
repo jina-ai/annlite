@@ -4,7 +4,7 @@
 namespace hnswlib {
 
 static float L2Sqr(const void *pVect1v, const void *pVect2v,
-                   const void *qty_ptr) {
+                   const void *qty_ptr, const local_state_t *local_state) {
   float *pVect1 = (float *)pVect1v;
   float *pVect2 = (float *)pVect2v;
   size_t qty = *((size_t *)qty_ptr);
@@ -23,7 +23,8 @@ static float L2Sqr(const void *pVect1v, const void *pVect2v,
 
 // Favor using AVX if available.
 static float L2SqrSIMD16Ext(const void *pVect1v, const void *pVect2v,
-                            const void *qty_ptr) {
+                            const void *qty_ptr,
+                            const local_state_t *local_state) {
   float *pVect1 = (float *)pVect1v;
   float *pVect2 = (float *)pVect2v;
   size_t qty = *((size_t *)qty_ptr);
@@ -59,7 +60,8 @@ static float L2SqrSIMD16Ext(const void *pVect1v, const void *pVect2v,
 #elif defined(USE_SSE)
 
 static float L2SqrSIMD16Ext(const void *pVect1v, const void *pVect2v,
-                            const void *qty_ptr) {
+                            const void *qty_ptr,
+                            const local_state_t *local_state) {
   float *pVect1 = (float *)pVect1v;
   float *pVect2 = (float *)pVect2v;
   size_t qty = *((size_t *)qty_ptr);
@@ -109,22 +111,24 @@ static float L2SqrSIMD16Ext(const void *pVect1v, const void *pVect2v,
 
 #if defined(USE_SSE) || defined(USE_AVX)
 static float L2SqrSIMD16ExtResiduals(const void *pVect1v, const void *pVect2v,
-                                     const void *qty_ptr) {
+                                     const void *qty_ptr,
+                                     const local_state_t *local_state) {
   size_t qty = *((size_t *)qty_ptr);
   size_t qty16 = qty >> 4 << 4;
-  float res = L2SqrSIMD16Ext(pVect1v, pVect2v, &qty16);
+  float res = L2SqrSIMD16Ext(pVect1v, pVect2v, &qty16, local_state);
   float *pVect1 = (float *)pVect1v + qty16;
   float *pVect2 = (float *)pVect2v + qty16;
 
   size_t qty_left = qty - qty16;
-  float res_tail = L2Sqr(pVect1, pVect2, &qty_left);
+  float res_tail = L2Sqr(pVect1, pVect2, &qty_left, local_state);
   return (res + res_tail);
 }
 #endif
 
 #ifdef USE_SSE
 static float L2SqrSIMD4Ext(const void *pVect1v, const void *pVect2v,
-                           const void *qty_ptr) {
+                           const void *qty_ptr,
+                           const local_state_t *local_state) {
   float PORTABLE_ALIGN32 TmpRes[8];
   float *pVect1 = (float *)pVect1v;
   float *pVect2 = (float *)pVect2v;
@@ -150,16 +154,17 @@ static float L2SqrSIMD4Ext(const void *pVect1v, const void *pVect2v,
 }
 
 static float L2SqrSIMD4ExtResiduals(const void *pVect1v, const void *pVect2v,
-                                    const void *qty_ptr) {
+                                    const void *qty_ptr,
+                                    const local_state_t *local_state) {
   size_t qty = *((size_t *)qty_ptr);
   size_t qty4 = qty >> 2 << 2;
 
-  float res = L2SqrSIMD4Ext(pVect1v, pVect2v, &qty4);
+  float res = L2SqrSIMD4Ext(pVect1v, pVect2v, &qty4, local_state);
   size_t qty_left = qty - qty4;
 
   float *pVect1 = (float *)pVect1v + qty4;
   float *pVect2 = (float *)pVect2v + qty4;
-  float res_tail = L2Sqr(pVect1, pVect2, &qty_left);
+  float res_tail = L2Sqr(pVect1, pVect2, &qty_left, local_state);
 
   return (res + res_tail);
 }
@@ -194,13 +199,18 @@ public:
 
   void *get_dist_func_param() { return &dim_; }
 
+  // Not local state
+  void attach_local_data(const void *) {}
+
+  void detach_local_data() {}
+
   ~L2Space() {}
 };
 
 static int L2SqrI4x(const void *__restrict pVect1,
                     const void *__restrict pVect2,
-                    const void *__restrict qty_ptr) {
-
+                    const void *__restrict qty_ptr,
+                    const local_state_t *__restrict local_state) {
   size_t qty = *((size_t *)qty_ptr);
   int res = 0;
   unsigned char *a = (unsigned char *)pVect1;
@@ -226,7 +236,8 @@ static int L2SqrI4x(const void *__restrict pVect1,
 }
 
 static int L2SqrI(const void *__restrict pVect1, const void *__restrict pVect2,
-                  const void *__restrict qty_ptr) {
+                  const void *__restrict qty_ptr,
+                  const local_state_t *__restrict local_state) {
   size_t qty = *((size_t *)qty_ptr);
   int res = 0;
   unsigned char *a = (unsigned char *)pVect1;
@@ -262,6 +273,11 @@ public:
   DISTFUNC<int> get_dist_func() { return fstdistfunc_; }
 
   void *get_dist_func_param() { return &dim_; }
+
+  // Not local state
+  void attach_local_data(const void *) {}
+
+  void detach_local_data() {}
 
   ~L2SpaceI() {}
 };

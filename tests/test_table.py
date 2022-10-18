@@ -128,7 +128,7 @@ def test_create_meta_table(tmpdir):
 
     addr = table.get_latest_commit()
     assert addr[:3] == ('0', 1, 2)
-    assert addr[-1] > time_since
+    assert addr[-1] >= time_since
 
     time_since = datetime.datetime.utcnow()
     table.delete_address('0')
@@ -136,4 +136,4 @@ def test_create_meta_table(tmpdir):
     assert addresses == []
 
     addr = table.get_latest_commit()
-    assert addr[-1] > time_since
+    assert addr[-1] >= time_since
