@@ -31,6 +31,8 @@ jobs:
         python-version: [['3.7', "cp37-*"], ['3.8', "cp38-*"], ['3.9', "cp39-*"], ['3.10', "cp310-*"]]
     steps:
       - uses: actions/checkout@v3
+        with:
+          fetch-depth: 100
       - name: Set up Python ${{ matrix.python-version[0] }}
         uses: actions/setup-python@v4
         with:
@@ -55,7 +57,7 @@ jobs:
           CIBW_BUILD: ${{ matrix.python-version[1] }}
           CIBW_SKIP: "*musllinux*"
           CIBW_ARCHS: ${{ matrix.cibw_arch }}
-          CIBW_ARCH_MACOS: x86_64 arm64
+          # CIBW_ARCH_MACOS: x86_64 arm64
           CIBW_BUILD_FRONTEND: build
       - uses: actions/upload-artifact@v3
         with:
