@@ -278,7 +278,7 @@ def test_search_numpy_membership_filter(
 
 def clear_hubble():
     client = hubble.Client(max_retries=None, jsonify=True)
-    art_list = client.list_artifacts(filter={'metaData.name': 'backup_docs'})
+    art_list = client.list_artifacts()
     for art in art_list['data']:
         client.delete_artifact(id=art['_id'])
 
@@ -290,12 +290,12 @@ def test_remote_storage(tmpdir):
 
     X = np.random.random((N, D))
     docs = DocumentArray([Document(id=f'{i}', embedding=X[i]) for i in range(N)])
-    index = AnnLite(n_dim=D, data_path=tmpdir / 'workspace1')
+    index = AnnLite(n_dim=D, data_path=tmpdir / 'workspace1' / '0')
     index.index(docs)
 
     index.backup(target_name='backup_docs')
 
-    index = AnnLite(n_dim=D, data_path=tmpdir / 'workspace2')
+    index = AnnLite(n_dim=D, data_path=tmpdir / 'workspace2' / '0')
     index.restore(source_name='backup_docs')
 
     clear_hubble()
