@@ -93,7 +93,7 @@ class AnnLite(CellContainer):
         self.n_clusters = n_clusters
         self.n_probe = max(n_probe, n_cells)
         self.n_cells = n_cells
-        self.seperator = '\\' if platform.system() == 'Windwos' else '/'
+        self.seperator = '\\' if platform.system() == 'Windows' else '/'
 
         if isinstance(metric, str):
             metric = Metric.from_string(metric)
