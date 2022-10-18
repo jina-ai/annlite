@@ -3,7 +3,7 @@ name: CD
 on:
   push:
     branches:
-      - main
+      - fix-cd-release-version
 
 jobs:
   prep-testbed:
@@ -154,6 +154,6 @@ jobs:
           pip install twine
           ./scripts/release.sh
         env:
-          TWINE_USERNAME: ${{ secrets.TWINE_USERNAME }}
-          TWINE_PASSWORD: ${{ secrets.TWINE_PASSWORD }}
+          TWINE_USERNAME: ${{ secrets.TWINE_USERNAME_TEST }}
+          TWINE_PASSWORD: ${{ secrets.TWINE_PASSWORD_TEST }}
           JINA_SLACK_WEBHOOK: ${{ secrets.JINA_SLACK_WEBHOOK }}
