@@ -21,7 +21,8 @@ jobs:
     outputs:
       matrix: ${{ steps.set-matrix.outputs.matrix }}
 
-  build-package:
+  build-wheels:
+    needs: [prep-testbed]
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
@@ -43,6 +44,7 @@ jobs:
           git fetch --depth=1 origin +refs/tags/*:refs/tags/*
           ./scripts/update-version.sh
       - name: Build sdist
+        if: ${{ matrix.os == 'ubuntu-latest' && matrix.python-version[0] == '3.7' }}
         run: |
           pip install build
           python -m build --sdist
@@ -64,32 +66,33 @@ jobs:
           path: |
             ./wheelhouse/*.whl
             ./dist/*.tar.gz
-
   core-test:
-    needs: [prep-testbed, build-package]
+    needs: [ prep-testbed, build-wheels ]
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest]
-        python-version: [['3.7', "cp37"]]
+        os: [ ubuntu-latest, windows-latest, macos-latest ]
+        cibw_arch: [ "auto64" ]
+        python-version: [ [ '3.7', "cp37-*" ] ]
         test-path: ${{fromJson(needs.prep-testbed.outputs.matrix)}}
     steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 100
       - name: Set up Python ${{ matrix.python-version[0] }}
         uses: actions/setup-python@v4
         with:
           python-version: ${{ matrix.python-version[0] }}
-      - uses: actions/checkout@v3
-      - uses: actions/download-artifact@v3
-        with:
-          name: artifact
       - name: Prepare enviroment
         run: |
           python -m pip install --upgrade pip
           pip install jina
-          pip install cibuildwheel
           pip install --pre docarray
           pip install pytest pytest-html pytest-cov pytest-mock pytest-repeat pytest-custom-exit-code pytest-timeout pytest-reraise
+      - uses: actions/download-artifact@v3
+        with:
+          name: artifact
       - name: Install annlite linux
         if: ${{ matrix.os == 'ubuntu-latest' }}
         run: |
@@ -102,6 +105,7 @@ jobs:
         if: ${{ matrix.os == 'windows-latest'}}
         run: |
           pip install --pre --find-links=wheelhouse/ annlite
+
       - name: Test unix
         id: test_unix
         if: ${{ matrix.os == 'ubuntu-latest' || matrix.os == 'macos-latest' }}
@@ -122,7 +126,6 @@ jobs:
           move annlite/tests/ ./
           cd tests/
           pytest -v -s -m "not gpu" -k "test"
-          echo "::set-output name=codecov_flag::annlite"
         timeout-minutes: 30
       - name: Check codecov file
         id: check_files
@@ -131,7 +134,7 @@ jobs:
           files: "coverage.xml"
       - name: Upload coverage from test to Codecov
         uses: codecov/codecov-action@v2
-        if: steps.check_files.outputs.files_exists == 'true' && ${{ matrix.python-version[0] }} == '3.7'
+        if: steps.check_files.outputs.files_exists == 'true' && ${{ matrix.python-version[0] }} == '3.7' && ${{ matrix.matrix.os }} == 'ubuntu-latest'
         with:
           file: coverage.xml
           flags: ${{ steps.test.outputs.codecov_flag }}
@@ -148,6 +151,7 @@ jobs:
       - uses: actions/download-artifact@v3
         with:
           name: artifact
+          path: dist
       - name: Pre-release (.devN)
         run: |
           git fetch --depth=1 origin +refs/tags/*:refs/tags/*
