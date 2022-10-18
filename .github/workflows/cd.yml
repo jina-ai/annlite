@@ -93,15 +93,14 @@ jobs:
       - uses: actions/download-artifact@v3
         with:
           name: artifact
-          path: dist
       - name: Install annlite linux
         if: ${{ matrix.os == 'ubuntu-latest' }}
         run: |
-          pip install dist/*${{ matrix.python-version[1] }}**linux*.whl
+          pip install wheelhouse/*${{ matrix.python-version[1] }}**linux*.whl
       - name: Install annlite macos
         if: ${{ matrix.os == 'macos-latest' }}
         run: |
-          pip install dist/*${{ matrix.python-version[1] }}**macos**x86_64*.whl
+          pip install wheelhouse/*${{ matrix.python-version[1] }}**macos**x86_64*.whl
       - name: Install annlite win
         if: ${{ matrix.os == 'windows-latest'}}
         run: |
