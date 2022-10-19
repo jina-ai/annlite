@@ -113,6 +113,7 @@ class AnnLite(CellContainer):
                 f'Load pre-trained projector codec (n_components={self.n_components}) from {self.model_path}'
             )
             self.projector_codec = ProjectorCodec.load(self._projector_codec_path)
+            self.projector_codec._is_trained = True
         elif n_components:
             logger.info(
                 f'Initialize Projector codec (n_components={self.n_components})'
@@ -125,6 +126,7 @@ class AnnLite(CellContainer):
                 f'Load trained VQ codec (K={self.n_cells}) from {self.model_path}'
             )
             self.vq_codec = VQCodec.load(self._vq_codec_path)
+            self.vq_codec._is_trained = True
         elif n_cells > 1:
             logger.info(f'Initialize VQ codec (K={self.n_cells})')
             self.vq_codec = VQCodec(self.n_cells, metric=self.metric)
@@ -135,6 +137,7 @@ class AnnLite(CellContainer):
                 f'Load trained PQ codec (n_subvectors={self.n_subvectors}) from {self.model_path}'
             )
             self.pq_codec = PQCodec.load(self._pq_codec_path)
+            self.pq_codec._is_trained = True
         elif n_subvectors:
             logger.info(f'Initialize PQ codec (n_subvectors={self.n_subvectors})')
             self.pq_codec = PQCodec(
