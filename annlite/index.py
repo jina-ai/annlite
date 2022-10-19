@@ -107,40 +107,42 @@ class AnnLite(CellContainer):
             data_path.mkdir(parents=True, exist_ok=True)
         self.data_path = data_path
 
-        self.projector_codec = None
+        self._projector_codec = None
         if self._projector_codec_path.exists():
             logger.info(
                 f'Load pre-trained projector codec (n_components={self.n_components}) from {self.model_path}'
             )
-            self.projector_codec = ProjectorCodec.load(self._projector_codec_path)
+            self._projector_codec = ProjectorCodec.load(self._projector_codec_path)
         elif n_components:
             logger.info(
                 f'Initialize Projector codec (n_components={self.n_components})'
             )
-            self.projector_codec = ProjectorCodec(n_dim, n_components=self.n_components)
+            self._projector_codec = ProjectorCodec(
+                n_dim, n_components=self.n_components
+            )
 
-        self.vq_codec = None
+        self._vq_codec = None
         if self._vq_codec_path.exists():
             logger.info(
                 f'Load trained VQ codec (K={self.n_cells}) from {self.model_path}'
             )
-            self.vq_codec = VQCodec.load(self._vq_codec_path)
+            self._vq_codec = VQCodec.load(self._vq_codec_path)
         elif n_cells > 1:
             logger.info(f'Initialize VQ codec (K={self.n_cells})')
-            self.vq_codec = VQCodec(self.n_cells, metric=self.metric)
+            self._vq_codec = VQCodec(self.n_cells, metric=self.metric)
 
-        self.pq_codec = None
+        self._pq_codec = None
         if self._pq_codec_path.exists():
             logger.info(
                 f'Load trained PQ codec (n_subvectors={self.n_subvectors}) from {self.model_path}'
             )
-            self.pq_codec = PQCodec.load(self._pq_codec_path)
+            self._pq_codec = PQCodec.load(self._pq_codec_path)
         elif n_subvectors:
             logger.info(f'Initialize PQ codec (n_subvectors={self.n_subvectors})')
-            self.pq_codec = PQCodec(
+            self._pq_codec = PQCodec(
                 dim=n_dim
-                if not self.projector_codec
-                else self.projector_codec.n_components,
+                if not self._projector_codec
+                else self._projector_codec.n_components,
                 n_subvectors=self.n_subvectors,
                 n_clusters=self.n_clusters,
                 metric=self.metric,
@@ -157,8 +159,8 @@ class AnnLite(CellContainer):
         super(AnnLite, self).__init__(
             n_dim,
             metric=metric,
-            projector_codec=self.projector_codec,
-            pq_codec=self.pq_codec,
+            projector_codec=self._projector_codec,
+            pq_codec=self._pq_codec,
             n_cells=n_cells,
             initial_size=initial_size,
             expand_step_size=expand_step_size,
@@ -203,23 +205,23 @@ class AnnLite(CellContainer):
             )
             return
 
-        if self.projector_codec:
+        if self._projector_codec:
             logger.info(
                 f'Start training Projector codec (n_components={self.n_components}) with {n_data} data...'
             )
-            self.projector_codec.fit(x)
+            self._projector_codec.fit(x)
 
-        if self.vq_codec:
+        if self._vq_codec:
             logger.info(
                 f'Start training VQ codec (K={self.n_cells}) with {n_data} data...'
             )
-            self.vq_codec.fit(x)
+            self._vq_codec.fit(x)
 
-        if self.pq_codec:
+        if self._pq_codec:
             logger.info(
                 f'Start training PQ codec (n_subvectors={self.n_subvectors}) with {n_data} data...'
             )
-            self.pq_codec.fit(x)
+            self._pq_codec.fit(x)
 
         logger.info(f'The annlite is successfully trained!')
 
@@ -244,23 +246,23 @@ class AnnLite(CellContainer):
             )
             return
 
-        if self.projector_codec:
+        if self._projector_codec:
             logging.info(
                 f'Partial training Projector codec (n_components={self.n_components}) with {n_data} data...'
             )
-            self.projector_codec.partial_fit(x)
+            self._projector_codec.partial_fit(x)
 
-        if self.vq_codec:
+        if self._vq_codec:
             logger.info(
                 f'Partial training VQ codec (K={self.n_cells}) with {n_data} data...'
             )
-            self.vq_codec.partial_fit(x)
+            self._vq_codec.partial_fit(x)
 
-        if self.pq_codec:
+        if self._pq_codec:
             logger.info(
                 f'Partial training PQ codec (n_subvectors={self.n_subvectors}) with {n_data} data...'
             )
-            self.pq_codec.partial_fit(x)
+            self._pq_codec.partial_fit(x)
 
         if auto_save:
             self.dump_model()
@@ -282,8 +284,8 @@ class AnnLite(CellContainer):
         n_data, _ = self._sanity_check(x)
 
         assigned_cells = (
-            self.vq_codec.encode(x)
-            if self.vq_codec
+            self._vq_codec.encode(x)
+            if self._vq_codec
             else np.zeros(n_data, dtype=np.int64)
         )
         return super(AnnLite, self).insert(x, assigned_cells, docs)
@@ -312,8 +314,8 @@ class AnnLite(CellContainer):
         n_data, _ = self._sanity_check(x)
 
         assigned_cells = (
-            self.vq_codec.encode(x)
-            if self.vq_codec
+            self._vq_codec.encode(x)
+            if self._vq_codec
             else np.zeros(n_data, dtype=np.int64)
         )
 
@@ -452,9 +454,9 @@ class AnnLite(CellContainer):
     def _cell_selection(self, query_np, limit):
         n_data, _ = self._sanity_check(query_np)
 
-        if self.vq_codec:
+        if self._vq_codec:
             dists = cdist(
-                query_np, self.vq_codec.codebook, metric=self.metric.name.lower()
+                query_np, self._vq_codec.codebook, metric=self.metric.name.lower()
             )
             dists, cells = top_k(dists, k=self.n_probe)
         else:
@@ -545,11 +547,11 @@ class AnnLite(CellContainer):
     def encode(self, x: 'np.ndarray'):
         n_data, _ = self._sanity_check(x)
 
-        if self.projector_codec:
-            x = self.projector_codec.encode(x)
+        if self._projector_codec:
+            x = self._projector_codec.encode(x)
 
-        if self.vq_codec:
-            x = self.pq_codec.encode(x)
+        if self._vq_codec:
+            x = self._pq_codec.encode(x)
 
         return x
 
@@ -557,11 +559,11 @@ class AnnLite(CellContainer):
         assert len(x.shape) == 2
         assert x.shape[1] == self.n_subvectors
 
-        if self.pq_codec:
-            x = self.pq_codec.decode(x)
+        if self._pq_codec:
+            x = self._pq_codec.decode(x)
 
-        if self.projector_codec:
-            x = self.projector_codec.decode(x)
+        if self._projector_codec:
+            x = self._projector_codec.decode(x)
 
         return x
 
@@ -636,7 +638,7 @@ class AnnLite(CellContainer):
 
     def backup(self, target_name: Optional[str] = None):
         if not target_name:
-            self.dump_index()
+            self.dump()
         else:
             self._backup_index_to_remote(target_name)
 
@@ -653,12 +655,12 @@ class AnnLite(CellContainer):
     def dump_model(self):
         logger.info(f'Save the parameters to {self.model_path}')
         self.model_path.mkdir(parents=True, exist_ok=True)
-        if self.projector_codec:
-            self.projector_codec.dump(self._projector_codec_path)
-        if self.vq_codec:
-            self.vq_codec.dump(self._vq_codec_path)
-        if self.pq_codec:
-            self.pq_codec.dump(self._pq_codec_path)
+        if self._projector_codec:
+            self._projector_codec.dump(self._projector_codec_path)
+        if self._vq_codec:
+            self._vq_codec.dump(self._vq_codec_path)
+        if self._pq_codec:
+            self._pq_codec.dump(self._pq_codec_path)
 
     def dump_index(self):
         logger.info(f'Save the indexer to {self.index_path}')
@@ -696,7 +698,7 @@ class AnnLite(CellContainer):
             logger.info(f'Upload the database `{target_name}` to remote.')
             seperator = '\\' if platform.system() == 'Windows' else '/'
             output_path = shutil.make_archive(
-                os.path.join(str(self.data_path.parent), f'{target_name}'),
+                os.path.join(str(self.data_path.parent), f'{target_name}_db'),
                 'zip',
                 str(self.data_path.parent),
                 str(self.data_path).split(seperator)[-1],
@@ -734,6 +736,24 @@ class AnnLite(CellContainer):
                 )
             shutil.rmtree(self.index_path)
 
+            logger.info(f'Upload the model `{target_name}` to remote')
+            self.dump_model()
+            output_path = shutil.make_archive(
+                os.path.join(str(self.model_path.parent), f'{target_name}_model'),
+                'zip',
+                str(self.model_path.parent),
+                str(self.model_path).split(seperator)[-1],
+            )
+            self.remote_store_client.upload_artifact(
+                f=output_path,
+                metadata={
+                    'name': target_name,
+                    'type': 'model',
+                    'cell': 'all',
+                },
+            )
+            Path(output_path).unlink()
+
     def _rebuild_index_from_local(self):
         if self.snapshot_path:
             logger.info(f'Load the indexer from snapshot {self.snapshot_path}')
@@ -759,6 +779,9 @@ class AnnLite(CellContainer):
                     assigned_cells = np.ones(len(docs), dtype=np.int64) * cell_id
                     super().insert(x, assigned_cells, docs, only_index=True)
                 logger.debug(f'Rebuild the index of cell-{cell_id} done')
+        if self.model_path:
+            logger.info(f'Load the model from {self.model_path}')
+            self._reload_models()
 
     def _rebuild_index_from_remote(self, source_name: str):
         import shutil
@@ -795,7 +818,7 @@ class AnnLite(CellContainer):
                             )
                 if art['metaData']['type'] == 'database':
                     logger.info(f'Load the database `{source_name}` from remote store')
-                    input_path = str(self.data_path.parent / f'{source_name}.zip')
+                    input_path = str(self.data_path.parent / f'{source_name}_db.zip')
                     self.remote_store_client.download_artifact(
                         id=art['_id'],
                         f=input_path,
@@ -804,17 +827,38 @@ class AnnLite(CellContainer):
                     shutil.unpack_archive(input_path, self.data_path.parent)
                     self._rebuild_database()
                     Path(input_path).unlink()
+                if art['metaData']['type'] == 'model':
+                    logger.info(f'Load the model `{source_name}` from remote store')
+                    input_path = str(
+                        self.model_path.parent / f'{source_name}_model.zip'
+                    )
+                    self.remote_store_client.download_artifact(
+                        id=art['_id'],
+                        f=input_path,
+                        show_progress=True,
+                    )
+                    shutil.unpack_archive(input_path, self.model_path.parent)
+                    self._reload_models()
+                    Path(input_path).unlink()
             shutil.rmtree(restore_path)
 
     @property
     def is_trained(self):
-        if self.projector_codec and (not self.projector_codec.is_trained):
+        if self._projector_codec and (not self._projector_codec.is_trained):
             return False
-        if self.vq_codec and (not self.vq_codec.is_trained):
+        if self._vq_codec and (not self._vq_codec.is_trained):
             return False
-        if self.pq_codec and (not self.pq_codec.is_trained):
+        if self._pq_codec and (not self._pq_codec.is_trained):
             return False
         return True
+
+    def _reload_models(self):
+        if self._projector_codec_path.exists():
+            self._projector_codec = ProjectorCodec.load(self._projector_codec_path)
+        if self._vq_codec_path.exists():
+            self._vq_codec = VQCodec.load(self._vq_codec_path)
+        if self._pq_codec_path.exists():
+            self._pq_codec = PQCodec.load(self._pq_codec_path)
 
     @property
     def use_smart_probing(self):

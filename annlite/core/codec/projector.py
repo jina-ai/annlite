@@ -44,7 +44,6 @@ class ProjectorCodec(BaseCodec):
         self.whiten = whiten
         self.svd_solver = svd_solver
 
-        self._is_trained = False
         self.pca = None
 
     def __hash__(self):
