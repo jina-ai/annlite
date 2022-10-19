@@ -13,11 +13,12 @@ def test_save_load(tmpfile):
         save_da.append(Document(id=str(i), embedding=np.random.rand(768)))
 
     # need release the resource
-    del save_da
+    save_da._annlite.close()
 
     load_da = DocumentArray(
         storage='annlite', config={'n_dim': 768, 'data_path': tmpfile}
     )
+    load_da._annlite.restore()
     assert len(load_da) == N
 
     for i in range(N, N + N):

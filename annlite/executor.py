@@ -19,7 +19,8 @@ class AnnLiteIndexer(Executor):
     :param metric: Distance metric type. Can be 'euclidean', 'inner_product', or 'cosine'
     :param limit: Number of results to get for each query document in search
     :param match_args: the arguments to `DocumentArray`'s match function
-    :param data_path: the workspace of the AnnLiteIndexer.
+    :param data_path: the workspace of the AnnLiteIndexer but not support when shards > 1.
+    :param restore_key: the name of indexer you want to restore from hub (will restore from local if not set).
     :param ef_construction: The construction time/accuracy trade-off
     :param ef_search: The query time accuracy/speed trade-off
     :param max_connection: The maximum number of outgoing connections in the
@@ -40,6 +41,7 @@ class AnnLiteIndexer(Executor):
         limit: int = 10,
         match_args: Optional[Dict] = None,
         data_path: Optional[str] = None,
+        restore_key: Optional[str] = None,
         ef_construction: Optional[int] = None,
         ef_search: Optional[int] = None,
         max_connection: Optional[int] = None,
@@ -102,6 +104,10 @@ class AnnLiteIndexer(Executor):
         }
         self._index = DocumentArray(storage='annlite', config=config)
 
+        if restore_key:
+            self.restore(source_name=f'{restore_key}_{self.runtime_args.shard_id}')
+        else:
+            self.restore()
         # start indexing thread in background to group indexing requests
         # together and perform batch indexing at once
         self._start_index_loop()
@@ -272,6 +278,35 @@ class AnnLiteIndexer(Executor):
             #     )
 
             flat_docs.match(self._index, **match_args)
+
+    @requests(on='/backup')
+    def backup(self, parameters: Optional[Dict] = {}, **kwargs):
+        """
+        Backup data to local or remote.
+        Use api of <class 'annlite.index.AnnLite'>
+
+        Keys accepted:
+            - 'target' (str): the name of indexer you want to backup as
+        """
+
+        target_name = parameters.get('target_name', None)
+        if target_name:
+            target_name = f'{target_name}_{self.runtime_args.shard_id}'
+        with self._index_lock:
+            if len(self._data_buffer) > 0:
+                raise RuntimeError(
+                    f'Cannot backup documents while the pending documents in the buffer are not indexed yet. '
+                    'Please wait for the pending documents to be indexed.'
+                )
+            self._index._annlite.backup(target_name)
+
+    def restore(self, source_name: Optional[str] = None):
+        """
+        Restore data from local or remote.
+        Use api of <class 'annlite.index.AnnLite'>
+        """
+
+        self._index._annlite.restore(source_name)
 
     @requests(on='/filter')
     def filter(self, parameters: Dict, **kwargs):

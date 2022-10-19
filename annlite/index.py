@@ -1,5 +1,6 @@
 import hashlib
 import logging
+import os
 import platform
 import warnings
 from pathlib import Path
@@ -178,9 +179,6 @@ class AnnLite(CellContainer):
                 if total_size >= MAX_TRAINING_DATA_SIZE:
                     break
             logger.info(f'Total training data size: {total_size}')
-
-        if self.total_docs > 0:
-            self._rebuild_index()
 
     def _sanity_check(self, x: 'np.ndarray'):
         assert x.ndim == 2, 'inputs must be a 2D array'
@@ -624,6 +622,34 @@ class AnnLite(CellContainer):
             return paths[0]
         return None
 
+    @property
+    def remote_store_client(self):
+        try:
+            import hubble
+
+            client = hubble.Client(max_retries=None, jsonify=True)
+            client.get_user_info()
+            return client
+        except Exception as ex:
+            logger.error(f'Not login to hubble yet.')
+            raise ex
+
+    def backup(self, target_name: Optional[str] = None):
+        if not target_name:
+            self.dump_index()
+        else:
+            self._backup_index_to_remote(target_name)
+
+    def restore(self, source_name: Optional[str] = None):
+        if not source_name:
+            if self.total_docs > 0:
+                logger.info(f'restore Annlite from local')
+                self._rebuild_index_from_local()
+        else:
+            logger.info(f'restore Annlite from artifact: {source_name}')
+            self.close()
+            self._rebuild_index_from_remote(source_name)
+
     def dump_model(self):
         logger.info(f'Save the parameters to {self.model_path}')
         self.model_path.mkdir(parents=True, exist_ok=True)
@@ -646,13 +672,69 @@ class AnnLite(CellContainer):
             logger.error(f'Failed to dump the indexer, {ex!r}')
             import shutil
 
-            shutil.rmtree(self.index_path)
+            if self.index_path:
+                shutil.rmtree(self.index_path)
 
     def dump(self):
         self.dump_model()
         self.dump_index()
 
-    def _rebuild_index(self):
+    def _backup_index_to_remote(self, target_name: str):
+        import shutil
+
+        self.close()
+
+        art_list = self.remote_store_client.list_artifacts(
+            filter={'metaData.name': target_name}
+        )
+        if len(art_list['data']) > 0:
+            raise RuntimeError(
+                f'The documents with the same name already exist. Please: '
+                '(1) Delete the existed documents from hubble (2) Rename and upload again.'
+            )
+        else:
+            logger.info(f'Upload the database `{target_name}` to remote.')
+            seperator = '\\' if platform.system() == 'Windows' else '/'
+            output_path = shutil.make_archive(
+                os.path.join(str(self.data_path.parent), f'{target_name}'),
+                'zip',
+                str(self.data_path.parent),
+                str(self.data_path).split(seperator)[-1],
+            )
+            self.remote_store_client.upload_artifact(
+                f=output_path,
+                metadata={
+                    'name': target_name,
+                    'type': 'database',
+                    'cell': 'all',
+                },
+            )
+            Path(output_path).unlink()
+
+            logger.info(f'Upload the indexer `{target_name}` to remote')
+            self.dump_index()
+            for cell_id in range(self.n_cells):
+                self.remote_store_client.upload_artifact(
+                    f=str(self.index_path / f'cell_{cell_id}.hnsw'),
+                    metadata={
+                        'name': target_name,
+                        'type': 'hnsw',
+                        'cell': cell_id,
+                    },
+                    show_progress=True,
+                )
+                self.remote_store_client.upload_artifact(
+                    f=str(self.index_path / f'cell_{cell_id}.db'),
+                    metadata={
+                        'name': target_name,
+                        'type': 'cell_table',
+                        'cell': cell_id,
+                    },
+                    show_progress=True,
+                )
+            shutil.rmtree(self.index_path)
+
+    def _rebuild_index_from_local(self):
         if self.snapshot_path:
             logger.info(f'Load the indexer from snapshot {self.snapshot_path}')
             for cell_id in range(self.n_cells):
@@ -677,6 +759,52 @@ class AnnLite(CellContainer):
                     assigned_cells = np.ones(len(docs), dtype=np.int64) * cell_id
                     super().insert(x, assigned_cells, docs, only_index=True)
                 logger.debug(f'Rebuild the index of cell-{cell_id} done')
+
+    def _rebuild_index_from_remote(self, source_name: str):
+        import shutil
+
+        art_list = self.remote_store_client.list_artifacts(
+            filter={'metaData.name': source_name}
+        )
+        if len(art_list['data']) == 0:
+            logger.info(f'The indexer `{source_name}` not found. ')
+        else:
+            logger.info(f'Load the indexer `{source_name}` from remote store')
+            restore_path = self.data_path / 'restore'
+            restore_path.mkdir(parents=True)
+            for art in art_list['data']:
+                for cell_id in range(self.n_cells):
+                    if art['metaData']['cell'] == cell_id:
+                        if art['metaData']['type'] == 'hnsw':
+                            self.remote_store_client.download_artifact(
+                                id=art['_id'],
+                                f=str(restore_path / f'cell_{cell_id}.hnsw'),
+                                show_progress=True,
+                            )
+                            self.vec_index(cell_id).load(
+                                restore_path / f'cell_{cell_id}.hnsw'
+                            )
+                        elif art['metaData']['type'] == 'cell_table':
+                            self.remote_store_client.download_artifact(
+                                id=art['_id'],
+                                f=str(restore_path / f'cell_{cell_id}.db'),
+                                show_progress=True,
+                            )
+                            self.cell_table(cell_id).load(
+                                restore_path / f'cell_{cell_id}.db'
+                            )
+                if art['metaData']['type'] == 'database':
+                    logger.info(f'Load the database `{source_name}` from remote store')
+                    input_path = str(self.data_path.parent / f'{source_name}.zip')
+                    self.remote_store_client.download_artifact(
+                        id=art['_id'],
+                        f=input_path,
+                        show_progress=True,
+                    )
+                    shutil.unpack_archive(input_path, self.data_path.parent)
+                    self._rebuild_database()
+                    Path(input_path).unlink()
+            shutil.rmtree(restore_path)
 
     @property
     def is_trained(self):

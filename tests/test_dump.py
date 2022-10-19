@@ -31,12 +31,14 @@ def test_dump_load(tmpfile, index_data):
     index.close()
 
     new_index = AnnLite(D, data_path=tmpfile)
+    new_index.restore()
     new_index.search(query, limit=10)
     new_gt = [m.id for m in query['@m']]
     assert len(set(gt) & set(new_gt)) / len(gt) == 1.0
     new_index.close()
 
     new_index = AnnLite(D, n_components=D // 2, data_path=tmpfile)
+    new_index.restore()
     new_index.search(query, limit=10)
     new_gt = [m.id for m in query['@m']]
     assert len(set(gt) & set(new_gt)) / len(gt) > 0.6

@@ -1,6 +1,9 @@
 import operator
+import os
 import random
+from unittest.mock import patch
 
+import hubble
 import numpy as np
 import pytest
 from docarray import Document, DocumentArray
@@ -271,3 +274,31 @@ def test_search_numpy_membership_filter(
                 for doc_id in doc_ids_query_k
             ]
         )
+
+
+def clear_hubble():
+    client = hubble.Client(max_retries=None, jsonify=True)
+    art_list = client.list_artifacts()
+    for art in art_list['data']:
+        client.delete_artifact(id=art['_id'])
+
+
+@patch.dict(os.environ, {'JINA_AUTH_TOKEN': ''})
+def test_remote_storage(tmpdir):
+    os.environ['JINA_AUTH_TOKEN'] = 'ed17d158d95d3f53f60eed445d783c80'
+    clear_hubble()
+
+    X = np.random.random((N, D))
+    docs = DocumentArray([Document(id=f'{i}', embedding=X[i]) for i in range(N)])
+    index = AnnLite(n_dim=D, data_path=tmpdir / 'workspace1' / '0')
+    index.index(docs)
+
+    index.backup(target_name='backup_docs')
+
+    index = AnnLite(n_dim=D, data_path=tmpdir / 'workspace2' / '0')
+    index.restore(source_name='backup_docs')
+
+    clear_hubble()
+    status = index.stat
+    assert int(status['total_docs']) == N
+    assert int(status['index_size']) == N

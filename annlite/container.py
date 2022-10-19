@@ -1,4 +1,3 @@
-import hashlib
 import warnings
 from pathlib import Path
 from typing import TYPE_CHECKING, Dict, List, Optional, Tuple
@@ -41,6 +40,7 @@ class CellContainer:
         self.n_cells = n_cells
         self.n_components = projector_codec.n_components if projector_codec else None
         self.data_path = data_path
+        self.serialize_config = serialize_config
 
         self._pq_codec = pq_codec
         self._projector_codec = projector_codec
@@ -303,7 +303,6 @@ class CellContainer:
                     self._meta_table.bulk_add_address(
                         [d.id for d in cell_docs], [cell_id] * cell_count, cell_offsets
                     )
-
         logger.debug(f'{len(docs)} new docs added')
 
     def _add_vecs(self, data: 'np.ndarray', cells: 'np.ndarray', offsets: 'np.ndarray'):
@@ -385,7 +384,11 @@ class CellContainer:
             f'total items for updating: {len(docs)}, ' f'success: {update_success}'
         )
 
-    def delete(self, ids: List[str], raise_errors_on_not_found: bool = False):
+    def delete(
+        self,
+        ids: List[str],
+        raise_errors_on_not_found: bool = False,
+    ):
         delete_success = 0
 
         for doc_id in ids:
@@ -409,6 +412,19 @@ class CellContainer:
         logger.debug(
             f'total items for updating: {len(ids)}, ' f'success: {delete_success}'
         )
+
+    def _rebuild_database(self):
+        """rebuild doc_store and meta_table after annlite download databse from hubble"""
+
+        self._doc_stores = [
+            DocStorage(
+                self.data_path / f'cell_{_}',
+                serialize_config=self.serialize_config or {},
+                lock=True,
+            )
+            for _ in range(self.n_cells)
+        ]
+        self._meta_table = MetaTable('metas', data_path=self.data_path, in_memory=False)
 
     def _get_doc_by_id(self, doc_id: str):
         cell_id = 0
