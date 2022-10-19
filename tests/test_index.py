@@ -1,5 +1,6 @@
 import operator
 import os
+import uuid
 import random
 from unittest.mock import patch
 
@@ -276,9 +277,9 @@ def test_search_numpy_membership_filter(
         )
 
 
-def clear_hubble():
+def delete_artifact(tmpname):
     client = hubble.Client(max_retries=None, jsonify=True)
-    art_list = client.list_artifacts()
+    art_list = client.list_artifacts(filter={'metaData.name': tmpname})
     for art in art_list['data']:
         client.delete_artifact(id=art['_id'])
 
@@ -286,19 +287,19 @@ def clear_hubble():
 @patch.dict(os.environ, {'JINA_AUTH_TOKEN': ''})
 def test_remote_storage(tmpdir):
     os.environ['JINA_AUTH_TOKEN'] = 'ed17d158d95d3f53f60eed445d783c80'
-    clear_hubble()
 
     X = np.random.random((N, D))
     docs = DocumentArray([Document(id=f'{i}', embedding=X[i]) for i in range(N)])
     index = AnnLite(n_dim=D, data_path=tmpdir / 'workspace1' / '0')
     index.index(docs)
 
-    index.backup(target_name='backup_docs')
+    tmpname = uuid.uuid4().hex
+    index.backup(target_name=tmpname)
 
     index = AnnLite(n_dim=D, data_path=tmpdir / 'workspace2' / '0')
-    index.restore(source_name='backup_docs')
+    index.restore(source_name=tmpname)
 
-    clear_hubble()
+    delete_artifact(tmpname)
     status = index.stat
     assert int(status['total_docs']) == N
     assert int(status['index_size']) == N
