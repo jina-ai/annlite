@@ -1,5 +1,6 @@
 import os
 import time
+import uuid
 from unittest.mock import patch
 
 import hubble
@@ -45,9 +46,9 @@ def docs_with_tags(N):
     return da
 
 
-def clear_hubble():
+def delete_artifact(tmpname):
     client = hubble.Client(max_retries=None, jsonify=True)
-    art_list = client.list_artifacts()
+    art_list = client.list_artifacts(filter={'metaData.name': tmpname})
     for art in art_list['data']:
         client.delete_artifact(id=art['_id'])
 
@@ -203,7 +204,6 @@ def test_clear(tmpfile):
 @patch.dict(os.environ, {'JINA_AUTH_TOKEN': ''})
 def test_remote_storage(tmpfile):
     os.environ['JINA_AUTH_TOKEN'] = 'ed17d158d95d3f53f60eed445d783c80'
-    clear_hubble()
 
     docs = gen_docs(N)
     f = Flow().add(
@@ -214,21 +214,23 @@ def test_remote_storage(tmpfile):
         workspace=tmpfile,
         shards=1,
     )
+    tmpname = uuid.uuid4().hex
     with f:
         f.post(on='/index', inputs=docs)
         time.sleep(2)
-        f.post(on='/backup', parameters={'target_name': 'backup_docs'})
+        f.post(on='/backup', parameters={'target_name': tmpname})
         time.sleep(2)
 
     f = Flow().add(
         uses=AnnLiteIndexer,
-        uses_with={'n_dim': D, 'restore_key': 'backup_docs'},
+        uses_with={'n_dim': D, 'restore_key': tmpname},
         workspace=tmpfile,
         shards=1,
     )
     with f:
         status = f.post(on='/status', return_results=True)[0]
 
+    delete_artifact(tmpname)
     assert int(status.tags['total_docs']) == N
     assert int(status.tags['index_size']) == N
 
@@ -275,12 +277,13 @@ def test_remote_storage_with_shards(tmpfile):
         shards=3,
         polling={'/index': 'ANY', '/search': 'ALL', '/backup': 'ALL', '/status': 'ALL'},
     )
+    tmpname = uuid.uuid4().hex
     with f:
         f.post(on='/index', inputs=docs)
         time.sleep(2)
         f.post(
             on='/backup',
-            parameters={'target_name': 'backup_docs_with_shards'},
+            parameters={'target_name': tmpname},
         )
         time.sleep(2)
 
@@ -288,7 +291,7 @@ def test_remote_storage_with_shards(tmpfile):
         uses=AnnLiteIndexer,
         uses_with={
             'n_dim': D,
-            'restore_key': 'backup_docs_with_shards',
+            'restore_key': tmpname,
         },
         workspace=tmpfile,
         shards=3,
@@ -297,6 +300,7 @@ def test_remote_storage_with_shards(tmpfile):
     with f:
         status = f.post(on='/status', return_results=True)
 
+    delete_artifact(tmpname)
     total_docs = 0
     index_size = 0
     for stat in status:
@@ -304,7 +308,6 @@ def test_remote_storage_with_shards(tmpfile):
         index_size += stat.tags['index_size']
     assert total_docs == N
     assert index_size == N
-    clear_hubble()
 
 
 def test_local_storage_with_shards(tmpfile):
