@@ -122,7 +122,7 @@ def test_hnsw_pq_search_multi_clusters(tmpdir, n_clusters, random_docs):
     # ----------------------------------
 
     # PQ linear search----------------------------------
-    _pq_codec = pq_index.pq_codec
+    _pq_codec = pq_index._pq_codec
     ids = np.array([int(doc.id) for doc in random_docs])
     linear_pq_index = PQIndex(Dim, _pq_codec)
     linear_pq_index.add_with_ids(X, ids)
