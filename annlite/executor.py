@@ -114,7 +114,7 @@ class AnnLiteIndexer(Executor):
 
     @requests(on='/index')
     def index(
-        self, docs: Optional[DocumentArray] = None, parameters: dict = {}, **kwargs
+        self, docs: Optional[DocumentArray] = None, parameters: dict = None, **kwargs
     ):
         """Index new documents
 
@@ -126,6 +126,9 @@ class AnnLiteIndexer(Executor):
 
         if not docs:
             return
+
+        if parameters is None:
+            parameters = {}
 
         access_paths = parameters.get('access_paths', self.index_access_paths)
         flat_docs = docs[access_paths]
@@ -176,7 +179,7 @@ class AnnLiteIndexer(Executor):
 
     @requests(on='/update')
     def update(
-        self, docs: Optional[DocumentArray] = None, parameters: dict = {}, **kwargs
+        self, docs: Optional[DocumentArray] = None, parameters: dict = None, **kwargs
     ):
         """Update existing documents
 
@@ -189,6 +192,9 @@ class AnnLiteIndexer(Executor):
 
         if not docs:
             return
+
+        if parameters is None:
+            parameters = {}
 
         access_paths = parameters.get('access_paths', self.index_access_paths)
         raise_errors_on_not_found = parameters.get('raise_errors_on_not_found', False)
@@ -217,12 +223,15 @@ class AnnLiteIndexer(Executor):
                         )
 
     @requests(on='/delete')
-    def delete(self, parameters: dict = {}, **kwargs):
+    def delete(self, parameters: dict = None, **kwargs):
         """Delete existing documents
 
         Delete entries from the index by id
         :param parameters: parameters to the request
         """
+
+        if parameters is None:
+            parameters = {}
 
         delete_ids = parameters.get('ids', [])
         if len(delete_ids) == 0:
@@ -239,7 +248,7 @@ class AnnLiteIndexer(Executor):
 
     @requests(on='/search')
     def search(
-        self, docs: Optional[DocumentArray] = None, parameters: dict = {}, **kwargs
+        self, docs: Optional[DocumentArray] = None, parameters: dict = None, **kwargs
     ):
         """Perform a vector similarity search and retrieve Document matches
 
@@ -262,6 +271,9 @@ class AnnLiteIndexer(Executor):
         if not docs:
             return
 
+        if parameters is None:
+            parameters = {}
+
         access_paths = parameters.get('access_paths', self.search_access_paths)
         flat_docs = docs[access_paths]
         match_args = (
@@ -280,7 +292,7 @@ class AnnLiteIndexer(Executor):
             flat_docs.match(self._index, **match_args)
 
     @requests(on='/backup')
-    def backup(self, parameters: Optional[Dict] = {}, **kwargs):
+    def backup(self, parameters: None, **kwargs):
         """
         Backup data to local or remote.
         Use api of <class 'annlite.index.AnnLite'>
@@ -288,6 +300,9 @@ class AnnLiteIndexer(Executor):
         Keys accepted:
             - 'target' (str): the name of indexer you want to backup as
         """
+
+        if parameters is None:
+            parameters = {}
 
         target_name = parameters.get('target_name', None)
         if target_name:
