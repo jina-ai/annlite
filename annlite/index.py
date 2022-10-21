@@ -182,6 +182,9 @@ class AnnLite(CellContainer):
                     break
             logger.info(f'Total training data size: {total_size}')
 
+        if self.total_docs > 0:
+            self.restore()
+
     def _sanity_check(self, x: 'np.ndarray'):
         assert x.ndim == 2, 'inputs must be a 2D array'
         assert (
