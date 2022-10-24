@@ -39,6 +39,7 @@ class AnnLiteIndexer(Executor):
         n_dim: int = 0,
         metric: str = 'cosine',
         limit: int = 10,
+        n_components: Optional[int] = None,
         match_args: Optional[Dict] = None,
         data_path: Optional[str] = None,
         restore_key: Optional[str] = None,
@@ -61,6 +62,7 @@ class AnnLiteIndexer(Executor):
         if not n_dim:
             raise ValueError('Please specify the dimension of the vectors to index!')
 
+        self.n_components = n_components
         self.metric = metric
         self.match_args = match_args or {}
         self.include_metadata = include_metadata
@@ -95,6 +97,7 @@ class AnnLiteIndexer(Executor):
 
         config = {
             'n_dim': n_dim,
+            'n_components': n_components,
             'metric': metric,
             'ef_construction': ef_construction,
             'ef_search': ef_search,
