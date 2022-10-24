@@ -800,13 +800,14 @@ class AnnLite(CellContainer):
                     art_list, type='hnsw', cell_id=cell_id
                 )
                 merger.download(ids=hnsw_ids, download_folder=f'hnsw_{cell_id}')
-                merger.merge_file(
-                    inputdir=restore_path / f'hnsw_{cell_id}',
-                    outputdir=restore_path / f'hnsw_{cell_id}',
-                    outputfilename=restore_path
-                    / f'hnsw_{cell_id}'
-                    / f'cell_{cell_id}.hnsw',
-                )
+                if len(hnsw_ids) > 1:
+                    merger.merge_file(
+                        inputdir=restore_path / f'hnsw_{cell_id}',
+                        outputdir=restore_path / f'hnsw_{cell_id}',
+                        outputfilename=restore_path
+                        / f'hnsw_{cell_id}'
+                        / f'cell_{cell_id}.hnsw',
+                    )
                 self.vec_index(cell_id).load(
                     restore_path / f'hnsw_{cell_id}' / f'cell_{cell_id}.hnsw'
                 )
