@@ -14,6 +14,7 @@
 
 
 
+
 <a name=release-note-0-3-0></a>
 ## Release Note (`0.3.0`)
 
@@ -348,4 +349,53 @@
 
  - [[```66257b41```](https://github.com/jina-ai/docarray/commit/66257b4147836a8e8b7c17dd12537143509e78a2)] __-__ Revert &#34;refactor: use rockdb as the storage backend (#171)&#34; (*numb3r3*)
  - [[```e56aae75```](https://github.com/jina-ai/docarray/commit/e56aae757e65e5f8294a15b6ba998e00bda97e1a)] __-__ __version__: the next version will be 0.3.13 (*Jina Dev Bot*)
+
+<a name=release-note-0-4-0></a>
+## Release Note (`0.4.0`)
+
+> Release time: 2022-10-24 09:53:20
+
+
+
+🙇 We'd like to thank all contributors for this new release! In particular,
+ numb3r3,  Jie Fu,  YangXiuyu,  felix-wang,  Ziniu Yu,  Gustavo Ye,  Jina Dev Bot,  🙇
+
+
+### 🆕 New Features
+
+ - [[```1cd07f2c```](https://github.com/jina-ai/docarray/commit/1cd07f2c33e4f1f4e756baab4a6cd0a1452996cf)] __-__ hub as remote storage (#177) (*YangXiuyu*)
+ - [[```90db6006```](https://github.com/jina-ai/docarray/commit/90db60067205d8e64a63c0c7eb4e782ac04d1033)] __-__ add flag for close (#191) (*Jie Fu*)
+ - [[```3b782900```](https://github.com/jina-ai/docarray/commit/3b7829004edfb4f6cf4b77048a747a0d338c21b3)] __-__ cibuildwheels (#186) (*YangXiuyu*)
+
+### 🐞 Bug fixes
+
+ - [[```8c807937```](https://github.com/jina-ai/docarray/commit/8c80793733e96680d2ca846371ebc3c684f1d5d7)] __-__ restore when initializing annlite (#201) (*Jie Fu*)
+ - [[```98f94d0f```](https://github.com/jina-ai/docarray/commit/98f94d0f4ff1bd0b1bc1b99d828d6fd21932dc2b)] __-__ set is_train=true after loading pca (#199) (*Jie Fu*)
+ - [[```0b9bb413```](https://github.com/jina-ai/docarray/commit/0b9bb413abe631ea07bd7358160060b16cafa827)] __-__ unittest (#198) (*YangXiuyu*)
+ - [[```0d1d5a2e```](https://github.com/jina-ai/docarray/commit/0d1d5a2e58eb043397f24a1d6efcee07c22e2cb1)] __-__ pre-release (*numb3r3*)
+ - [[```fdcf3818```](https://github.com/jina-ai/docarray/commit/fdcf3818f1b8a2b11df96f4c6c72e972bab91238)] __-__ cd release version (#197) (*YangXiuyu*)
+ - [[```f4bbc495```](https://github.com/jina-ai/docarray/commit/f4bbc49529a2ac4174bbb0cc7c88ab8666bd034c)] __-__ clean codes (*numb3r3*)
+ - [[```6bedafe4```](https://github.com/jina-ai/docarray/commit/6bedafe4c49ce8c4831b4cc01c1b8702924e4b8f)] __-__ test-paths (*numb3r3*)
+ - [[```beb79b23```](https://github.com/jina-ai/docarray/commit/beb79b23a1b1412bad402410a0b90393f0e535b6)] __-__ __cd__: combine build and test (*numb3r3*)
+ - [[```19652ed0```](https://github.com/jina-ai/docarray/commit/19652ed0b6ef0ffc9dc1c3d2dc2640075e4d6d13)] __-__ cd workflow (#196) (*YangXiuyu*)
+ - [[```4fe2b3be```](https://github.com/jina-ai/docarray/commit/4fe2b3be51ed0b571c6f0b9c9f20a68c18b7486c)] __-__ cd workflow (#195) (*YangXiuyu*)
+ - [[```4fdacde2```](https://github.com/jina-ai/docarray/commit/4fdacde2a22a5e6fb0edc15bb6f77bf4d8f25834)] __-__ cd workflow (#193) (*YangXiuyu*)
+ - [[```494fbfcb```](https://github.com/jina-ai/docarray/commit/494fbfcbb96257168542f56ec617a9dc9082c084)] __-__ cd release (#192) (*felix-wang*)
+ - [[```d2803ce0```](https://github.com/jina-ai/docarray/commit/d2803ce00e41a69470a3001e4677927b407c3282)] __-__ cd workflow (#190) (*felix-wang*)
+ - [[```fe9db3d9```](https://github.com/jina-ai/docarray/commit/fe9db3d9f7e04cbad96832409dd1d3159195c060)] __-__ build on apple silicon (#188) (*Ziniu Yu*)
+ - [[```bb402ae9```](https://github.com/jina-ai/docarray/commit/bb402ae9674a8410686b8dde3aea82f1b86fc10b)] __-__ __bindings__: build on windows (#183) (*YangXiuyu*)
+ - [[```efc18f80```](https://github.com/jina-ai/docarray/commit/efc18f80228ef2371c19fbb205cabb94afd47385)] __-__ update executor parameter (#180) (*YangXiuyu*)
+ - [[```f142089a```](https://github.com/jina-ai/docarray/commit/f142089a419bba3d7e23b2c34b16455ddbcb805d)] __-__ executor tests (#179) (*felix-wang*)
+ - [[```79e171d4```](https://github.com/jina-ai/docarray/commit/79e171d411f31dad7231bce1682ac78ff7b3e1b2)] __-__ __annliteindexer__: annlite executor integration (#170) (*YangXiuyu*)
+
+### 🧼 Code Refactoring
+
+ - [[```e8c59907```](https://github.com/jina-ai/docarray/commit/e8c59907540bada5282a413b43d64f11596678d3)] __-__ use rocksdb as the docs storage engine (#178) (*felix-wang*)
+
+### 🍹 Other Improvements
+
+ - [[```e6dfcd2a```](https://github.com/jina-ai/docarray/commit/e6dfcd2a7ff0fdd149dd606487f7aa0107775c63)] __-__ bump to v0.4.0 (*numb3r3*)
+ - [[```6ce03fd0```](https://github.com/jina-ai/docarray/commit/6ce03fd04e5bb63da3c3d2cf1c620ac77daf6c2a)] __-__ release (*numb3r3*)
+ - [[```02857ec4```](https://github.com/jina-ai/docarray/commit/02857ec4103e32139f695adac4f7a40c4e65c67a)] __-__ Add pq dist table support (#158) (*Gustavo Ye*)
+ - [[```ff54290b```](https://github.com/jina-ai/docarray/commit/ff54290bfb19d07b953aa00d5d52cb1e8f805d3a)] __-__ __version__: the next version will be 0.3.14 (*Jina Dev Bot*)
 
