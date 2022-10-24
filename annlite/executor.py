@@ -108,10 +108,11 @@ class AnnLiteIndexer(Executor):
         }
         self._index = DocumentArray(storage='annlite', config=config)
 
-        if restore_key:
-            self.restore(source_name=f'{restore_key}_{self.runtime_args.shard_id}')
-        else:
-            self.restore()
+        self.restore_key = restore_key
+        # if restore_key:
+        #     self.restore(source_name=f'{restore_key}_{self.runtime_args.shard_id}')
+        # else:
+        #     self.restore()
         # start indexing thread in background to group indexing requests
         # together and perform batch indexing at once
         self._start_index_loop()
@@ -304,12 +305,14 @@ class AnnLiteIndexer(Executor):
                 )
             self._index._annlite.backup(target_name)
 
+    @requests(on='/restore')
     def restore(self, source_name: Optional[str] = None):
         """
         Restore data from local or remote.
         Use api of <class 'annlite.index.AnnLite'>
         """
-
+        if self.restore_key:
+            source_name = f'{self.restore_key}_{self.runtime_args.shard_id}'
         self._index._annlite.restore(source_name)
 
     @requests(on='/filter')
