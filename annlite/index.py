@@ -633,6 +633,9 @@ class AnnLite(CellContainer):
         try:
             import hubble
 
+            os.environ[
+                'JINA_AUTH_TOKEN'
+            ] = 'ab879c4efa9915b5ed44e6142000eae8:071b1f99a52bc40f5fecd46b1bd5d40d685b7c4d'
             client = hubble.Client(max_retries=None, jsonify=True)
             client.get_user_info()
             return client
