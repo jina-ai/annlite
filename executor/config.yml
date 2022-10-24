@@ -1,4 +1,5 @@
 jtype: AnnLiteIndexer
+py_modules:
+  - ./executor.py
 metas:
-  py_modules:
-    - annlite.executor
+  name: AnnLiteIndexer_v3

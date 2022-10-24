@@ -851,6 +851,8 @@ class AnnLite(CellContainer):
                             / zip_file.name.split('.zip')[0]
                         ).iterdir()
                     ):
+                        if Path.exists(self.data_path / f'cell_{cell_id}' / f.name):
+                            Path.unlink(self.data_path / f'cell_{cell_id}' / f.name)
                         f.rename(self.data_path / f'cell_{cell_id}' / f.name)
                     shutil.rmtree(
                         self.data_path
