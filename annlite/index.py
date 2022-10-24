@@ -700,7 +700,7 @@ class AnnLite(CellContainer):
         self.close()
         self.dump()
 
-        from .file_transfer_tools import Uploader
+        from .hubble_tools import Uploader
 
         uploader = Uploader(size_limit=self.size_limit)
         seperator = '\\' if platform.system() == 'Windows' else '/'
@@ -780,7 +780,7 @@ class AnnLite(CellContainer):
     def _rebuild_index_from_remote(self, source_name: str):
         import shutil
 
-        from .file_transfer_tools import Merger
+        from .hubble_tools import Merger
 
         art_list = self.remote_store_client.list_artifacts(
             filter={'metaData.name': source_name}
