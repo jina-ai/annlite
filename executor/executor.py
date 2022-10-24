@@ -306,11 +306,12 @@ class AnnLiteIndexer(Executor):
             self._index._annlite.backup(target_name)
 
     @requests(on='/restore')
-    def restore(self, source_name: Optional[str] = None):
+    def restore(self, parameters: Optional[Dict] = {}, **kwargs):
         """
         Restore data from local or remote.
         Use api of <class 'annlite.index.AnnLite'>
         """
+        source_name = parameters.get('source_name', None)
         if self.restore_key:
             source_name = f'{self.restore_key}_{self.runtime_args.shard_id}'
         self._index._annlite.restore(source_name)
