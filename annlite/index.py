@@ -67,7 +67,6 @@ class AnnLite(CellContainer):
         n_components: Optional[int] = None,
         initial_size: Optional[int] = None,
         expand_step_size: int = 10240,
-        size_limit: Optional[int] = 2048,
         columns: Optional[Union[Dict, List]] = None,
         filterable_attrs: Optional[Dict] = None,
         data_path: Union[Path, str] = Path('./data'),
@@ -94,7 +93,7 @@ class AnnLite(CellContainer):
         self.n_clusters = n_clusters
         self.n_probe = max(n_probe, n_cells)
         self.n_cells = n_cells
-        self.size_limit = size_limit
+        self.size_limit = 2048
 
         if isinstance(metric, str):
             metric = Metric.from_string(metric)

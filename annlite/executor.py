@@ -18,6 +18,7 @@ class AnnLiteIndexer(Executor):
     :param n_dim: Dimensionality of vectors to index
     :param metric: Distance metric type. Can be 'euclidean', 'inner_product', or 'cosine'
     :param limit: Number of results to get for each query document in search
+    :param n_components: Number of components to use for dimensionality reduction
     :param match_args: the arguments to `DocumentArray`'s match function
     :param data_path: the workspace of the AnnLiteIndexer but not support when shards > 1.
     :param restore_key: the name of indexer you want to restore from hub (will restore from local if not set).

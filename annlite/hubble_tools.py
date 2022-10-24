@@ -35,13 +35,8 @@ def make_archive(input: Path, output_name: str) -> Path:
 
 def remote_store_client():
     try:
-        import os
-
         import hubble
 
-        os.environ[
-            'JINA_AUTH_TOKEN'
-        ] = 'ab879c4efa9915b5ed44e6142000eae8:071b1f99a52bc40f5fecd46b1bd5d40d685b7c4d'
         client = hubble.Client(max_retries=None, jsonify=True)
         client.get_user_info()
         return client
@@ -55,7 +50,7 @@ class Uploader:
         """
         This class create a filesplit object to split the file into small pieces and
         upload them on to hubble.
-        Args: size_limit: The max size of split files.
+        :params size_limit: The max size of split files.
         """
         self.size_limit = size_limit
         self.client = remote_store_client()
@@ -258,8 +253,7 @@ class Merger:
     def __init__(self, restore_path):
         """
         This class creates an object to download and merge the split files from hubble.
-        Args:
-            restore_path:
+        :param restore_path: tmp directory for downloading and merging files.
         """
         self.restore_path = restore_path
         self.restore_path.mkdir(parents=True)
