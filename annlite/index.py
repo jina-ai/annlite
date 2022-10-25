@@ -785,7 +785,7 @@ class AnnLite(CellContainer):
         from .hubble_tools import Merger
 
         art_list = self.remote_store_client.list_artifacts(
-            filter={'metaData.name': source_name}
+            filter={'metaData.name': source_name}, pageSize=100
         )
         if len(art_list['data']) == 0:
             logger.info(f'The indexer `{source_name}` not found. ')
