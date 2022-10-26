@@ -15,6 +15,7 @@
 
 
 
+
 <a name=release-note-0-3-0></a>
 ## Release Note (`0.3.0`)
 
@@ -398,4 +399,24 @@
  - [[```6ce03fd0```](https://github.com/jina-ai/docarray/commit/6ce03fd04e5bb63da3c3d2cf1c620ac77daf6c2a)] __-__ release (*numb3r3*)
  - [[```02857ec4```](https://github.com/jina-ai/docarray/commit/02857ec4103e32139f695adac4f7a40c4e65c67a)] __-__ Add pq dist table support (#158) (*Gustavo Ye*)
  - [[```ff54290b```](https://github.com/jina-ai/docarray/commit/ff54290bfb19d07b953aa00d5d52cb1e8f805d3a)] __-__ __version__: the next version will be 0.3.14 (*Jina Dev Bot*)
+
+<a name=release-note-0-5-0></a>
+## Release Note (`0.5.0`)
+
+> Release time: 2022-10-26 07:12:58
+
+
+
+🙇 We'd like to thank all contributors for this new release! In particular,
+ numb3r3,  felix-wang,  Jina Dev Bot,  🙇
+
+
+### 🐞 Bug fixes
+
+ - [[```de5273ab```](https://github.com/jina-ai/docarray/commit/de5273ab7cf81ba26bb4307cd66f3fc50974b8ef)] __-__ undo wheels uploading (#203) (*felix-wang*)
+
+### 🍹 Other Improvements
+
+ - [[```5faf1dfa```](https://github.com/jina-ai/docarray/commit/5faf1dfa3326213c3b9e20de0d8b7aca4dbdf6ba)] __-__ regular release (*numb3r3*)
+ - [[```95e51f26```](https://github.com/jina-ai/docarray/commit/95e51f269ac130b9d54b004734ff68afc07a9cf1)] __-__ __version__: the next version will be 0.4.1 (*Jina Dev Bot*)
 
