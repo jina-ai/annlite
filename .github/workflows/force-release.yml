@@ -36,6 +36,11 @@ jobs:
         uses: actions/setup-python@v4
         with:
           python-version: ${{ matrix.python-version[0] }}
+      - name: Update version
+        shell: bash
+        run: |
+          git fetch --depth=1 origin +refs/tags/*:refs/tags/*
+          ./scripts/update-version.sh
       - name: Build sdist
         if: ${{ matrix.os == 'ubuntu-latest' && matrix.python-version[0] == '3.7' }}
         run: |
