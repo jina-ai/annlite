@@ -23,7 +23,7 @@ function clean_build {
 function pub_pypi {
     # publish to pypi
     twine upload dist/*
-    twine upload wheelhouse/*
+    # twine upload wheelhouse/*
     clean_build
 }
 
