@@ -9,7 +9,6 @@ from filesplit.merge import Merge
 from filesplit.split import Split
 from loguru import logger
 
-seperator = '\\' if platform.system() == 'Windows' else '/'
 ignored_extn = ['.DS_Store']
 
 
@@ -28,7 +27,7 @@ def make_archive(input: Path, output_name: str) -> Path:
         os.path.join(str(input.parent), output_name),
         'zip',
         str(input.parent),
-        str(input).split(seperator)[-1],
+        str(input.name),
     )
     return Path(output_path)
 
@@ -39,6 +38,7 @@ class Uploader:
         This class create a filesplit object to split the file into small pieces and
         upload them on to hubble.
         :params size_limit: The max size of split files.
+        :params client: hubble client used for uploading.
         """
         self.size_limit = size_limit
         self.client = client
@@ -53,7 +53,7 @@ class Uploader:
             self.upload_directory(split_list, target_name, type, cell_id, merge=False)
             shutil.rmtree(split_list)
         else:
-            if self._check_exsits(target_name, type, input.name):
+            if self._check_exists(target_name, type, input.name):
                 return
             self._upload_hubble(input, target_name, type, input.name, cell_id)
 
@@ -66,7 +66,7 @@ class Uploader:
         merge: bool = True,
     ):
         def _upload():
-            if self._check_exsits(target_name, type, str(idx) + '.zip'):
+            if self._check_exists(target_name, type, str(idx) + '.zip'):
                 return
 
             Path.mkdir(input.parent / str(idx))
@@ -112,7 +112,7 @@ class Uploader:
                 _upload()
         else:
             for idx, file_name in enumerate(list(input.glob('*'))):
-                if self._check_exsits(target_name, type, str(file_name.name)):
+                if self._check_exists(target_name, type, str(file_name.name)):
                     continue
                 self._upload_hubble(
                     file_name, target_name, type, str(file_name.name), cell_id
@@ -127,7 +127,7 @@ class Uploader:
         root_path: Path,
         upload_folder: str,
     ):
-        if self._check_exsits(target_name, type, file_name):
+        if self._check_exists(target_name, type, file_name):
             return
         upload_file = shutil.make_archive(
             os.path.join(str(root_path), f'{target_name}_{type}'),
@@ -155,7 +155,7 @@ class Uploader:
         )
         Path(upload_file).unlink()
 
-    def _check_exsits(self, target_name: str, type: str, file_name: str) -> bool:
+    def _check_exists(self, target_name: str, type: str, file_name: str) -> bool:
         art_list = self.client.list_artifacts(
             filter={
                 'metaData.name': target_name,
@@ -242,6 +242,7 @@ class Merger:
         """
         This class creates an object to download and merge the split files from hubble.
         :param restore_path: tmp directory for downloading and merging files.
+        :param client: hubble client used for merging files.
         """
         self.restore_path = restore_path
         self.restore_path.mkdir(parents=True)
