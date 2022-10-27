@@ -883,13 +883,14 @@ class AnnLite(CellContainer):
                 merger.merge_file(
                     inputdir=restore_path / 'mate_table',
                     outputdir=self.data_path,
-                    outputfilename=self.data_path / 'metas.db',
+                    outputfilename=Path('metas.db'),
+                    # outputfilename=self.data_path / 'metas.db',
                 )
             else:
                 mata_table_file = restore_path / 'mate_table' / 'metas.db'
                 # these two lines fix unit test error on Windows
-                if Path.exists(self.data_path / 'metas.db'):
-                    Path.unlink(self.data_path / 'metas.db')
+                # if Path.exists(self.data_path / 'metas.db'):
+                #     Path.unlink(self.data_path / 'metas.db')
                 mata_table_file.rename(self.data_path / 'metas.db')
             shutil.rmtree(restore_path / 'mate_table')
 
