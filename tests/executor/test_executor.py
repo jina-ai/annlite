@@ -16,6 +16,8 @@ Nu = 999  # number of data update
 Nq = 10
 D = 128  # dimentionality / number of features
 
+token = 'ed17d158d95d3f53f60eed445d783c80'
+
 
 def gen_docs(num):
     res = DocumentArray()
@@ -201,10 +203,7 @@ def test_clear(tmpfile):
         assert int(status.tags['index_size']) == 0
 
 
-@patch.dict(os.environ, {'JINA_AUTH_TOKEN': ''})
 def test_remote_storage(tmpfile):
-    os.environ['JINA_AUTH_TOKEN'] = 'ed17d158d95d3f53f60eed445d783c80'
-
     docs = gen_docs(N)
     f = Flow().add(
         uses=AnnLiteIndexer,
@@ -218,16 +217,17 @@ def test_remote_storage(tmpfile):
     with f:
         f.post(on='/index', inputs=docs)
         time.sleep(2)
-        f.post(on='/backup', parameters={'target_name': tmpname})
+        f.post(on='/backup', parameters={'target_name': tmpname, 'token': token})
         time.sleep(2)
 
     f = Flow().add(
         uses=AnnLiteIndexer,
-        uses_with={'n_dim': D, 'restore_key': tmpname},
+        uses_with={'n_dim': D},
         workspace=tmpfile,
         shards=1,
     )
     with f:
+        f.post(on='/restore', parameters={'source_name': tmpname, 'token': token})
         status = f.post(on='/status', return_results=True)[0]
 
     delete_artifact(tmpname)
@@ -258,15 +258,14 @@ def test_local_storage(tmpfile):
         shards=1,
     )
     with f:
+        f.post(on='/restore')
         status = f.post(on='/status', return_results=True)[0]
 
     assert int(status.tags['total_docs']) == N
     assert int(status.tags['index_size']) == N
 
 
-@patch.dict(os.environ, {'JINA_AUTH_TOKEN': ''})
 def test_remote_storage_with_shards(tmpfile):
-    os.environ['JINA_AUTH_TOKEN'] = 'ed17d158d95d3f53f60eed445d783c80'
     docs = gen_docs(N)
     f = Flow().add(
         uses=AnnLiteIndexer,
@@ -275,7 +274,14 @@ def test_remote_storage_with_shards(tmpfile):
         },
         workspace=tmpfile,
         shards=3,
-        polling={'/index': 'ANY', '/search': 'ALL', '/backup': 'ALL', '/status': 'ALL'},
+        polling={
+            '/index': 'ANY',
+            '/search': 'ALL',
+            '/backup': 'ALL',
+            '/status': 'ALL',
+            'backup': 'ALL',
+            'restore': 'ALL',
+        },
     )
     tmpname = uuid.uuid4().hex
     with f:
@@ -283,7 +289,7 @@ def test_remote_storage_with_shards(tmpfile):
         time.sleep(2)
         f.post(
             on='/backup',
-            parameters={'target_name': tmpname},
+            parameters={'target_name': tmpname, 'token': token},
         )
         time.sleep(2)
 
@@ -291,13 +297,20 @@ def test_remote_storage_with_shards(tmpfile):
         uses=AnnLiteIndexer,
         uses_with={
             'n_dim': D,
-            'restore_key': tmpname,
         },
         workspace=tmpfile,
         shards=3,
-        polling={'/index': 'ANY', '/search': 'ALL', '/backup': 'ALL', '/status': 'ALL'},
+        polling={
+            '/index': 'ANY',
+            '/search': 'ALL',
+            '/backup': 'ALL',
+            '/status': 'ALL',
+            'backup': 'ALL',
+            'restore': 'ALL',
+        },
     )
     with f:
+        f.post(on='/restore', parameters={'source_name': tmpname, 'token': token})
         status = f.post(on='/status', return_results=True)
 
     delete_artifact(tmpname)
@@ -319,7 +332,14 @@ def test_local_storage_with_shards(tmpfile):
         },
         workspace=tmpfile,
         shards=3,
-        polling={'/index': 'ANY', '/search': 'ALL', '/backup': 'ALL', '/status': 'ALL'},
+        polling={
+            '/index': 'ANY',
+            '/search': 'ALL',
+            '/backup': 'ALL',
+            '/status': 'ALL',
+            'backup': 'ALL',
+            'restore': 'ALL',
+        },
     )
     with f:
         f.post(on='/index', inputs=docs)
@@ -332,9 +352,17 @@ def test_local_storage_with_shards(tmpfile):
         uses_with={'n_dim': D},
         workspace=tmpfile,
         shards=3,
-        polling={'/index': 'ANY', '/search': 'ALL', '/backup': 'ALL', '/status': 'ALL'},
+        polling={
+            '/index': 'ANY',
+            '/search': 'ALL',
+            '/backup': 'ALL',
+            '/status': 'ALL',
+            'backup': 'ALL',
+            'restore': 'ALL',
+        },
     )
     with f:
+        f.post(on='/restore')
         status = f.post(on='/status', return_results=True)
 
     total_docs = 0

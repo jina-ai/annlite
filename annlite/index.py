@@ -897,7 +897,7 @@ class AnnLite(CellContainer):
                 if 'model' in art['metaData']['type']
             ]
             assert len(model_id) == 1
-            self.remote_store_client.download_artifact(
+            client.download_artifact(
                 id=model_id[0],
                 f=file_name,
                 show_progress=True,

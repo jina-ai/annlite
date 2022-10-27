@@ -1,7 +1,7 @@
 import operator
 import os
-import uuid
 import random
+import uuid
 from unittest.mock import patch
 
 import hubble
@@ -30,6 +30,8 @@ numeric_operators = {
 }
 
 categorical_operators = {'$eq': operator.eq, '$neq': operator.ne}
+
+token = 'ed17d158d95d3f53f60eed445d783c80'
 
 
 @pytest.fixture
@@ -284,9 +286,7 @@ def delete_artifact(tmpname):
         client.delete_artifact(id=art['_id'])
 
 
-@patch.dict(os.environ, {'JINA_AUTH_TOKEN': ''})
 def test_remote_storage(tmpdir):
-    os.environ['JINA_AUTH_TOKEN'] = 'ed17d158d95d3f53f60eed445d783c80'
 
     X = np.random.random((N, D))
     docs = DocumentArray([Document(id=f'{i}', embedding=X[i]) for i in range(N)])
@@ -294,10 +294,10 @@ def test_remote_storage(tmpdir):
     index.index(docs)
 
     tmpname = uuid.uuid4().hex
-    index.backup(target_name=tmpname)
+    index.backup(target_name=tmpname, token=token)
 
     index = AnnLite(n_dim=D, data_path=tmpdir / 'workspace2' / '0')
-    index.restore(source_name=tmpname)
+    index.restore(source_name=tmpname, token=token)
 
     delete_artifact(tmpname)
     status = index.stat
