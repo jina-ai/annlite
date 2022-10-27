@@ -33,30 +33,30 @@ def make_archive(input: Path, output_name: str) -> Path:
     return Path(output_path)
 
 
-def remote_store_client():
-    try:
-        import hubble
-
-        os.environ[
-            'JINA_AUTH_TOKEN'
-        ] = 'ab879c4efa9915b5ed44e6142000eae8:071b1f99a52bc40f5fecd46b1bd5d40d685b7c4d'
-        client = hubble.Client(max_retries=None, jsonify=True)
-        client.get_user_info()
-        return client
-    except Exception as ex:
-        logger.error(f'Not login to hubble yet.')
-        raise ex
+# def remote_store_client():
+#     try:
+#         import hubble
+#
+#         os.environ[
+#             'JINA_AUTH_TOKEN'
+#         ] = 'ab879c4efa9915b5ed44e6142000eae8:071b1f99a52bc40f5fecd46b1bd5d40d685b7c4d'
+#         client = hubble.Client(max_retries=None, jsonify=True)
+#         client.get_user_info()
+#         return client
+#     except Exception as ex:
+#         logger.error(f'Not login to hubble yet.')
+#         raise ex
 
 
 class Uploader:
-    def __init__(self, size_limit=1024):
+    def __init__(self, size_limit=1024, client=None):
         """
         This class create a filesplit object to split the file into small pieces and
         upload them on to hubble.
         :params size_limit: The max size of split files.
         """
         self.size_limit = size_limit
-        self.client = remote_store_client()
+        self.client = client
 
     def upload_file(
         self, input: Path, target_name: str, type: str, cell_id: Union[int, str]
@@ -253,14 +253,14 @@ class Uploader:
 
 
 class Merger:
-    def __init__(self, restore_path):
+    def __init__(self, restore_path, client):
         """
         This class creates an object to download and merge the split files from hubble.
         :param restore_path: tmp directory for downloading and merging files.
         """
         self.restore_path = restore_path
         self.restore_path.mkdir(parents=True)
-        self.client = remote_store_client()
+        self.client = client
 
     def merge_file(self, inputdir: Path, outputdir: Path, outputfilename: Path):
         Merge(

@@ -295,6 +295,7 @@ class AnnLiteIndexer(Executor):
         """
 
         target_name = parameters.get('target_name', None)
+        token = parameters.get('token', None)
         if target_name:
             target_name = f'{target_name}_{self.runtime_args.shard_id}'
         with self._index_lock:
@@ -303,7 +304,7 @@ class AnnLiteIndexer(Executor):
                     f'Cannot backup documents while the pending documents in the buffer are not indexed yet. '
                     'Please wait for the pending documents to be indexed.'
                 )
-            self._index._annlite.backup(target_name)
+            self._index._annlite.backup(target_name, token)
 
     @requests(on='/restore')
     def restore(self, parameters: Optional[Dict] = {}, **kwargs):
@@ -312,9 +313,10 @@ class AnnLiteIndexer(Executor):
         Use api of <class 'annlite.index.AnnLite'>
         """
         source_name = parameters.get('source_name', None)
+        token = parameters.get('token', None)
         if self.restore_key:
             source_name = f'{self.restore_key}_{self.runtime_args.shard_id}'
-        self._index._annlite.restore(source_name)
+        self._index._annlite.restore(source_name, token)
 
     @requests(on='/filter')
     def filter(self, parameters: Dict, **kwargs):

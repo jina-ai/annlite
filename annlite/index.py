@@ -633,9 +633,7 @@ class AnnLite(CellContainer):
         try:
             import hubble
 
-            os.environ[
-                'JINA_AUTH_TOKEN'
-            ] = 'ab879c4efa9915b5ed44e6142000eae8:071b1f99a52bc40f5fecd46b1bd5d40d685b7c4d'
+            os.environ['JINA_AUTH_TOKEN'] = self.token
             client = hubble.Client(max_retries=None, jsonify=True)
             client.get_user_info()
             return client
@@ -643,23 +641,27 @@ class AnnLite(CellContainer):
             logger.error(f'Not login to hubble yet.')
             raise ex
 
-    def backup(self, target_name: Optional[str] = None):
+    def backup(self, target_name: Optional[str] = None, token: Optional[str] = None):
         if not target_name:
             logger.info('dump to local ...')
             self.dump()
         else:
+            if token is None:
+                logger.error(f'back up to remote needs token')
             logger.info(f'dump to remote: {target_name}')
-            self._backup_index_to_remote(target_name)
+            self._backup_index_to_remote(target_name, token)
 
-    def restore(self, source_name: Optional[str] = None):
+    def restore(self, source_name: Optional[str] = None, token: Optional[str] = None):
         if not source_name:
             if self.total_docs > 0:
                 logger.info(f'restore Annlite from local')
                 self._rebuild_index_from_local()
         else:
+            if token is None:
+                logger.error(f'restore from remote needs token')
             logger.info(f'restore Annlite from artifact: {source_name}')
             self.close()
-            self._rebuild_index_from_remote(source_name)
+            self._rebuild_index_from_remote(source_name, token)
 
     def dump_model(self):
         logger.info(f'Save the parameters to {self.model_path}')
@@ -697,14 +699,16 @@ class AnnLite(CellContainer):
         self.dump_model()
         self.dump_index()
 
-    def _backup_index_to_remote(self, target_name: str):
+    def _backup_index_to_remote(self, target_name: str, token: str):
 
         self.close()
         self.dump()
 
         from .hubble_tools import Uploader
 
-        uploader = Uploader(size_limit=self.size_limit)
+        self.token = token
+        client = self.remote_store_client
+        uploader = Uploader(size_limit=self.size_limit, client=client)
         seperator = '\\' if platform.system() == 'Windows' else '/'
 
         for cell_id in range(self.n_cells):
@@ -779,12 +783,14 @@ class AnnLite(CellContainer):
             logger.info(f'Load the model from {self.model_path}')
             self._reload_models()
 
-    def _rebuild_index_from_remote(self, source_name: str):
+    def _rebuild_index_from_remote(self, source_name: str, token: str):
         import shutil
 
         from .hubble_tools import Merger
 
-        art_list = self.remote_store_client.list_artifacts(
+        self.token = token
+        client = self.remote_store_client
+        art_list = client.list_artifacts(
             filter={'metaData.name': source_name}, pageSize=100
         )
         if len(art_list['data']) == 0:
@@ -793,7 +799,7 @@ class AnnLite(CellContainer):
             logger.info(f'Load the indexer `{source_name}` from remote store')
 
             restore_path = self.data_path / 'restore'
-            merger = Merger(restore_path=restore_path)
+            merger = Merger(restore_path=restore_path, client=client)
 
             for cell_id in range(self.n_cells):
                 # download hnsw files and merge and load
