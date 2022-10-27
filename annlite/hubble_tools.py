@@ -33,21 +33,6 @@ def make_archive(input: Path, output_name: str) -> Path:
     return Path(output_path)
 
 
-# def remote_store_client():
-#     try:
-#         import hubble
-#
-#         os.environ[
-#             'JINA_AUTH_TOKEN'
-#         ] = 'ab879c4efa9915b5ed44e6142000eae8:071b1f99a52bc40f5fecd46b1bd5d40d685b7c4d'
-#         client = hubble.Client(max_retries=None, jsonify=True)
-#         client.get_user_info()
-#         return client
-#     except Exception as ex:
-#         logger.error(f'Not login to hubble yet.')
-#         raise ex
-
-
 class Uploader:
     def __init__(self, size_limit=1024, client=None):
         """
