@@ -813,9 +813,10 @@ class AnnLite(CellContainer):
                     merger.merge_file(
                         inputdir=restore_path / f'hnsw_{cell_id}',
                         outputdir=restore_path / f'hnsw_{cell_id}',
-                        outputfilename=restore_path
-                        / f'hnsw_{cell_id}'
-                        / f'cell_{cell_id}.hnsw',
+                        outputfilename=Path(f'cell_{cell_id}.hnsw'),
+                        # outputfilename=restore_path
+                        # / f'hnsw_{cell_id}'
+                        # / f'cell_{cell_id}.hnsw',
                     )
                 self.vec_index(cell_id).load(
                     restore_path / f'hnsw_{cell_id}' / f'cell_{cell_id}.hnsw'
@@ -835,9 +836,10 @@ class AnnLite(CellContainer):
                     merger.merge_file(
                         inputdir=restore_path / f'cell_table_{cell_id}',
                         outputdir=restore_path / f'cell_table_{cell_id}',
-                        outputfilename=restore_path
-                        / f'cell_table_{cell_id}'
-                        / f'cell_{cell_id}.db',
+                        outputfilename=Path(f'cell_{cell_id}.db'),
+                        # outputfilename=restore_path
+                        # / f'cell_table_{cell_id}'
+                        # / f'cell_{cell_id}.db',
                     )
 
                 self.cell_table(cell_id).load(
