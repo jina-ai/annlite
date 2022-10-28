@@ -1,3 +1,4 @@
 annlite
 certifi
 docarray
+pathlib>=3.8
