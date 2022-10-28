@@ -856,8 +856,10 @@ class AnnLite(CellContainer):
                             / zip_file.name.split('.zip')[0]
                         ).iterdir()
                     ):
-                        if Path.exists(self.data_path / f'cell_{cell_id}' / f.name):
-                            Path.unlink(self.data_path / f'cell_{cell_id}' / f.name)
+                        origin_database_path = (
+                            self.data_path / f'cell_{cell_id}' / f.name
+                        )
+                        origin_database_path.unlink(missing_ok=True)
                         f.rename(self.data_path / f'cell_{cell_id}' / f.name)
                     shutil.rmtree(
                         self.data_path
@@ -882,8 +884,8 @@ class AnnLite(CellContainer):
             else:
                 mata_table_file = restore_path / 'mate_table' / 'metas.db'
                 # these two lines fix unit test error on Windows
-                if Path.exists(self.data_path / 'metas.db'):
-                    Path.unlink(self.data_path / 'metas.db')
+                origin_metas_path = self.data_path / 'metas.db'
+                origin_metas_path.unlink(missing_ok=True)
                 mata_table_file.rename(self.data_path / 'metas.db')
             shutil.rmtree(restore_path / 'mate_table')
 
