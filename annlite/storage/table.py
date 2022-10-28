@@ -139,6 +139,9 @@ class Table:
         self._conn.backup(backup_db)
         backup_db.close()
 
+    def close(self):
+        self._conn.close()
+
     @property
     def name(self):
         return self._name

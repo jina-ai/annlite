@@ -547,6 +547,7 @@ class AnnLite(CellContainer):
     def close(self):
         for cell_id in range(self.n_cells):
             self.doc_store(cell_id).close()
+        self.meta_table.close()
 
     def encode(self, x: 'np.ndarray'):
         n_data, _ = self._sanity_check(x)
