@@ -885,11 +885,18 @@ class AnnLite(CellContainer):
                 )
             else:
                 mata_table_file = restore_path / 'mate_table' / 'metas.db'
-                # these two lines fix unit test error on Windows
-                origin_metas_path = self.data_path / 'metas.db'
-                if origin_metas_path.exists():
-                    origin_metas_path.unlink()
+                if platform.system() == 'Windows':
+                    self.meta_table.close()
+                    origin_metas_path = self.data_path / 'metas.db'
+                    if origin_metas_path.exists():
+                        origin_metas_path.unlink()
                 mata_table_file.rename(self.data_path / 'metas.db')
+
+                from .storage.table import MetaTable
+
+                self._meta_table = MetaTable(
+                    'metas', data_path=self.data_path, in_memory=False
+                )
             shutil.rmtree(restore_path / 'mate_table')
 
             # download model files
