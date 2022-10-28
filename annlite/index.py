@@ -547,6 +547,7 @@ class AnnLite(CellContainer):
     def close(self):
         for cell_id in range(self.n_cells):
             self.doc_store(cell_id).close()
+        self.meta_table.close()
 
     def encode(self, x: 'np.ndarray'):
         n_data, _ = self._sanity_check(x)
@@ -701,7 +702,6 @@ class AnnLite(CellContainer):
 
     def _backup_index_to_remote(self, target_name: str, token: str):
 
-        self.close()
         self.dump()
 
         from .hubble_tools import Uploader
@@ -709,7 +709,6 @@ class AnnLite(CellContainer):
         self.token = token
         client = self.remote_store_client
         uploader = Uploader(size_limit=self.size_limit, client=client)
-        seperator = '\\' if platform.system() == 'Windows' else '/'
 
         for cell_id in range(self.n_cells):
             # upload database
@@ -751,7 +750,7 @@ class AnnLite(CellContainer):
             'model.zip',
             'all',
             self.model_path.parent,
-            str(self.model_path).split(seperator)[-1],
+            str(self.model_path.name),
         )
 
     def _rebuild_index_from_local(self):
@@ -885,17 +884,15 @@ class AnnLite(CellContainer):
             else:
                 mata_table_file = restore_path / 'mate_table' / 'metas.db'
                 if platform.system() == 'Windows':
-                    self.meta_table.close()
                     origin_metas_path = self.data_path / 'metas.db'
                     if origin_metas_path.exists():
                         origin_metas_path.unlink()
                 mata_table_file.rename(self.data_path / 'metas.db')
-                if platform.system() == 'Windows':
-                    from .storage.table import MetaTable
+                from .storage.table import MetaTable
 
-                    self._meta_table = MetaTable(
-                        'metas', data_path=self.data_path, in_memory=False
-                    )
+                self._meta_table = MetaTable(
+                    'metas', data_path=self.data_path, in_memory=False
+                )
             shutil.rmtree(restore_path / 'mate_table')
 
             # download model files
