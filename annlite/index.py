@@ -702,8 +702,8 @@ class AnnLite(CellContainer):
 
     def _backup_index_to_remote(self, target_name: str, token: str):
 
-        self.close()
         self.dump()
+        self.close()
 
         from .hubble_tools import Uploader
 
