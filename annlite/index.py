@@ -547,7 +547,6 @@ class AnnLite(CellContainer):
     def close(self):
         for cell_id in range(self.n_cells):
             self.doc_store(cell_id).close()
-        self.meta_table.close()
 
     def encode(self, x: 'np.ndarray'):
         n_data, _ = self._sanity_check(x)
@@ -702,8 +701,8 @@ class AnnLite(CellContainer):
 
     def _backup_index_to_remote(self, target_name: str, token: str):
 
-        self.dump()
         self.close()
+        self.dump()
 
         from .hubble_tools import Uploader
 
@@ -891,12 +890,12 @@ class AnnLite(CellContainer):
                     if origin_metas_path.exists():
                         origin_metas_path.unlink()
                 mata_table_file.rename(self.data_path / 'metas.db')
+                if platform.system() == 'Windows':
+                    from .storage.table import MetaTable
 
-                from .storage.table import MetaTable
-
-                self._meta_table = MetaTable(
-                    'metas', data_path=self.data_path, in_memory=False
-                )
+                    self._meta_table = MetaTable(
+                        'metas', data_path=self.data_path, in_memory=False
+                    )
             shutil.rmtree(restore_path / 'mate_table')
 
             # download model files

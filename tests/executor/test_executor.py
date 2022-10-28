@@ -49,8 +49,7 @@ def docs_with_tags(N):
 
 
 def delete_artifact(tmpname):
-    os.environ['JINA_AUTH_TOKEN'] = token
-    client = hubble.Client(max_retries=None, jsonify=True)
+    client = hubble.Client(token=token, max_retries=None, jsonify=True)
     art_list = client.list_artifacts(filter={'metaData.name': tmpname})
     for art in art_list['data']:
         client.delete_artifact(id=art['_id'])
