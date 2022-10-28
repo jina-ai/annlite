@@ -547,7 +547,6 @@ class AnnLite(CellContainer):
     def close(self):
         for cell_id in range(self.n_cells):
             self.doc_store(cell_id).close()
-        self.meta_table.close()
 
     def encode(self, x: 'np.ndarray'):
         n_data, _ = self._sanity_check(x)
@@ -643,6 +642,9 @@ class AnnLite(CellContainer):
             raise ex
 
     def backup(self, target_name: Optional[str] = None, token: Optional[str] = None):
+        # file lock will be released when backup to remote, this will
+        # release the file lock. And it's only needed in Windows
+        # since we need to release file lock before we can access rocksdb files.
         if not target_name:
             logger.info('dump to local ...')
             self.dump()
@@ -650,9 +652,11 @@ class AnnLite(CellContainer):
             if token is None:
                 logger.error(f'back up to remote needs token')
             logger.info(f'dump to remote: {target_name}')
+            self.close()
             self._backup_index_to_remote(target_name, token)
 
     def restore(self, source_name: Optional[str] = None, token: Optional[str] = None):
+        # file lock will be released when restore from remote
         if not source_name:
             if self.total_docs > 0:
                 logger.info(f'restore Annlite from local')
@@ -888,11 +892,12 @@ class AnnLite(CellContainer):
                     if origin_metas_path.exists():
                         origin_metas_path.unlink()
                 mata_table_file.rename(self.data_path / 'metas.db')
-                from .storage.table import MetaTable
+                if platform.system() == 'Windows':
+                    from .storage.table import MetaTable
 
-                self._meta_table = MetaTable(
-                    'metas', data_path=self.data_path, in_memory=False
-                )
+                    self._meta_table = MetaTable(
+                        'metas', data_path=self.data_path, in_memory=False
+                    )
             shutil.rmtree(restore_path / 'mate_table')
 
             # download model files
