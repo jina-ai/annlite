@@ -890,7 +890,7 @@ class AnnLite(CellContainer):
                 if platform.system() == 'Windows':
                     origin_metas_path = self.data_path / 'metas.db'
                     if origin_metas_path.exists():
-                        self._mata_table.close()
+                        self._meta_table.close()
                         origin_metas_path.unlink()
                 mata_table_file.rename(self.data_path / 'metas.db')
                 if platform.system() == 'Windows':
