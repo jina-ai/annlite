@@ -307,6 +307,7 @@ def test_remote_backup_restore(tmpdir):
 
     tmpname = uuid.uuid4().hex
     index.backup(target_name='test', token=token)
+    index.close()
 
     index = AnnLite(n_dim=D, data_path=tmpdir / 'workspace' / '0')
     index.restore(source_name='test', token=token)
