@@ -814,9 +814,6 @@ class AnnLite(CellContainer):
                         inputdir=restore_path / f'hnsw_{cell_id}',
                         outputdir=restore_path / f'hnsw_{cell_id}',
                         outputfilename=Path(f'cell_{cell_id}.hnsw'),
-                        # outputfilename=restore_path
-                        # / f'hnsw_{cell_id}'
-                        # / f'cell_{cell_id}.hnsw',
                     )
                 self.vec_index(cell_id).load(
                     restore_path / f'hnsw_{cell_id}' / f'cell_{cell_id}.hnsw'
@@ -837,9 +834,6 @@ class AnnLite(CellContainer):
                         inputdir=restore_path / f'cell_table_{cell_id}',
                         outputdir=restore_path / f'cell_table_{cell_id}',
                         outputfilename=Path(f'cell_{cell_id}.db'),
-                        # outputfilename=restore_path
-                        # / f'cell_table_{cell_id}'
-                        # / f'cell_{cell_id}.db',
                     )
 
                 self.cell_table(cell_id).load(
@@ -884,13 +878,12 @@ class AnnLite(CellContainer):
                     inputdir=restore_path / 'mate_table',
                     outputdir=self.data_path,
                     outputfilename=Path('metas.db'),
-                    # outputfilename=self.data_path / 'metas.db',
                 )
             else:
                 mata_table_file = restore_path / 'mate_table' / 'metas.db'
                 # these two lines fix unit test error on Windows
-                # if Path.exists(self.data_path / 'metas.db'):
-                #     Path.unlink(self.data_path / 'metas.db')
+                if Path.exists(self.data_path / 'metas.db'):
+                    Path.unlink(self.data_path / 'metas.db')
                 mata_table_file.rename(self.data_path / 'metas.db')
             shutil.rmtree(restore_path / 'mate_table')
 
