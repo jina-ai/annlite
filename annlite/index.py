@@ -859,7 +859,8 @@ class AnnLite(CellContainer):
                         origin_database_path = (
                             self.data_path / f'cell_{cell_id}' / f.name
                         )
-                        origin_database_path.unlink(missing_ok=True)
+                        if origin_database_path.exists():
+                            origin_database_path.unlink()
                         f.rename(self.data_path / f'cell_{cell_id}' / f.name)
                     shutil.rmtree(
                         self.data_path
@@ -885,7 +886,8 @@ class AnnLite(CellContainer):
                 mata_table_file = restore_path / 'mate_table' / 'metas.db'
                 # these two lines fix unit test error on Windows
                 origin_metas_path = self.data_path / 'metas.db'
-                origin_metas_path.unlink(missing_ok=True)
+                if origin_metas_path.exists():
+                    origin_metas_path.unlink()
                 mata_table_file.rename(self.data_path / 'metas.db')
             shutil.rmtree(restore_path / 'mate_table')
 
