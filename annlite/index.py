@@ -877,16 +877,16 @@ class AnnLite(CellContainer):
             logger.info(f'Load the meta_table `{source_name}` from remote store')
 
             meta_table_ids = merger.get_artifact_ids(art_list, type='meta_table')
-            merger.download(ids=meta_table_ids, download_folder='mate_table')
+            merger.download(ids=meta_table_ids, download_folder='meta_table')
 
             if len(meta_table_ids) > 1:
                 merger.merge_file(
-                    inputdir=restore_path / 'mate_table',
+                    inputdir=restore_path / 'meta_table',
                     outputdir=self.data_path,
                     outputfilename=Path('metas.db'),
                 )
             else:
-                mata_table_file = restore_path / 'mate_table' / 'metas.db'
+                mata_table_file = restore_path / 'meta_table' / 'metas.db'
                 if platform.system() == 'Windows':
                     origin_metas_path = self.data_path / 'metas.db'
                     if origin_metas_path.exists():
@@ -899,7 +899,7 @@ class AnnLite(CellContainer):
                     self._meta_table = MetaTable(
                         'metas', data_path=self.data_path, in_memory=False
                     )
-            shutil.rmtree(restore_path / 'mate_table')
+            shutil.rmtree(restore_path / 'meta_table')
 
             # download model files
             logger.info(f'Load the model `{source_name}` from remote store')
