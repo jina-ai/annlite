@@ -262,6 +262,29 @@ The query will be performed on the field if the condition is satisfied. The foll
     }
     ```
 
+## Dump and Load
+
+By default, the hnsw index is in memory. You can dump the index to `data_path` by calling `.dump()`:
+
+```python
+
+from annlite import AnnLite
+
+ann = AnnLite(128, metric='cosine', data_path="/path/to/data_path")
+ann.index(docs)
+ann.dump()
+ann.close()
+```
+Note that please make sure to call `.close()` before you restore the index.
+
+And you can restore the hnsw index from `data_path` if it exists:
+
+```python
+new_ann = AnnLite(128, metric='cosine', data_path="/path/to/data_path")
+```
+
+If you didn't dump the hnsw index, the index will be rebuilt from scratch. This will take a while.
+
 ## Supported distance metrics
 
 The annlite supports the following distance metrics:
