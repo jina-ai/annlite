@@ -273,9 +273,7 @@ from annlite import AnnLite
 ann = AnnLite(128, metric='cosine', data_path="/path/to/data_path")
 ann.index(docs)
 ann.dump()
-ann.close()
 ```
-Note that please make sure to call `.close()` before you restore the index.
 
 And you can restore the hnsw index from `data_path` if it exists:
 
