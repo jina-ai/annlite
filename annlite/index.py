@@ -93,6 +93,7 @@ class AnnLite(CellContainer):
         self.n_clusters = n_clusters
         self.n_probe = max(n_probe, n_cells)
         self.n_cells = n_cells
+        self.size_limit = 2048
 
         if isinstance(metric, str):
             metric = Metric.from_string(metric)
@@ -632,6 +633,7 @@ class AnnLite(CellContainer):
         try:
             import hubble
 
+            os.environ['JINA_AUTH_TOKEN'] = self.token
             client = hubble.Client(max_retries=None, jsonify=True)
             client.get_user_info()
             return client
@@ -639,21 +641,32 @@ class AnnLite(CellContainer):
             logger.error(f'Not login to hubble yet.')
             raise ex
 
-    def backup(self, target_name: Optional[str] = None):
+    def backup(self, target_name: Optional[str] = None, token: Optional[str] = None):
+        # file lock will be released when backup to remote, this will
+        # release the file lock. And it's only needed in Windows
+        # since we need to release file lock before we can access rocksdb files.
         if not target_name:
+            logger.info('dump to local ...')
             self.dump()
         else:
-            self._backup_index_to_remote(target_name)
+            if token is None:
+                logger.error(f'back up to remote needs token')
+            logger.info(f'dump to remote: {target_name}')
+            self.close()
+            self._backup_index_to_remote(target_name, token)
 
-    def restore(self, source_name: Optional[str] = None):
+    def restore(self, source_name: Optional[str] = None, token: Optional[str] = None):
+        # file lock will be released when restore from remote
         if not source_name:
             if self.total_docs > 0:
                 logger.info(f'restore Annlite from local')
                 self._rebuild_index_from_local()
         else:
+            if token is None:
+                logger.error(f'restore from remote needs token')
             logger.info(f'restore Annlite from artifact: {source_name}')
             self.close()
-            self._rebuild_index_from_remote(source_name)
+            self._rebuild_index_from_remote(source_name, token)
 
     def dump_model(self):
         logger.info(f'Save the parameters to {self.model_path}')
@@ -666,8 +679,16 @@ class AnnLite(CellContainer):
             self._pq_codec.dump(self._pq_codec_path)
 
     def dump_index(self):
+        import shutil
+
         logger.info(f'Save the indexer to {self.index_path}')
         try:
+            if Path.exists(self.index_path):
+                logger.info(
+                    f'Index path {self.index_path} already exists, will be '
+                    f'overwritten'
+                )
+                shutil.rmtree(self.index_path)
             self.index_path.mkdir(parents=True)
 
             for cell_id in range(self.n_cells):
@@ -675,7 +696,6 @@ class AnnLite(CellContainer):
                 self.cell_table(cell_id).dump(self.index_path / f'cell_{cell_id}.db')
         except Exception as ex:
             logger.error(f'Failed to dump the indexer, {ex!r}')
-            import shutil
 
             if self.index_path:
                 shutil.rmtree(self.index_path)
@@ -684,78 +704,58 @@ class AnnLite(CellContainer):
         self.dump_model()
         self.dump_index()
 
-    def _backup_index_to_remote(self, target_name: str):
-        import shutil
+    def _backup_index_to_remote(self, target_name: str, token: str):
 
-        self.close()
+        self.dump()
 
-        art_list = self.remote_store_client.list_artifacts(
-            filter={'metaData.name': target_name}
+        from .hubble_tools import Uploader
+
+        self.token = token
+        client = self.remote_store_client
+        uploader = Uploader(size_limit=self.size_limit, client=client)
+
+        for cell_id in range(self.n_cells):
+            # upload database
+            uploader.upload_directory(
+                Path(self.data_path) / f'cell_{cell_id}',
+                target_name=target_name,
+                type='database',
+                cell_id=cell_id,
+            )
+
+            # upload hnsw file
+            uploader.upload_file(
+                Path(self.index_path) / f'cell_{cell_id}.hnsw',
+                target_name=target_name,
+                type='hnsw',
+                cell_id=cell_id,
+            )
+
+            # upload cell_table
+            uploader.upload_file(
+                Path(self.index_path) / f'cell_{cell_id}.db',
+                target_name=target_name,
+                type='cell_table',
+                cell_id=cell_id,
+            )
+
+        # upload meta table
+        uploader.upload_file(
+            Path(self.data_path) / 'metas.db',
+            target_name=target_name,
+            type='meta_table',
+            cell_id='all',
         )
-        if len(art_list['data']) > 0:
-            raise RuntimeError(
-                f'The documents with the same name already exist. Please: '
-                '(1) Delete the existed documents from hubble (2) Rename and upload again.'
-            )
-        else:
-            logger.info(f'Upload the database `{target_name}` to remote.')
-            seperator = '\\' if platform.system() == 'Windows' else '/'
-            output_path = shutil.make_archive(
-                os.path.join(str(self.data_path.parent), f'{target_name}_db'),
-                'zip',
-                str(self.data_path.parent),
-                str(self.data_path).split(seperator)[-1],
-            )
-            self.remote_store_client.upload_artifact(
-                f=output_path,
-                metadata={
-                    'name': target_name,
-                    'type': 'database',
-                    'cell': 'all',
-                },
-            )
-            Path(output_path).unlink()
 
-            logger.info(f'Upload the indexer `{target_name}` to remote')
-            self.dump_index()
-            for cell_id in range(self.n_cells):
-                self.remote_store_client.upload_artifact(
-                    f=str(self.index_path / f'cell_{cell_id}.hnsw'),
-                    metadata={
-                        'name': target_name,
-                        'type': 'hnsw',
-                        'cell': cell_id,
-                    },
-                    show_progress=True,
-                )
-                self.remote_store_client.upload_artifact(
-                    f=str(self.index_path / f'cell_{cell_id}.db'),
-                    metadata={
-                        'name': target_name,
-                        'type': 'cell_table',
-                        'cell': cell_id,
-                    },
-                    show_progress=True,
-                )
-            shutil.rmtree(self.index_path)
-
-            logger.info(f'Upload the model `{target_name}` to remote')
-            self.dump_model()
-            output_path = shutil.make_archive(
-                os.path.join(str(self.model_path.parent), f'{target_name}_model'),
-                'zip',
-                str(self.model_path.parent),
-                str(self.model_path).split(seperator)[-1],
-            )
-            self.remote_store_client.upload_artifact(
-                f=output_path,
-                metadata={
-                    'name': target_name,
-                    'type': 'model',
-                    'cell': 'all',
-                },
-            )
-            Path(output_path).unlink()
+        # upload training model
+        uploader.archive_and_upload(
+            target_name,
+            'model',
+            'model.zip',
+            'all',
+            self.model_path.parent,
+            str(self.model_path.name),
+        )
 
     def _rebuild_index_from_local(self):
         if self.snapshot_path:
@@ -786,63 +786,139 @@ class AnnLite(CellContainer):
             logger.info(f'Load the model from {self.model_path}')
             self._reload_models()
 
-    def _rebuild_index_from_remote(self, source_name: str):
+    def _rebuild_index_from_remote(self, source_name: str, token: str):
         import shutil
 
-        art_list = self.remote_store_client.list_artifacts(
-            filter={'metaData.name': source_name}
+        from .hubble_tools import Merger
+
+        self.token = token
+        client = self.remote_store_client
+        art_list = client.list_artifacts(
+            filter={'metaData.name': source_name}, pageSize=100
         )
         if len(art_list['data']) == 0:
             logger.info(f'The indexer `{source_name}` not found. ')
         else:
             logger.info(f'Load the indexer `{source_name}` from remote store')
+
             restore_path = self.data_path / 'restore'
-            restore_path.mkdir(parents=True)
-            for art in art_list['data']:
-                for cell_id in range(self.n_cells):
-                    if art['metaData']['cell'] == cell_id:
-                        if art['metaData']['type'] == 'hnsw':
-                            self.remote_store_client.download_artifact(
-                                id=art['_id'],
-                                f=str(restore_path / f'cell_{cell_id}.hnsw'),
-                                show_progress=True,
-                            )
-                            self.vec_index(cell_id).load(
-                                restore_path / f'cell_{cell_id}.hnsw'
-                            )
-                        elif art['metaData']['type'] == 'cell_table':
-                            self.remote_store_client.download_artifact(
-                                id=art['_id'],
-                                f=str(restore_path / f'cell_{cell_id}.db'),
-                                show_progress=True,
-                            )
-                            self.cell_table(cell_id).load(
-                                restore_path / f'cell_{cell_id}.db'
-                            )
-                if art['metaData']['type'] == 'database':
-                    logger.info(f'Load the database `{source_name}` from remote store')
-                    input_path = str(self.data_path.parent / f'{source_name}_db.zip')
-                    self.remote_store_client.download_artifact(
-                        id=art['_id'],
-                        f=input_path,
-                        show_progress=True,
+            merger = Merger(restore_path=restore_path, client=client)
+
+            for cell_id in range(self.n_cells):
+                # download hnsw files and merge and load
+                logger.info(f'Load the hnsw `{source_name}` from remote store')
+
+                hnsw_ids = merger.get_artifact_ids(
+                    art_list, type='hnsw', cell_id=cell_id
+                )
+                merger.download(ids=hnsw_ids, download_folder=f'hnsw_{cell_id}')
+                if len(hnsw_ids) > 1:
+                    merger.merge_file(
+                        inputdir=restore_path / f'hnsw_{cell_id}',
+                        outputdir=restore_path / f'hnsw_{cell_id}',
+                        outputfilename=Path(f'cell_{cell_id}.hnsw'),
                     )
-                    shutil.unpack_archive(input_path, self.data_path.parent)
-                    self._rebuild_database()
-                    Path(input_path).unlink()
-                if art['metaData']['type'] == 'model':
-                    logger.info(f'Load the model `{source_name}` from remote store')
-                    input_path = str(
-                        self.model_path.parent / f'{source_name}_model.zip'
+                self.vec_index(cell_id).load(
+                    restore_path / f'hnsw_{cell_id}' / f'cell_{cell_id}.hnsw'
+                )
+                shutil.rmtree(restore_path / f'hnsw_{cell_id}')
+
+                # download cell_table files and merge and load
+                logger.info(f'Load the cell_table `{source_name}` from remote store')
+
+                cell_table_ids = merger.get_artifact_ids(
+                    art_list, type='cell_table', cell_id=cell_id
+                )
+                merger.download(
+                    ids=cell_table_ids, download_folder=f'cell_table_{cell_id}'
+                )
+                if len(cell_table_ids) > 1:
+                    merger.merge_file(
+                        inputdir=restore_path / f'cell_table_{cell_id}',
+                        outputdir=restore_path / f'cell_table_{cell_id}',
+                        outputfilename=Path(f'cell_{cell_id}.db'),
                     )
-                    self.remote_store_client.download_artifact(
-                        id=art['_id'],
-                        f=input_path,
-                        show_progress=True,
+
+                self.cell_table(cell_id).load(
+                    restore_path / f'cell_table_{cell_id}' / f'cell_{cell_id}.db'
+                )
+                shutil.rmtree(restore_path / f'cell_table_{cell_id}')
+
+                # download database files and rebuild
+                logger.info(f'Load the database `{source_name}` from remote store')
+
+                database_ids = merger.get_artifact_ids(art_list, type='database')
+                merger.download(ids=database_ids, download_folder='database')
+                for zip_file in list((restore_path / 'database').iterdir()):
+                    # default has only one cell
+                    shutil.unpack_archive(zip_file, self.data_path / f'cell_{cell_id}')
+                    for f in list(
+                        (
+                            self.data_path
+                            / f'cell_{cell_id}'
+                            / zip_file.name.split('.zip')[0]
+                        ).iterdir()
+                    ):
+                        origin_database_path = (
+                            self.data_path / f'cell_{cell_id}' / f.name
+                        )
+                        if origin_database_path.exists():
+                            origin_database_path.unlink()
+                        f.rename(self.data_path / f'cell_{cell_id}' / f.name)
+                    shutil.rmtree(
+                        self.data_path
+                        / f'cell_{cell_id}'
+                        / zip_file.name.split('.zip')[0]
                     )
-                    shutil.unpack_archive(input_path, self.model_path.parent)
-                    self._reload_models()
-                    Path(input_path).unlink()
+                    Path(zip_file).unlink()
+                self._rebuild_database()
+
+            # download meta_table files
+            logger.info(f'Load the meta_table `{source_name}` from remote store')
+
+            meta_table_ids = merger.get_artifact_ids(art_list, type='meta_table')
+            merger.download(ids=meta_table_ids, download_folder='meta_table')
+
+            if len(meta_table_ids) > 1:
+                merger.merge_file(
+                    inputdir=restore_path / 'meta_table',
+                    outputdir=self.data_path,
+                    outputfilename=Path('metas.db'),
+                )
+            else:
+                mata_table_file = restore_path / 'meta_table' / 'metas.db'
+                if platform.system() == 'Windows':
+                    origin_metas_path = self.data_path / 'metas.db'
+                    if origin_metas_path.exists():
+                        self._meta_table.close()
+                        origin_metas_path.unlink()
+                mata_table_file.rename(self.data_path / 'metas.db')
+                if platform.system() == 'Windows':
+                    from .storage.table import MetaTable
+
+                    self._meta_table = MetaTable(
+                        'metas', data_path=self.data_path, in_memory=False
+                    )
+            shutil.rmtree(restore_path / 'meta_table')
+
+            # download model files
+            logger.info(f'Load the model `{source_name}` from remote store')
+            file_name = str(self.model_path.parent / f'{source_name}_model.zip')
+            model_id = [
+                art['_id']
+                for art in art_list['data']
+                if 'model' in art['metaData']['type']
+            ]
+            assert len(model_id) == 1
+            client.download_artifact(
+                id=model_id[0],
+                f=file_name,
+                show_progress=True,
+            )
+            shutil.unpack_archive(file_name, self.model_path.parent)
+            self._reload_models()
+            Path(file_name).unlink()
+
             shutil.rmtree(restore_path)
 
     @property
