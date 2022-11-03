@@ -624,8 +624,10 @@ class AnnLite(CellContainer):
         paths = list(
             (self.data_path / f'snapshot-{self.params_hash}').glob(f'*-SNAPSHOT')
         )
+
         if paths:
-            return paths[0]
+            paths = sorted(paths, key=lambda x: x.name)
+            return paths[-1]
         return None
 
     @property
