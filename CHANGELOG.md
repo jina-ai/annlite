@@ -16,6 +16,7 @@
 
 
 
+
 <a name=release-note-0-3-0></a>
 ## Release Note (`0.3.0`)
 
@@ -419,4 +420,25 @@
 
  - [[```5faf1dfa```](https://github.com/jina-ai/docarray/commit/5faf1dfa3326213c3b9e20de0d8b7aca4dbdf6ba)] __-__ regular release (*numb3r3*)
  - [[```95e51f26```](https://github.com/jina-ai/docarray/commit/95e51f269ac130b9d54b004734ff68afc07a9cf1)] __-__ __version__: the next version will be 0.4.1 (*Jina Dev Bot*)
+
+<a name=release-note-0-5-1></a>
+## Release Note (`0.5.1`)
+
+> Release time: 2022-11-03 03:29:55
+
+
+
+🙇 We'd like to thank all contributors for this new release! In particular,
+ numb3r3,  Jie Fu,  Jina Dev Bot,  🙇
+
+
+### 🆕 New Features
+
+ - [[```dd08f6f2```](https://github.com/jina-ai/docarray/commit/dd08f6f28008aaf020cb972f45e154afaf99cb28)] __-__ add file splitter and merger to support big file transfer to hubble (#202) (*Jie Fu*)
+
+### 🍹 Other Improvements
+
+ - [[```83e45001```](https://github.com/jina-ai/docarray/commit/83e4500180e98bb967ab2ec17ca202c1702fb411)] __-__ bump 0.5.1 (*numb3r3*)
+ - [[```557c624b```](https://github.com/jina-ai/docarray/commit/557c624b3419b8bf70386e66a75d1958ef427738)] __-__ fix force release (*numb3r3*)
+ - [[```77312214```](https://github.com/jina-ai/docarray/commit/773122144a9ec39663829c64090d6116585fb6e1)] __-__ __version__: the next version will be 0.5.1 (*Jina Dev Bot*)
 
