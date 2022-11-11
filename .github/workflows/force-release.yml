@@ -19,8 +19,49 @@ jobs:
         env:
           release_token: ${{ secrets.ANNLITE_RELEASE_TOKEN }}
 
+  build-wheels:
+    needs: [token-check]
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ ubuntu-latest, windows-latest, macos-latest ]
+        cibw_arch: [ "auto64" ]
+        python-version: [ [ '3.7', "cp37-*" ], [ '3.8', "cp38-*" ], [ '3.9', "cp39-*" ], [ '3.10', "cp310-*" ] ]
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 100
+      - name: Set up Python ${{ matrix.python-version[0] }}
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ matrix.python-version[0] }}
+      - name: Build sdist
+        if: ${{ matrix.os == 'ubuntu-latest' && matrix.python-version[0] == '3.7' }}
+        run: |
+          pip install build
+          python -m build --sdist
+      - name: Build wheels
+        uses: pypa/cibuildwheel@v2.10.2
+        with:
+          package-dir: ./
+        env:
+          CIBW_ENVIRONMENT: >
+            STAN_BACKEND="${{ env.STAN_BACKEND }}"
+          CIBW_MANYLINUX_X86_64_IMAGE: manylinux2014
+          CIBW_BUILD: ${{ matrix.python-version[1] }}
+          CIBW_SKIP: "*musllinux*"
+          CIBW_ARCHS: ${{ matrix.cibw_arch }}
+          # CIBW_ARCH_MACOS: x86_64 arm64
+          CIBW_BUILD_FRONTEND: build
+      - uses: actions/upload-artifact@v3
+        with:
+          path: |
+            ./wheelhouse/*.whl
+            ./dist/*.tar.gz
+
   regular-release:
-    needs: token-check
+    needs: build-wheels
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
@@ -31,6 +72,9 @@ jobs:
       - uses: actions/setup-python@v2
         with:
           python-version: 3.7
+      - uses: actions/download-artifact@v3
+        with:
+          name: artifact
       - run: |
           git fetch --depth=1 origin +refs/tags/*:refs/tags/*
           npm install git-release-notes

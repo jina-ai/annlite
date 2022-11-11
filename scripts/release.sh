@@ -11,6 +11,25 @@ INIT_FILE='annlite/__init__.py'
 VER_TAG='__version__ = '
 RELEASENOTE='./node_modules/.bin/git-release-notes'
 
+function escape_slashes {
+    sed 's/\//\\\//g'
+}
+
+
+function update_ver_line {
+    local OLD_LINE_PATTERN=$1
+    local NEW_LINE=$2
+    local FILE=$3
+
+    local NEW=$(echo "${NEW_LINE}" | escape_slashes)
+    if [ "$(uname)" == "Darwin" ]; then
+      sed -i '' '/'"${OLD_LINE_PATTERN}"'/s/.*/'"${NEW}"'/' "${FILE}";
+    else
+      sed -i '/'"${OLD_LINE_PATTERN}"'/s/.*/'"${NEW}"'/' "${FILE}";
+    fi
+    head -n10 ${FILE}
+}
+
 
 function clean_build {
     rm -rf dist
@@ -23,7 +42,7 @@ function clean_build {
 function pub_pypi {
     # publish to pypi
     twine upload dist/*
-    twine upload wheelhouse/*
+    # twine upload wheelhouse/*
     clean_build
 }
 
@@ -70,6 +89,9 @@ if [[ $1 == "final" ]]; then
 
   make_release_note
   pub_pypi
+
+  VER_TAG_NEXT=$VER_TAG\'${NEXT_VER}\'
+  update_ver_line "$VER_TAG" "$VER_TAG_NEXT" "$INIT_FILE"
 
   RELEASE_REASON="$2"
   RELEASE_ACTOR="$3"
