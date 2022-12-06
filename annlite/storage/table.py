@@ -306,6 +306,7 @@ class CellTable(Table):
         self._conn.row_factory = _offset_factory
 
         cursor = self._conn.cursor()
+
         try:
             offsets = cursor.execute(sql, params).fetchall()
             self._conn.row_factory = None

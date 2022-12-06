@@ -306,10 +306,10 @@ def test_remote_backup_restore(tmpdir):
     index.index(docs)
 
     tmpname = uuid.uuid4().hex
-    index.backup(target_name='test', token=token)
+    index.backup(target_name='test_remote_backup_restore', token=token)
 
     index = AnnLite(n_dim=D, data_path=tmpdir / 'workspace' / '0')
-    index.restore(source_name='test', token=token)
+    index.restore(source_name='test_remote_backup_restore', token=token)
 
     delete_artifact(tmpname)
     status = index.stat
