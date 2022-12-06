@@ -306,9 +306,13 @@ class CellTable(Table):
         self._conn.row_factory = _offset_factory
 
         cursor = self._conn.cursor()
-        offsets = cursor.execute(sql, params).fetchall()
-        self._conn.row_factory = None
-        return offsets if offsets else []
+        try:
+            offsets = cursor.execute(sql, params).fetchall()
+            self._conn.row_factory = None
+            return offsets if offsets else []
+        except Exception as e:
+            self._conn.row_factory = None
+            raise e
 
     def delete(self, doc_ids: List[str]):
         """Delete the docs
@@ -361,7 +365,6 @@ class CellTable(Table):
             # # EXPLAIN SQL query
             # for row in self._conn.execute('EXPLAIN QUERY PLAN ' + sql, params):
             #     print(row)
-
             return self._conn.execute(sql, params).fetchone()[0]
         else:
             sql = f'SELECT MAX(_id) from {self.name} LIMIT 1;'
