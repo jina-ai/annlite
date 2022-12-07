@@ -209,3 +209,49 @@ def test_filter_with_limit_offset(tmpfile, limit, offset, order_by, ascending):
             assert m.tags[order_by] <= matches[i + 1].tags[order_by]
         else:
             assert m.tags[order_by] >= matches[i + 1].tags[order_by]
+
+
+@pytest.mark.parametrize('limit', [1, 5])
+def test_filter_with_wrong_columns(tmpfile, limit):
+    N = 100
+    D = 128
+
+    index = AnnLite(
+        D,
+        columns=[('price', float)],
+        data_path=tmpfile,
+    )
+    X = np.random.random((N, D)).astype(np.float32)
+
+    docs = DocumentArray(
+        [
+            Document(id=f'{i}', embedding=X[i], tags={'price': random.random()})
+            for i in range(N)
+        ]
+    )
+
+    index.index(docs)
+
+    matches = index.filter(
+        filter={'price': {'$lte': 50}},
+        limit=limit,
+        include_metadata=True,
+    )
+
+    assert len(matches) == limit
+
+    import sqlite3
+
+    with pytest.raises(sqlite3.OperationalError):
+        matches = index.filter(
+            filter={'price_': {'$lte': 50}},
+            include_metadata=True,
+        )
+
+    matches = index.filter(
+        filter={'price': {'$lte': 50}},
+        limit=limit,
+        include_metadata=True,
+    )
+
+    assert len(matches) == limit
