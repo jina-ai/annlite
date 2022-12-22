@@ -19,6 +19,7 @@
 
 
 
+
 <a name=release-note-0-3-0></a>
 ## Release Note (`0.3.0`)
 
@@ -481,4 +482,23 @@
 ### 🍹 Other Improvements
 
  - [[```c84635c9```](https://github.com/jina-ai/docarray/commit/c84635c9854b7b3c2b5718941979720b673ed7eb)] __-__ __version__: the next version will be 0.5.3 (*Jina Dev Bot*)
+
+<a name=release-note-0-5-5></a>
+## Release Note (`0.5.5`)
+
+> Release time: 2022-12-22 03:27:38
+
+
+
+🙇 We'd like to thank all contributors for this new release! In particular,
+ Jie Fu,  Jina Dev Bot,  🙇
+
+
+### 🐞 Bug fixes
+
+ - [[```61e0a57f```](https://github.com/jina-ai/docarray/commit/61e0a57f901b087fbe6cab16aefb1d46d5fd54a2)] __-__ fix offset factory (#208) (*Jie Fu*)
+
+### 🍹 Other Improvements
+
+ - [[```f6fdc9d3```](https://github.com/jina-ai/docarray/commit/f6fdc9d34fd8e8de47e7ac68e6813956c2aeebfe)] __-__ __version__: the next version will be 0.5.5 (*Jina Dev Bot*)
 
