@@ -20,6 +20,7 @@
 
 
 
+
 <a name=release-note-0-3-0></a>
 ## Release Note (`0.3.0`)
 
@@ -501,4 +502,27 @@
 ### 🍹 Other Improvements
 
  - [[```f6fdc9d3```](https://github.com/jina-ai/docarray/commit/f6fdc9d34fd8e8de47e7ac68e6813956c2aeebfe)] __-__ __version__: the next version will be 0.5.5 (*Jina Dev Bot*)
+
+<a name=release-note-0-5-6></a>
+## Release Note (`0.5.6`)
+
+> Release time: 2023-02-08 09:06:21
+
+
+
+🙇 We'd like to thank all contributors for this new release! In particular,
+ Jie Fu,  Jina Dev Bot,  🙇
+
+
+### 🐞 Bug fixes
+
+ - [[```906ed7d4```](https://github.com/jina-ai/docarray/commit/906ed7d4159527e8b5f00cdc9106433925f04a43)] __-__ save and load offset2ids for list_like feature (#210) (*Jie Fu*)
+
+### 🏁 Unit Test and CICD
+
+ - [[```a2519f0f```](https://github.com/jina-ai/docarray/commit/a2519f0f323d0c3cb2d68ad1cd3eeed4beb40ce6)] __-__ add test for offset2ids saving and loading (#212) (*Jie Fu*)
+
+### 🍹 Other Improvements
+
+ - [[```68215807```](https://github.com/jina-ai/docarray/commit/68215807953eed366e1d6f48fbbbbc1abebf13ff)] __-__ __version__: the next version will be 0.5.6 (*Jina Dev Bot*)
 
