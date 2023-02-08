@@ -36,7 +36,7 @@ class AnnLiteIndexer(Executor):
 
     def __init__(
         self,
-        n_dim: int = 0,
+        n_dim: int = 5,
         metric: str = 'cosine',
         limit: int = 10,
         n_components: Optional[int] = None,

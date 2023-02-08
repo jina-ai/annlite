@@ -372,3 +372,34 @@ def test_local_storage_with_shards(tmpfile):
         index_size += stat.tags['index_size']
     assert total_docs == N
     assert index_size == N
+
+
+def test_local_storage_with_delete(tmpfile):
+    docs = gen_docs(N)
+    f = Flow().add(
+        uses=AnnLiteIndexer,
+        uses_with={
+            'n_dim': D,
+        },
+        workspace=tmpfile,
+        shards=1,
+    )
+    with f:
+        f.post(on='/index', inputs=docs)
+        time.sleep(2)
+        f.post(on='/backup')
+        time.sleep(2)
+
+    f = Flow().add(
+        uses=AnnLiteIndexer,
+        uses_with={'n_dim': D},
+        workspace=tmpfile,
+        shards=1,
+    )
+    with f:
+        f.post(on='/restore')
+        f.post(on='/delete', parameters={'ids': ['0']})
+        status = f.post(on='/status', return_results=True)[0]
+
+    assert int(status.tags['total_docs']) == N - 1
+    assert int(status.tags['index_size']) == N - 1
