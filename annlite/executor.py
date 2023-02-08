@@ -298,6 +298,8 @@ class AnnLiteIndexer(Executor):
                     'Please wait for the pending documents to be indexed.'
                 )
             self._index._annlite.backup(target_name, token)
+        if self._index._list_like:
+            self._index._save_offset2ids()
 
     @requests(on='/restore')
     def restore(self, parameters: Optional[Dict] = {}, **kwargs):
@@ -310,6 +312,8 @@ class AnnLiteIndexer(Executor):
         if source_name:
             source_name = f'{source_name}_{self.runtime_args.shard_id}'
         self._index._annlite.restore(source_name, token)
+        if self._index._list_like:
+            self._index._load_offset2ids()
 
     @requests(on='/filter')
     def filter(self, parameters: Dict, **kwargs):
