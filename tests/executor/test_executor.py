@@ -403,3 +403,31 @@ def test_local_storage_with_delete(tmpfile):
 
     assert int(status.tags['total_docs']) == N - 1
     assert int(status.tags['index_size']) == N - 1
+
+
+def test_local_storage_delete_update(tmpfile):
+    docs = gen_docs(N)
+    f = Flow().add(
+        uses=AnnLiteIndexer,
+        uses_with={
+            'n_dim': D,
+        },
+        workspace=tmpfile,
+        shards=1,
+    )
+    with f:
+        f.post(on='/clear')
+        f.post(on='/index', inputs=docs)
+        time.sleep(2)
+        f.post(on='/backup')
+
+        f.post(on='/delete', parameters={'ids': ['0']})
+        time.sleep(2)
+        f.post(on='/backup')
+
+        new_doc = gen_docs(N)[1:]
+        f.post(on='/update', inputs=new_doc)
+        status = f.post(on='/status', return_results=True)[0]
+
+        assert int(status.tags['total_docs']) == N - 1
+        assert int(status.tags['index_size']) == N - 1

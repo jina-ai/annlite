@@ -167,6 +167,7 @@ class CellTable(Table):
         lazy_create: bool = False,
     ):
         super().__init__(name, data_path=data_path, in_memory=in_memory)
+        self.data_path = data_path
 
         self._columns = []
         self._indexed_keys = set()
@@ -200,19 +201,18 @@ class CellTable(Table):
     def create_table(self):
         sql = f'''CREATE TABLE {self.name}
                     (_id INTEGER PRIMARY KEY AUTOINCREMENT,
-                     _doc_id TEXT NOT NULL UNIQUE,
-                     _deleted NUMERIC DEFAULT 0'''
+                     _doc_id TEXT NOT NULL UNIQUE'''
         if len(self._columns) > 0:
             sql += ', ' + ', '.join(self._columns)
         sql += ')'
         self._conn.execute(sql)
 
-        sql_statement = f'''CREATE INDEX idx__delete_
-                                ON {self.name}(_deleted)'''
-        self._conn.execute(sql_statement)
+        # sql_statement = f'''CREATE INDEX idx__delete_
+        #                         ON {self.name}(_deleted)'''
+        # self._conn.execute(sql_statement)
 
-        for name in self._indexed_keys:
-            self.create_index(name, commit=False)
+        # for name in self._indexed_keys:
+        #     self.create_index(name, commit=False)
         self._conn.commit()
 
     def insert(
@@ -251,7 +251,6 @@ class CellTable(Table):
             cursor = self._conn.cursor()
             if docs_size > 1:
                 cursor.executemany(sql, values[:-1])
-
             cursor.execute(sql, values[-1])
             last_row_id = cursor.lastrowid
             row_ids = list(range(last_row_id - len(docs), last_row_id))
@@ -281,7 +280,7 @@ class CellTable(Table):
         :return: offsets list of matched docs
         """
 
-        where_conds = ['_deleted = ?']
+        where_conds = []
         if where_clause:
             where_conds.append(where_clause)
         where = ' and '.join(where_conds)
@@ -292,7 +291,8 @@ class CellTable(Table):
 
         sql = f'SELECT _id from {self.name} WHERE {where} ORDER BY {_order_by} {_limit} {_offset}'
 
-        params = (0,) + tuple([_converting(p) for p in where_params])
+        # params = (0,) + tuple([_converting(p) for p in where_params])
+        params = tuple([_converting(p) for p in where_params])
 
         # # EXPLAIN SQL query
         # for row in self._conn.execute('EXPLAIN QUERY PLAN ' + sql, params):
@@ -308,6 +308,7 @@ class CellTable(Table):
         cursor = self._conn.cursor()
 
         try:
+            print(f"we are printing sql: {sql}, {params}")
             offsets = cursor.execute(sql, params).fetchall()
             self._conn.row_factory = None
             return offsets if offsets else []
@@ -320,12 +321,14 @@ class CellTable(Table):
 
         :param doc_ids: The IDs of docs
         """
-        sql = f'UPDATE {self.name} SET _deleted = 1 WHERE _doc_id = ?'
+        # sql = f'UPDATE {self.name} SET _deleted = 1 WHERE _doc_id = ?'
+        sql = f'DELETE {self.name} WHERE _doc_id = ?'
         self._conn.executemany(sql, doc_ids)
         self._conn.commit()
 
     def get_docid_by_offset(self, offset: int):
-        sql = f'SELECT _doc_id from {self.name} WHERE _id = ? and _deleted = 0 LIMIT 1;'
+        # sql = f'SELECT _doc_id from {self.name} WHERE _id = ? and _deleted = 0 LIMIT 1;'
+        sql = f'SELECT _doc_id from {self.name} WHERE _id = ? LIMIT 1;'
         result = self._conn.execute(sql, (offset + 1,)).fetchone()
         if result:
             return result[0]
@@ -336,17 +339,20 @@ class CellTable(Table):
 
         :param offset: The offset of the doc
         """
-        sql = f'UPDATE {self.name} SET _deleted = 1 WHERE _id = ?'
+        # sql = f'UPDATE {self.name} SET _deleted = 1 WHERE _id = ?'
+        sql = f'DELETE FROM {self.name} WHERE _id = ?'
         self._conn.execute(sql, (offset + 1,))
         self._conn.commit()
 
     def undo_delete_by_offset(self, offset: int):
-        sql = f'UPDATE {self.name} SET _deleted = 0 WHERE _id = ?'
+        # sql = f'UPDATE {self.name} SET _deleted = 0 WHERE _id = ?'
+        sql = f'DELETE from {self.name} WHERE _id = ?'
         self._conn.execute(sql, (offset + 1,))
         self._conn.commit()
 
     def exist(self, doc_id: str):
-        sql = f'SELECT count(*) from {self.name} WHERE _deleted = 0 and _doc_id = ?;'
+        # sql = f'SELECT count(*) from {self.name} WHERE _deleted = 0 and _doc_id = ?;'
+        sql = f'SELECT count(*) from {self.name} WHERE _doc_id = ?;'
         return self._conn.execute(sql, (doc_id,)).fetchone()[0] > 0
 
     def count(self, where_clause: str = '', where_params: Tuple = ()):
@@ -358,7 +364,8 @@ class CellTable(Table):
 
         if where_clause:
             sql = 'SELECT count(_id) from {table} WHERE {where} LIMIT 1;'
-            where = f'_deleted = ? and {where_clause}'
+            # where = f'_deleted = ? and {where_clause}'
+            where = where_clause
             sql = sql.format(table=self.name, where=where)
 
             params = (0,) + tuple([_converting(p) for p in where_params])
@@ -368,10 +375,12 @@ class CellTable(Table):
             #     print(row)
             return self._conn.execute(sql, params).fetchone()[0]
         else:
-            sql = f'SELECT MAX(_id) from {self.name} LIMIT 1;'
+            # sql = f'SELECT MAX(_id) from {self.name} LIMIT 1;'
+            sql = f'SELECT count(_id) from {self.name};'
             result = self._conn.execute(sql).fetchone()
             if result[0]:
-                return result[0] - self.deleted_count()
+                # return result[0] - self.deleted_count()
+                return result[0]
             return 0
 
     def deleted_count(self):
@@ -382,6 +391,12 @@ class CellTable(Table):
     @property
     def size(self):
         return self.count()
+
+    def list(self):
+        sql = 'SELECT _doc_id from {table}'
+        sql = sql.format(table=self.name)
+        result = self._conn.execute(sql).fetchone()
+        return result
 
 
 class MetaTable(Table):
@@ -404,25 +419,24 @@ class MetaTable(Table):
                         (_doc_id TEXT NOT NULL PRIMARY KEY,
                          cell_id INTEGER NOT NULL,
                          offset INTEGER NOT NULL,
-                         time_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                         _deleted NUMERIC DEFAULT 0)'''
+                         time_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)'''
 
         self._conn.execute(sql)
 
         self._conn.execute(
             f'CREATE INDEX if not exists idx_time_at_ ON {self.name}(time_at)'
         )
-        self._conn.execute(
-            f'CREATE INDEX if not exists idx__delete_ ON {self.name}(_deleted)'
-        )
+        # self._conn.execute(
+        #     f'CREATE INDEX if not exists idx__delete_ ON {self.name}(_deleted)'
+        # )
 
         self._conn.commit()
 
     def iter_addresses(
         self, time_since: 'datetime.datetime' = datetime.datetime(2020, 2, 2, 0, 0)
     ):
-        sql = f'SELECT _doc_id, cell_id, offset from {self.name} WHERE time_at >= ? AND _deleted = 0 ORDER BY time_at ASC;'
-
+        # sql = f'SELECT _doc_id, cell_id, offset from {self.name} WHERE time_at >= ? AND _deleted = 0 ORDER BY time_at ASC;'
+        sql = f'SELECT _doc_id, cell_id, offset from {self.name} WHERE time_at >= ? ORDER BY time_at ASC;'
         cursor = self._conn.cursor()
         for doc_id, cell_id, offset in cursor.execute(sql, (time_since,)):
             yield doc_id, cell_id, offset
@@ -435,29 +449,33 @@ class MetaTable(Table):
         return row
 
     def get_address(self, doc_id: str):
-        sql = f'SELECT cell_id, offset from {self.name} WHERE _doc_id = ? AND _deleted = 0 LIMIT 1;'
+        # sql = f'SELECT cell_id, offset from {self.name} WHERE _doc_id = ? AND _deleted = 0 LIMIT 1;'
+        sql = f'SELECT cell_id, offset from {self.name} WHERE _doc_id = ? LIMIT 1;'
         cursor = self._conn.execute(sql, (doc_id,))
         row = cursor.fetchone()
         return (row[0], row[1]) if row else (None, None)
 
     def delete_address(self, doc_id: str, commit: bool = True):
-        sql = f'UPDATE {self.name} SET _deleted = 1, time_at = ? WHERE _doc_id = ?'
-        self._conn.execute(
-            sql,
-            (
-                time_now(),
-                doc_id,
-            ),
-        )
+        # sql = f'UPDATE {self.name} SET _deleted = 1, time_at = ? WHERE _doc_id = ?'
+        sql = f'DELETE from {self.name} WHERE _doc_id = ?'
+        # self._conn.execute(
+        #     sql,
+        #     (
+        #         time_now(),
+        #         doc_id,
+        #     ),
+        # )
+        self._conn.execute(sql, (doc_id,))
         print(f'Deleted {doc_id} at: {time_now()}')
         if commit:
             self._conn.commit()
 
     def add_address(self, doc_id: str, cell_id: int, offset: int, commit: bool = True):
-        sql = f'INSERT OR REPLACE INTO {self.name}(_doc_id, cell_id, offset, time_at, _deleted) VALUES (?, ?, ?, ?, ?);'
+        # sql = f'INSERT OR REPLACE INTO {self.name}(_doc_id, cell_id, offset, time_at, _deleted) VALUES (?, ?, ?, ?, ?);'
+        sql = f'INSERT OR REPLACE INTO {self.name}(_doc_id, cell_id, offset, time_at) VALUES (?, ?, ?, ?);'
         self._conn.execute(
             sql,
-            (doc_id, cell_id, offset, time_now(), 0),
+            (doc_id, cell_id, offset, time_now()),
         )
         if commit:
             self._conn.commit()
@@ -469,11 +487,12 @@ class MetaTable(Table):
         offsets: Union[List[int], np.ndarray],
         commit: bool = True,
     ):
-        sql = f'INSERT OR REPLACE INTO {self.name}(_doc_id, cell_id, offset, time_at, _deleted) VALUES (?, ?, ?, ?, ?);'
+        # sql = f'INSERT OR REPLACE INTO {self.name}(_doc_id, cell_id, offset, time_at, _deleted) VALUES (?, ?, ?, ?, ?);'
+        sql = f'INSERT OR REPLACE INTO {self.name}(_doc_id, cell_id, offset, time_at) VALUES (?, ?, ?, ?);'
         self._conn.executemany(
             sql,
             [
-                (doc_id, cell_id, offset, time_now(), 0)
+                (doc_id, cell_id, offset, time_now())
                 for doc_id, cell_id, offset in zip(doc_ids, cell_ids, offsets)
             ],
         )

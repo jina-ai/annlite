@@ -103,8 +103,10 @@ class AnnLiteIndexer(Executor):
             'max_connection': max_connection,
             'data_path': data_path or self.workspace or './workspace',
             'columns': columns,
+            'list_like': False,
         }
         self._index = DocumentArray(storage='annlite', config=config)
+        print(f"we are init, size of cell_table: {self._index._annlite.cell_table(0).size}")
 
         # start indexing thread in background to group indexing requests
         # together and perform batch indexing at once
@@ -298,6 +300,7 @@ class AnnLiteIndexer(Executor):
                     'Please wait for the pending documents to be indexed.'
                 )
             self._index._annlite.backup(target_name, token)
+        print(f"after backup, the size of cell_table: {self._index._annlite.cell_table(0).size}")
         if self._index._list_like:
             self._index._save_offset2ids()
 
