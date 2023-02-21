@@ -286,7 +286,7 @@ class CellTable(Table):
         _limit = f'LIMIT {limit}' if limit > 0 else ''
         _offset = f'OFFSET {offset}' if offset > 0 else ''
 
-        if len(where_conds) > 0 and where:
+        if where:
             sql = f'SELECT _id from {self.name} WHERE {where} ORDER BY {_order_by} {_limit} {_offset}'
         else:
             sql = f'SELECT _id from {self.name} ORDER BY {_order_by} {_limit} {_offset}'
@@ -307,7 +307,7 @@ class CellTable(Table):
         cursor = self._conn.cursor()
 
         try:
-            if len(where_conds) > 0 and where:
+            if where:
                 offsets = cursor.execute(sql, params).fetchall()
             else:
                 offsets = cursor.execute(sql).fetchall()
