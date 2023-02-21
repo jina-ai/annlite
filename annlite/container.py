@@ -105,7 +105,7 @@ class CellContainer:
                 continue
 
             indices = None
-            if where_clause or (cell_table.deleted_count() > 0):
+            if where_clause:
                 indices = cell_table.query(
                     where_clause=where_clause, where_params=where_params
                 )
@@ -340,7 +340,6 @@ class CellContainer:
             _cell_id, _offset = self._meta_table.get_address(doc.id)
             if cell_id == _cell_id:
                 self.vec_index(cell_id).add_with_ids(x.reshape(1, -1), [_offset])
-                self.cell_table(cell_id).undo_delete_by_offset(_offset)
                 self.doc_store(cell_id).update([doc])
                 self.meta_table.add_address(doc.id, cell_id, _offset)
                 update_success += 1
