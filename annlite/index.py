@@ -692,7 +692,8 @@ class AnnLite(CellContainer):
         try:
             if Path.exists(self.index_path):
                 logger.info(
-                    f'Index path {self.index_path} already exists, will be ' f'overwritten'
+                    f'Index path {self.index_path} already exists, will be '
+                    f'overwritten'
                 )
                 shutil.rmtree(self.index_path)
             self.index_path.mkdir(parents=True)
