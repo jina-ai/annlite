@@ -21,6 +21,7 @@
 
 
 
+
 <a name=release-note-0-3-0></a>
 ## Release Note (`0.3.0`)
 
@@ -525,4 +526,23 @@
 ### 🍹 Other Improvements
 
  - [[```68215807```](https://github.com/jina-ai/docarray/commit/68215807953eed366e1d6f48fbbbbc1abebf13ff)] __-__ __version__: the next version will be 0.5.6 (*Jina Dev Bot*)
+
+<a name=release-note-0-5-7></a>
+## Release Note (`0.5.7`)
+
+> Release time: 2023-02-21 12:34:55
+
+
+
+🙇 We'd like to thank all contributors for this new release! In particular,
+ Jie Fu,  Jina Dev Bot,  🙇
+
+
+### 🐞 Bug fixes
+
+ - [[```4a66d0c0```](https://github.com/jina-ai/docarray/commit/4a66d0c06e7497cb94cd18da505a2e309594b20c)] __-__ remove delete tags for cell_table and meta_table (#215) (*Jie Fu*)
+
+### 🍹 Other Improvements
+
+ - [[```eee752fe```](https://github.com/jina-ai/docarray/commit/eee752fe091dc5b5b519bb2aa866cb7d5dc48822)] __-__ __version__: the next version will be 0.5.7 (*Jina Dev Bot*)
 
