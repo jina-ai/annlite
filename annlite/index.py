@@ -689,22 +689,22 @@ class AnnLite(CellContainer):
         import shutil
 
         logger.info(f'Save the indexer to {self.index_path}')
-        # try:
-        if Path.exists(self.index_path):
-            logger.info(
-                f'Index path {self.index_path} already exists, will be ' f'overwritten'
-            )
-            shutil.rmtree(self.index_path)
-        self.index_path.mkdir(parents=True)
+        try:
+            if Path.exists(self.index_path):
+                logger.info(
+                    f'Index path {self.index_path} already exists, will be ' f'overwritten'
+                )
+                shutil.rmtree(self.index_path)
+            self.index_path.mkdir(parents=True)
 
-        for cell_id in range(self.n_cells):
-            self.vec_index(cell_id).dump(self.index_path / f'cell_{cell_id}.hnsw')
-            self.cell_table(cell_id).dump(self.index_path / f'cell_{cell_id}.db')
-        # except Exception as ex:
-        #     logger.error(f'Failed to dump the indexer, {ex!r}')
+            for cell_id in range(self.n_cells):
+                self.vec_index(cell_id).dump(self.index_path / f'cell_{cell_id}.hnsw')
+                self.cell_table(cell_id).dump(self.index_path / f'cell_{cell_id}.db')
+        except Exception as ex:
+            logger.error(f'Failed to dump the indexer, {ex!r}')
 
-        if self.index_path:
-            shutil.rmtree(self.index_path)
+            if self.index_path:
+                shutil.rmtree(self.index_path)
 
     def dump(self):
         self.dump_model()
