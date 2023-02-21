@@ -501,4 +501,3 @@
 ### 🍹 Other Improvements
 
  - [[```f6fdc9d3```](https://github.com/jina-ai/docarray/commit/f6fdc9d34fd8e8de47e7ac68e6813956c2aeebfe)] __-__ __version__: the next version will be 0.5.5 (*Jina Dev Bot*)
-

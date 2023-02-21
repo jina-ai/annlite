@@ -608,8 +608,11 @@ class AnnLite(CellContainer):
                 return date_time.isoformat('#', 'hours')
             return date_time.isoformat('#', 'seconds')
 
-        return datetime.datetime.now().isoformat('#', 'hours') if \
-            platform.system() == 'Windows' else datetime.datetime.now().isoformat('#', 'seconds')
+        return (
+            datetime.datetime.now().isoformat('#', 'hours')
+            if platform.system() == 'Windows'
+            else datetime.datetime.now().isoformat('#', 'seconds')
+        )
 
     @property
     def index_path(self):
@@ -689,8 +692,7 @@ class AnnLite(CellContainer):
         # try:
         if Path.exists(self.index_path):
             logger.info(
-                f'Index path {self.index_path} already exists, will be '
-                f'overwritten'
+                f'Index path {self.index_path} already exists, will be ' f'overwritten'
             )
             shutil.rmtree(self.index_path)
         self.index_path.mkdir(parents=True)

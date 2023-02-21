@@ -308,7 +308,7 @@ class CellTable(Table):
         cursor = self._conn.cursor()
 
         try:
-            print(f"we are printing sql: {sql}, {params}")
+            print(f'we are printing sql: {sql}, {params}')
             offsets = cursor.execute(sql, params).fetchall()
             self._conn.row_factory = None
             return offsets if offsets else []
