@@ -49,6 +49,7 @@ class AnnLiteIndexer(Executor):
         index_access_paths: str = '@r',
         search_access_paths: str = '@r',
         columns: Optional[Union[List[Tuple[str, str]], Dict[str, str]]] = None,
+        list_like: Optional[bool] = False,
         dim: int = None,
         *args,
         **kwargs,
@@ -103,7 +104,7 @@ class AnnLiteIndexer(Executor):
             'max_connection': max_connection,
             'data_path': data_path or self.workspace or './workspace',
             'columns': columns,
-            'list_like': False,
+            'list_like': list_like,
         }
         self._index = DocumentArray(storage='annlite', config=config)
 
