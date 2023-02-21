@@ -134,6 +134,3 @@ def test_create_meta_table(tmpdir):
     table.delete_address('0')
     addresses = list(table.iter_addresses(time_since=time_since))
     assert addresses == []
-
-    # addr = table.get_latest_commit()
-    # assert addr[-1] >= time_since

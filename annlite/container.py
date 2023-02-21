@@ -105,7 +105,6 @@ class CellContainer:
                 continue
 
             indices = None
-            # if where_clause or (cell_table.deleted_count() > 0):
             if where_clause:
                 indices = cell_table.query(
                     where_clause=where_clause, where_params=where_params
