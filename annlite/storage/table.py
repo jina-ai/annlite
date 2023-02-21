@@ -277,15 +277,19 @@ class CellTable(Table):
         """
 
         where_conds = []
+        where = None
         if where_clause:
             where_conds.append(where_clause)
-        where = ' and '.join(where_conds)
+            where = ' and '.join(where_conds)
 
         _order_by = f'{order_by or "_id"} {"ASC" if ascending else "DESC"}'
         _limit = f'LIMIT {limit}' if limit > 0 else ''
         _offset = f'OFFSET {offset}' if offset > 0 else ''
 
-        sql = f'SELECT _id from {self.name} WHERE {where} ORDER BY {_order_by} {_limit} {_offset}'
+        if len(where_conds) > 0 and where:
+            sql = f'SELECT _id from {self.name} WHERE {where} ORDER BY {_order_by} {_limit} {_offset}'
+        else:
+            sql = f'SELECT _id from {self.name} ORDER BY {_order_by} {_limit} {_offset}'
 
         params = tuple([_converting(p) for p in where_params])
 
@@ -303,7 +307,10 @@ class CellTable(Table):
         cursor = self._conn.cursor()
 
         try:
-            offsets = cursor.execute(sql, params).fetchall()
+            if len(where_conds) > 0 and where:
+                offsets = cursor.execute(sql, params).fetchall()
+            else:
+                offsets = cursor.execute(sql).fetchall()
             self._conn.row_factory = None
             return offsets if offsets else []
         except Exception as e:
