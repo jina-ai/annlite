@@ -606,8 +606,14 @@ class AnnLite(CellContainer):
             if platform.system() == 'Windows':
                 return date_time.isoformat('#', 'hours')
             return date_time.isoformat('#', 'seconds')
+        else:
+            import datetime
 
-        return None
+            return (
+                datetime.datetime.utcnow().isoformat('#', 'hours')
+                if platform.system() == 'Windows'
+                else datetime.datetime.utcnow().isoformat('#', 'seconds')
+            )
 
     @property
     def index_path(self):
