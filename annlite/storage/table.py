@@ -392,12 +392,6 @@ class CellTable(Table):
     def size(self):
         return self.count()
 
-    def list(self):
-        sql = 'SELECT _doc_id from {table}'
-        sql = sql.format(table=self.name)
-        result = self._conn.execute(sql).fetchone()
-        return result
-
 
 class MetaTable(Table):
     def __init__(
