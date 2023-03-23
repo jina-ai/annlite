@@ -392,7 +392,6 @@ class CellContainer:
 
         for doc_id in ids:
             cell_id, offset = self._meta_table.get_address(doc_id)
-            print(f'{doc_id} {cell_id} {offset}')
             if cell_id is not None:
                 self.vec_index(cell_id).delete([offset])
                 self.cell_table(cell_id).delete_by_offset(offset)

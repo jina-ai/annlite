@@ -111,8 +111,13 @@ class DocStorage:
                 '`DocStorage` had been closed already, will skip this close operation.'
             )
             return
-        self._db.flush(wait=True)
-        self._db.close()
+        try:
+            self._db.flush(wait=True)
+            self._db.close()
+        except Exception as ex:
+            if 'No such file or directory' not in str(ex):
+                # this is a known bug, we can safely ignore it
+                raise ex
         self._is_closed = True
 
     def __len__(self):
