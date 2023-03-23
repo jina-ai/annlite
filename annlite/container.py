@@ -83,7 +83,7 @@ class CellContainer:
             CellTable(f'table_{c}', columns=columns) for c in range(n_cells)
         ]
 
-        self._meta_table = MetaTable('metas', data_path=data_path, in_memory=False)
+        self._meta_table = MetaTable('metas', data_path=data_path, in_memory=True)
 
     def ivf_search(
         self,
@@ -280,10 +280,11 @@ class CellContainer:
             offsets = np.array(offsets, dtype=np.int64)
 
             self.vec_index(cell_id).add_with_ids(data, offsets)
+            self._meta_table.bulk_add_address([d.id for d in docs], cells, offsets)
 
             if not only_index:
                 self.doc_store(cell_id).insert(docs)
-                self._meta_table.bulk_add_address([d.id for d in docs], cells, offsets)
+
         else:
             for cell_id, cell_count in zip(unique_cells, unique_cell_counts):
                 # TODO: Jina should allow boolean filtering in docarray to avoid this
@@ -297,12 +298,13 @@ class CellContainer:
                 cell_data = data[indices, :]
 
                 self.vec_index(cell_id).add_with_ids(cell_data, cell_offsets)
+                self._meta_table.bulk_add_address(
+                    [d.id for d in cell_docs], [cell_id] * cell_count, cell_offsets
+                )
 
                 if not only_index:
                     self.doc_store(cell_id).insert(cell_docs)
-                    self._meta_table.bulk_add_address(
-                        [d.id for d in cell_docs], [cell_id] * cell_count, cell_offsets
-                    )
+
         logger.debug(f'{len(docs)} new docs added')
 
     def _add_vecs(self, data: 'np.ndarray', cells: 'np.ndarray', offsets: 'np.ndarray'):
