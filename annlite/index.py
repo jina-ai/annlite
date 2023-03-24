@@ -753,7 +753,7 @@ class AnnLite(CellContainer):
             Path(self.index_path) / 'meta.db',
             target_name=target_name,
             type='meta_table',
-            cell_id='all',
+            cell_id=0,
         )
 
         # upload training model
@@ -857,7 +857,9 @@ class AnnLite(CellContainer):
                 # download database files and rebuild
                 logger.info(f'Load the database `{source_name}` from remote store')
 
-                database_ids = merger.get_artifact_ids(art_list, type='database')
+                database_ids = merger.get_artifact_ids(
+                    art_list, type='database', cell_id=cell_id
+                )
                 merger.download(ids=database_ids, download_folder='database')
                 for zip_file in list((restore_path / 'database').iterdir()):
                     # default has only one cell
@@ -881,12 +883,14 @@ class AnnLite(CellContainer):
                         / zip_file.name.split('.zip')[0]
                     )
                     Path(zip_file).unlink()
-                self._rebuild_database()
+            self._rebuild_database()
 
             # download meta_table files
             logger.info(f'Load the meta_table `{source_name}` from remote store')
 
-            meta_table_ids = merger.get_artifact_ids(art_list, type='meta_table')
+            meta_table_ids = merger.get_artifact_ids(
+                art_list, type='meta_table', cell_id=0
+            )
             merger.download(ids=meta_table_ids, download_folder='meta_table')
 
             if len(meta_table_ids) > 1:
