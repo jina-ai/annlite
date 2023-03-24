@@ -299,6 +299,7 @@ def test_local_backup_restore(tmpdir):
     assert int(status['index_size']) == N
 
 
+@pytest.mark.skip(reason='This test requires a running hubble instance')
 def test_remote_backup_restore(tmpdir):
     X = np.random.random((N, D))
     docs = DocumentArray([Document(id=f'{i}', embedding=X[i]) for i in range(N)])

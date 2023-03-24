@@ -431,7 +431,6 @@ class MetaTable(Table):
     def delete_address(self, doc_id: str, commit: bool = True):
         sql = f'DELETE from {self.name} WHERE _doc_id = ?'
         self._conn.execute(sql, (doc_id,))
-        print(f'Deleted {doc_id} at: {time_now()}')
         if commit:
             self._conn.commit()
 
