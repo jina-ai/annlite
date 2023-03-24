@@ -424,7 +424,7 @@ class CellContainer:
             )
             for _ in range(self.n_cells)
         ]
-        self._meta_table = MetaTable('metas', data_path=self.data_path, in_memory=False)
+        # self._meta_table = MetaTable('metas', data_path=self.data_path, in_memory=False)
 
     def _get_doc_by_id(self, doc_id: str):
         cell_id = 0

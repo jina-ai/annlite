@@ -750,7 +750,7 @@ class AnnLite(CellContainer):
 
         # upload meta table
         uploader.upload_file(
-            Path(self.data_path) / 'metas.db',
+            Path(self.index_path) / 'meta.db',
             target_name=target_name,
             type='meta_table',
             cell_id='all',
@@ -892,23 +892,10 @@ class AnnLite(CellContainer):
             if len(meta_table_ids) > 1:
                 merger.merge_file(
                     inputdir=restore_path / 'meta_table',
-                    outputdir=self.data_path,
-                    outputfilename=Path('metas.db'),
+                    outputdir=restore_path / 'meta_table',
+                    outputfilename=Path('meta.db'),
                 )
-            else:
-                mata_table_file = restore_path / 'meta_table' / 'metas.db'
-                if platform.system() == 'Windows':
-                    origin_metas_path = self.data_path / 'metas.db'
-                    if origin_metas_path.exists():
-                        self._meta_table.close()
-                        origin_metas_path.unlink()
-                mata_table_file.rename(self.data_path / 'metas.db')
-                if platform.system() == 'Windows':
-                    from .storage.table import MetaTable
-
-                    self._meta_table = MetaTable(
-                        'metas', data_path=self.data_path, in_memory=False
-                    )
+            self._meta_table.load(restore_path / 'meta_table' / 'meta.db')
             shutil.rmtree(restore_path / 'meta_table')
 
             # download model files
