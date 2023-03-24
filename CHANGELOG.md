@@ -22,6 +22,7 @@
 
 
 
+
 <a name=release-note-0-3-0></a>
 ## Release Note (`0.3.0`)
 
@@ -545,4 +546,24 @@
 ### 🍹 Other Improvements
 
  - [[```eee752fe```](https://github.com/jina-ai/docarray/commit/eee752fe091dc5b5b519bb2aa866cb7d5dc48822)] __-__ __version__: the next version will be 0.5.7 (*Jina Dev Bot*)
+
+<a name=release-note-0-5-8></a>
+## Release Note (`0.5.8`)
+
+> Release time: 2023-03-24 11:13:35
+
+
+
+🙇 We'd like to thank all contributors for this new release! In particular,
+ felix-wang,  YangXiuyu,  Jina Dev Bot,  🙇
+
+
+### 🐞 Bug fixes
+
+ - [[```bfeb7e94```](https://github.com/jina-ai/docarray/commit/bfeb7e94c879db263dc4931b54b6b87dac09df81)] __-__ delete and update (#222) (*felix-wang*)
+ - [[```7783b30f```](https://github.com/jina-ai/docarray/commit/7783b30fd55a10bd2dd0c75dc0451f0fe1834927)] __-__ __hnsw__: bump hnswlib to v0.6.2 (#185) (*YangXiuyu*)
+
+### 🍹 Other Improvements
+
+ - [[```4c145ddd```](https://github.com/jina-ai/docarray/commit/4c145ddd19abb4caec479941d1c0ffb03c4cfcf3)] __-__ __version__: the next version will be 0.5.8 (*Jina Dev Bot*)
 
