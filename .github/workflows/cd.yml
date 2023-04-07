@@ -91,6 +91,7 @@ jobs:
           pip install jina
           pip install --pre docarray
           pip install pytest pytest-html pytest-cov pytest-mock pytest-repeat pytest-custom-exit-code pytest-timeout pytest-reraise
+          export JINA_HIDE_SURVEY=1
       - uses: actions/download-artifact@v3
         with:
           name: artifact
