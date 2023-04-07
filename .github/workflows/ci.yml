@@ -104,6 +104,8 @@ jobs:
         python-version: [3.7]
         cibw_arch: ["auto64"]
         test-path: ${{fromJson(needs.prep-testbed.outputs.matrix)}}
+    env:
+      JINA_HIDE_SURVEY: "1"
     steps:
       - name: Set up Python ${{ matrix.python-version }}
         uses: actions/setup-python@v3
@@ -116,7 +118,6 @@ jobs:
           pip install jina
           pip install --pre docarray
           pip install pytest pytest-html pytest-cov pytest-mock pytest-repeat pytest-custom-exit-code pytest-timeout pytest-reraise
-          export JINA_HIDE_SURVEY=1
       - name: Build wheel
         uses: pypa/cibuildwheel@v2.10.2
         with:
