@@ -23,6 +23,7 @@
 
 
 
+
 <a name=release-note-0-3-0></a>
 ## Release Note (`0.3.0`)
 
@@ -566,4 +567,23 @@
 ### 🍹 Other Improvements
 
  - [[```4c145ddd```](https://github.com/jina-ai/docarray/commit/4c145ddd19abb4caec479941d1c0ffb03c4cfcf3)] __-__ __version__: the next version will be 0.5.8 (*Jina Dev Bot*)
+
+<a name=release-note-0-5-9></a>
+## Release Note (`0.5.9`)
+
+> Release time: 2023-04-07 04:16:28
+
+
+
+🙇 We'd like to thank all contributors for this new release! In particular,
+ felix-wang,  Jina Dev Bot,  🙇
+
+
+### 🐞 Bug fixes
+
+ - [[```ab807ff6```](https://github.com/jina-ai/docarray/commit/ab807ff69e533ec90e0b0f6c782749267324d177)] __-__ bump rocksdb &gt;= 0.3.9 (#225) (*felix-wang*)
+
+### 🍹 Other Improvements
+
+ - [[```3668c3fa```](https://github.com/jina-ai/docarray/commit/3668c3fa6f7a2d2af39549987637e11e385a75bb)] __-__ __version__: the next version will be 0.5.9 (*Jina Dev Bot*)
 
