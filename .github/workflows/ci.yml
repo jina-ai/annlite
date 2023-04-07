@@ -104,6 +104,8 @@ jobs:
         python-version: [3.7]
         cibw_arch: ["auto64"]
         test-path: ${{fromJson(needs.prep-testbed.outputs.matrix)}}
+    env:
+      JINA_HIDE_SURVEY: "1"
     steps:
       - name: Set up Python ${{ matrix.python-version }}
         uses: actions/setup-python@v3

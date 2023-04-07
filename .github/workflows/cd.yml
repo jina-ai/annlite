@@ -77,6 +77,8 @@ jobs:
         cibw_arch: [ "auto64" ]
         python-version: [ [ '3.7', "cp37-*" ] ]
         test-path: ${{fromJson(needs.prep-testbed.outputs.matrix)}}
+    env:
+      JINA_HIDE_SURVEY: "1"
     steps:
       - uses: actions/checkout@v3
         with:

@@ -53,7 +53,7 @@ class DocStorage:
     def insert(self, docs: 'DocumentArray'):
         write_batch = WriteBatch(raw_mode=True)
         write_opt = WriteOptions()
-        write_opt.set_sync(True)
+        write_opt.sync = True
         batch_size = 0
         for doc in docs:
             write_batch.put(doc.id.encode(), doc.to_bytes(**self._serialize_config))
@@ -64,7 +64,7 @@ class DocStorage:
     def update(self, docs: 'DocumentArray'):
         write_batch = WriteBatch(raw_mode=True)
         write_opt = WriteOptions()
-        write_opt.set_sync(True)
+        write_opt.sync = True
         for doc in docs:
             key = doc.id.encode()
             if key not in self._db:
@@ -76,7 +76,7 @@ class DocStorage:
     def delete(self, doc_ids: List[str]):
         write_batch = WriteBatch(raw_mode=True)
         write_opt = WriteOptions()
-        write_opt.set_sync(True)
+        write_opt.sync = True
         for doc_id in doc_ids:
             write_batch.delete(doc_id.encode())
         self._db.write(write_batch, write_opt=write_opt)
@@ -139,7 +139,7 @@ class DocStorage:
         count = 0
         docs = DocumentArray()
 
-        read_opt = ReadOptions(raw_mode=True)
+        read_opt = ReadOptions()
 
         for value in self._db.values(read_opt=read_opt):
             doc = Document.from_bytes(value, **self._serialize_config)
