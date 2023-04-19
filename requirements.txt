@@ -1,7 +1,7 @@
 click
 cython
-docarray>=0.13.16
-docarray[common]>=0.13.16
+docarray>=0.13.16,<0.30.0
+docarray[common]>=0.13.16,<0.30.0
 filesplit
 loguru
 numpy
