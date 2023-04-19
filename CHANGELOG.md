@@ -24,6 +24,7 @@
 
 
 
+
 <a name=release-note-0-3-0></a>
 ## Release Note (`0.3.0`)
 
@@ -586,4 +587,20 @@
 ### 🍹 Other Improvements
 
  - [[```3668c3fa```](https://github.com/jina-ai/docarray/commit/3668c3fa6f7a2d2af39549987637e11e385a75bb)] __-__ __version__: the next version will be 0.5.9 (*Jina Dev Bot*)
+
+<a name=release-note-0-5-10></a>
+## Release Note (`0.5.10`)
+
+> Release time: 2023-04-19 03:12:50
+
+
+
+🙇 We'd like to thank all contributors for this new release! In particular,
+ Jie Fu,  Jina Dev Bot,  🙇
+
+
+### 🍹 Other Improvements
+
+ - [[```d55d544e```](https://github.com/jina-ai/docarray/commit/d55d544e876653bb47e79e2dd00f859c3ef00ffa)] __-__ bumping docarray (#227) (*Jie Fu*)
+ - [[```86057c69```](https://github.com/jina-ai/docarray/commit/86057c69401e2b6d63822be2c3c3a0f63d4661a6)] __-__ __version__: the next version will be 0.5.10 (*Jina Dev Bot*)
 
