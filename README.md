@@ -32,9 +32,6 @@ It allows to search for nearest neighbors in a dataset of millions of points wit
 
 - 🔎 **Filterable**: the library allows you to search for nearest neighbors within a subset of the dataset.
 
-- 🍱 **Integration**: Smooth integration with neural search ecosystem including [Jina](https://github.com/jina-ai/jina) and [DocArray](https://github.com/jina-ai/docarray),
-    so that users can easily expose search API with **gRPC** and/or **HTTP**.
-
 The library is easy to install and use. It is designed to be used with Python.
 
 <!---
@@ -55,28 +52,14 @@ or install from source:
 python setup.py install
 ```
 
-## Quick start
-
-Before you start, you need to know some experience about [DocArray](https://github.com/jina-ai/docarray).
-`AnnLite` is designed to be used with [DocArray](https://github.com/jina-ai/docarray), so you need to know how to use `DocArray` first.
-
-For example, you can create a `DocArray` with `1000` random vectors with `128` dimensions:
-
-```python
-from docarray import DocumentArray
-import numpy as np
-
-docs = DocumentArray.empty(1000)
-docs.embeddings = np.random.random([1000, 128]).astype(np.float32)
-```
-
-
 ### Index
 
 Then you can create an `AnnIndexer` to index the created `docs` and search for nearest neighbors:
 
 ```python
 from annlite import AnnLite
+
+docs = [{'id': '0', 'embedding': [], 'price': 8}]
 
 ann = AnnLite(128, metric='cosine', data_path="/tmp/annlite_data")
 ann.index(docs)
@@ -91,36 +74,13 @@ And if you want to create a new index, you can delete the directory first.
 Then you can search for nearest neighbors for some query docs with `ann.search()`:
 
 ```python
-query = DocumentArray.empty(5)
-query.embeddings = np.random.random([5, 128]).astype(np.float32)
+query = []
 
 result = ann.search(query)
 ```
 
 Then, you can inspect the retrieved docs for each query doc inside `query` matches:
 ```python
-for q in query:
-    print(f'Query {q.id}')
-    for k, m in enumerate(q.matches):
-        print(f'{k}: {m.id} {m.scores["cosine"]}')
-```
-
-```bash
-Query ddbae2073416527bad66ff186543eff8
-0: 47dcf7f3fdbe3f0b8d73b87d2a1b266f {'value': 0.17575037}
-1: 7f2cbb8a6c2a3ec7be024b750964f317 {'value': 0.17735684}
-2: 2e7eed87f45a87d3c65c306256566abb {'value': 0.17917466}
-Query dda90782f6514ebe4be4705054f74452
-0: 6616eecba99bd10d9581d0d5092d59ce {'value': 0.14570713}
-1: d4e3147fc430de1a57c9883615c252c6 {'value': 0.15338594}
-2: 5c7b8b969d4381f405b8f07bc68f8148 {'value': 0.15743542}
-...
-```
-
-Or shorten the loop as one-liner using the element & attribute selector:
-
-```python
-print(query['@m', ('id', 'scores__cosine')])
 ```
 
 ### Query
@@ -150,8 +110,7 @@ docs = ann.get_docs(limit=10, offset=0, order_by='x', ascending=True)
 After you have indexed the `docs`, you can update the docs in the index by calling `ann.update()`:
 
 ```python
-updated_docs = docs.sample(10)
-updated_docs.embeddings = np.random.random([10, 128]).astype(np.float32)
+updated_docs = [{'id': '0', 'embedding': [], 'price': 6}]
 
 ann.update(updated_docs)
 ```
@@ -162,7 +121,7 @@ ann.update(updated_docs)
 And finally, you can delete the docs from the index by calling `ann.delete()`:
 
 ```python
-to_delete = docs.sample(10)
+to_delete = [{'id': '0'}]
 ann.delete(to_delete)
 ```
 
@@ -384,41 +343,6 @@ Note that:
 - `% same filter`  indicates the amount of data that verifies a filter in the database.
     - For example, if `% same filter = 10` and `Stored data = 1_000_000` then it means `100_000` example verify the filter.
 
-
-## Next steps
-
-If you already have experience with Jina and DocArray, you can start using `AnnLite` right away.
-
-Otherwise, you can check out this advanced tutorial to learn how to use `AnnLite`: [here]() in practice.
-
-
-## 🙋 FAQ
-
-**1. Why should I use `AnnLite`?**
-
-`AnnLite` is easy to use and intuitive to set up in production. It is also very fast and memory efficient, making it a great choice for approximate nearest neighbor search.
-
-**2. How do I use `AnnLite` with Jina?**
-
-We have implemented an executor for `AnnLite` that can be used with Jina.
-
-```python
-from jina import Flow
-
-with Flow().add(uses='jinahub://AnnLiteIndexer', uses_with={'n_dim': 128}) as f:
-    f.post('/index', inputs=docs)
-```
-
-3. Does `AnnLite` support search with filters?
-
-```text
-Yes.
-```
-
-
-## Documentation
-
-You can find the documentation on [Github]() and [ReadTheDocs]()
 
 ## 🤝 Contribute and spread the word
 
