@@ -1,9 +1,7 @@
-import time
 import warnings
 from pathlib import Path
 from typing import Dict, List, Union
 
-from docarray import Document, DocumentArray
 from rocksdict import Options, Rdict, ReadOptions, WriteBatch, WriteOptions
 
 
@@ -50,27 +48,30 @@ class DocStorage:
 
         self._is_closed = False
 
-    def insert(self, docs: 'DocumentArray'):
+    def insert(self, docs: 'List'):
         write_batch = WriteBatch(raw_mode=True)
         write_opt = WriteOptions()
         write_opt.sync = True
         batch_size = 0
         for doc in docs:
-            write_batch.put(doc.id.encode(), doc.to_bytes(**self._serialize_config))
+            #TODO: How to serialize a dict
+            #write_batch.put(doc.id.encode(), doc.to_bytes(**self._serialize_config))
+            write_batch.put(doc['id'].encode(), bytes(doc))
             batch_size += 1
         self._db.write(write_batch, write_opt=write_opt)
         self._size += batch_size
 
-    def update(self, docs: 'DocumentArray'):
+    def update(self, docs: 'List'):
         write_batch = WriteBatch(raw_mode=True)
         write_opt = WriteOptions()
         write_opt.sync = True
         for doc in docs:
-            key = doc.id.encode()
+            key = doc['id'].encode()
             if key not in self._db:
-                raise ValueError(f'The Doc ({doc.id}) does not exist in database!')
+                raise ValueError(f'The Doc ({doc["id"]}) does not exist in database!')
 
-            write_batch.put(key, doc.to_bytes(**self._serialize_config))
+            #write_batch.put(key, doc.to_bytes(**self._serialize_config))
+            write_batch.put(key, bytes(doc))
         self._db.write(write_batch, write_opt=write_opt)
 
     def delete(self, doc_ids: List[str]):
@@ -82,14 +83,15 @@ class DocStorage:
         self._db.write(write_batch, write_opt=write_opt)
         self._size -= len(doc_ids)
 
-    def get(self, doc_ids: Union[str, list]) -> DocumentArray:
-        docs = DocumentArray()
+    def get(self, doc_ids: Union[str, list]) -> List:
+        docs = []
         if isinstance(doc_ids, str):
             doc_ids = [doc_ids]
 
         for doc_bytes in self._db[[k.encode() for k in doc_ids]]:
             if doc_bytes:
-                docs.append(Document.from_bytes(doc_bytes, **self._serialize_config))
+                #docs.append(Document.from_bytes(doc_bytes, **self._serialize_config))
+                docs.append(doc_bytes)
 
         return docs
 
@@ -135,21 +137,21 @@ class DocStorage:
     def last_transaction_id(self):
         return self._db.latest_sequence_number()
 
-    def batched_iterator(self, batch_size: int = 1, **kwargs) -> 'DocumentArray':
+    def batched_iterator(self, batch_size: int = 1, **kwargs) -> 'List':
         count = 0
-        docs = DocumentArray()
+        docs = []
 
         read_opt = ReadOptions()
 
         for value in self._db.values(read_opt=read_opt):
-            doc = Document.from_bytes(value, **self._serialize_config)
-            docs.append(doc)
+            #doc = Document.from_bytes(value, **self._serialize_config)
+            docs.append(value)
             count += 1
 
             if count == batch_size:
                 yield docs
                 count = 0
-                docs = DocumentArray()
+                docs = []
 
         if count > 0:
             yield docs

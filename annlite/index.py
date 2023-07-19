@@ -7,11 +7,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Dict, List, Optional, Union
 
 import numpy as np
-from docarray.math.ndarray import to_numpy_array
 from loguru import logger
-
-if TYPE_CHECKING:
-    from docarray import DocumentArray
 
 from .container import CellContainer
 from .core import PQCodec, ProjectorCodec, VQCodec
@@ -271,7 +267,7 @@ class AnnLite(CellContainer):
         if auto_save:
             self.dump_model()
 
-    def index(self, docs: 'DocumentArray', **kwargs):
+    def index(self, docs: 'List', **kwargs):
         """Add the documents to the index.
 
         :param docs: the document array to be indexed.
@@ -284,7 +280,9 @@ class AnnLite(CellContainer):
         if not self.is_trained:
             raise RuntimeError(f'The indexer is not trained, cannot add new documents')
 
-        x = to_numpy_array(docs.embeddings)
+        # TODO: Obtain the embeddings from the dict or change index signature
+        #x = to_numpy_array(docs.embeddings)
+        x = None
         n_data, _ = self._sanity_check(x)
 
         assigned_cells = (
@@ -296,7 +294,7 @@ class AnnLite(CellContainer):
 
     def update(
         self,
-        docs: 'DocumentArray',
+        docs: 'List',
         raise_errors_on_not_found: bool = False,
         insert_if_not_found: bool = True,
         **kwargs,
@@ -314,7 +312,9 @@ class AnnLite(CellContainer):
         if not self.is_trained:
             raise RuntimeError(f'The indexer is not trained, cannot add new documents')
 
-        x = to_numpy_array(docs.embeddings)
+        # TODO: Obtain the embeddings from the dict or change index signature
+        #x = to_numpy_array(docs.embeddings)
+        x = None
         n_data, _ = self._sanity_check(x)
 
         assigned_cells = (
@@ -333,7 +333,7 @@ class AnnLite(CellContainer):
 
     def search(
         self,
-        docs: 'DocumentArray',
+        docs: 'List',
         filter: Optional[dict] = None,
         limit: int = 10,
         include_metadata: bool = True,
@@ -349,7 +349,9 @@ class AnnLite(CellContainer):
         if not self.is_trained:
             raise RuntimeError(f'The indexer is not trained, cannot add new documents')
 
-        query_np = to_numpy_array(docs.embeddings)
+        # TODO: Obtain the embeddings from the dict or change index signature
+        #query_np = to_numpy_array(docs.embeddings)
+        query_np = None
 
         match_dists, match_docs = self.search_by_vectors(
             query_np, filter=filter, limit=limit, include_metadata=include_metadata
@@ -523,7 +525,7 @@ class AnnLite(CellContainer):
 
     def delete(
         self,
-        docs: Union['DocumentArray', List[str]],
+        docs: Union['List[Dict]', List[str]],
         raise_errors_on_not_found: bool = False,
     ):
         """Delete entries from the index by id
@@ -532,9 +534,10 @@ class AnnLite(CellContainer):
         :param docs: the documents to delete
         """
 
-        super().delete(
-            docs if isinstance(docs, list) else docs[:, 'id'], raise_errors_on_not_found
-        )
+        if len(docs) > 0:
+            super().delete(
+                docs if isinstance(docs[0], str) else [doc['id'] for doc in docs], raise_errors_on_not_found
+            )
 
     def clear(self):
         """Clear the whole database"""

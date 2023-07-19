@@ -3,7 +3,6 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Dict, List, Optional, Tuple
 
 import numpy as np
-from docarray import Document, DocumentArray
 from loguru import logger
 
 if TYPE_CHECKING:
@@ -154,7 +153,7 @@ class CellContainer:
         ascending: bool = True,
         include_metadata: bool = False,
     ):
-        result = DocumentArray()
+        result = []
         if len(cells) > 1 and offset > 0:
             raise ValueError('Offset is not supported for multiple cells')
 
@@ -178,7 +177,7 @@ class CellContainer:
 
             for offset in indices:
                 doc_id = self.cell_table(cell_id).get_docid_by_offset(offset)
-                doc = Document(id=doc_id)
+                doc = dict(id=doc_id)
                 if include_metadata or (len(cells) > 1 and order_by):
                     doc = self.doc_store(cell_id).get([doc_id])[0]
 
@@ -194,7 +193,6 @@ class CellContainer:
             )
             if limit > 0:
                 result = result[:limit]
-            result = DocumentArray(result)
 
         return result
 
@@ -222,9 +220,9 @@ class CellContainer:
             )
 
             topk_dists.append(dists)
-            match_docs = DocumentArray()
+            match_docs = []
             for dist, doc_id, cell_id in zip(dists, doc_ids, cells):
-                doc = Document(id=doc_id)
+                doc = dict(id=doc_id)
                 if include_metadata:
                     doc = self.doc_store(cell_id).get([doc_id])[0]
 
@@ -263,7 +261,7 @@ class CellContainer:
         self,
         data: 'np.ndarray',
         cells: 'np.ndarray',
-        docs: 'DocumentArray',
+        docs: 'List[Dict]',
         only_index: bool = False,
     ):
         assert len(docs) == len(data)
@@ -280,7 +278,7 @@ class CellContainer:
             offsets = np.array(offsets, dtype=np.int64)
 
             self.vec_index(cell_id).add_with_ids(data, offsets)
-            self._meta_table.bulk_add_address([d.id for d in docs], cells, offsets)
+            self._meta_table.bulk_add_address([d['id'] for d in docs], cells, offsets)
 
             if not only_index:
                 self.doc_store(cell_id).insert(docs)
@@ -324,7 +322,7 @@ class CellContainer:
         self,
         data: 'np.ndarray',
         cells: 'np.ndarray',
-        docs: 'DocumentArray',
+        docs: 'List[Dict]',
         insert_if_not_found: bool = True,
         raise_errors_on_not_found: bool = False,
     ):
@@ -339,21 +337,21 @@ class CellContainer:
             doc,
             cell_id,
         ) in zip(data, docs, cells):
-            _cell_id, _offset = self._meta_table.get_address(doc.id)
+            _cell_id, _offset = self._meta_table.get_address(doc['id'])
             if cell_id == _cell_id:
                 self.vec_index(cell_id).add_with_ids(x.reshape(1, -1), [_offset])
                 self.doc_store(cell_id).update([doc])
-                self.meta_table.add_address(doc.id, cell_id, _offset)
+                self.meta_table.add_address(doc['id'], cell_id, _offset)
                 update_success += 1
             elif _cell_id is None:
                 if raise_errors_on_not_found and not insert_if_not_found:
                     raise Exception(
-                        f'The document (id={doc.id}) cannot be updated as'
+                        f'The document (id={doc["id"]}) cannot be updated as'
                         f'it is not found in the index'
                     )
                 elif not (raise_errors_on_not_found or insert_if_not_found):
                     warnings.warn(
-                        f'The document (id={doc.id}) cannot be updated as '
+                        f'The document (id={doc["id"]}) cannot be updated as '
                         f'it is not found in the index',
                         RuntimeWarning,
                     )

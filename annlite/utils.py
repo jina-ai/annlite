@@ -2,7 +2,6 @@ import os
 import shutil
 
 import numpy as np
-from docarray import Document, DocumentArray
 
 
 def clean_workspace():
@@ -11,30 +10,6 @@ def clean_workspace():
 
     if os.path.exists('./workspace'):
         shutil.rmtree('./workspace')
-
-
-def docs_with_tags(N, D, probs, categories):
-
-    all_docs = []
-    start_current = 0
-    for k, prob in enumerate(probs):
-        n_current = int(N * prob)
-        X = np.random.random((n_current, D)).astype(np.float32)
-
-        docs = [
-            Document(
-                embedding=X[i],
-                id=f'{i+start_current}',
-                tags={
-                    'category': categories[k],
-                },
-            )
-            for i in range(n_current)
-        ]
-        all_docs.extend(docs)
-        start_current += n_current
-
-    return DocumentArray(all_docs)
 
 
 def _precision(predicted, relevant, eval_at):
