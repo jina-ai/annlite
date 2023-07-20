@@ -45,10 +45,10 @@ def test_update_legal(annlite_with_data):
     updated_docs = [dict(id=f'{i}', embedding=updated_X[i], x=random.random()) for i in range(Nt)]
 
     index.update(updated_docs)
-    index.search(updated_docs)
+    matches = index.search(updated_docs)
     for i in range(Nt):
         np.testing.assert_array_almost_equal(
-            updated_docs[i]['embedding'], updated_docs[i].matches[0]['embedding'], decimal=5
+            updated_docs[i]['embedding'], matches[i][0]['embedding'], decimal=5
         )
 
 

@@ -49,10 +49,10 @@ def test_query(projector_annlite_with_data):
     X = np.random.random((5, n_features)).astype(np.float32)  # a 128-dim query vector
     query = [dict(embedding=X[i]) for i in range(5)]
 
-    indexer.search(query)
+    matches = indexer.search(query)
 
-    for i in range(len(query[0].matches) - 1):
+    for i in range(len(matches[0]) - 1):
         assert (
-            query[0].matches[i]['scores']['euclidean']
-            <= query[0].matches[i + 1]['scores']['euclidean']
+            matches[0][i]['scores']['euclidean']
+            <= matches[0][i + 1]['scores']['euclidean']
         )

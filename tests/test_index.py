@@ -112,26 +112,26 @@ def test_query(annlite_with_data):
     X = np.random.random((Nq, D)).astype(np.float32)  # a 128-dim query vector
     query = [dict(embedding=X[i]) for i in range(5)]
 
-    annlite_with_data.search(query)
+    matches = annlite_with_data.search(query)
 
-    for i in range(len(query[0].matches) - 1):
+    for i in range(len(matches[0]) - 1):
         assert (
-            query[0].matches[i]['scores']['euclidean']
-            <= query[0].matches[i + 1]['scores']['euclidean']
+            matches[0][i]['scores']['euclidean']
+            <= matches[0][i + 1]['scores']['euclidean']
         )
 
 
 def test_index_query_with_filtering_sorted_results(annlite_with_data):
     X = np.random.random((Nq, D)).astype(np.float32)
     query = [dict(embedding=X[i]) for i in range(5)]
-    annlite_with_data.search(query, filter={'x': {'$gt': 0.6}}, include_metadata=True)
+    matches = annlite_with_data.search(query, filter={'x': {'$gt': 0.6}}, include_metadata=True)
 
-    for i in range(len(query[0].matches) - 1):
+    for i in range(len(matches[0]) - 1):
         assert (
-            query[0].matches[i]['scores']['euclidean']
-            <= query[0].matches[i + 1]['scores']['euclidean']
+            matches[0][i]['scores']['euclidean']
+            <= matches[0][i + 1]['scores']['euclidean']
         )
-        assert query[0].matches[i]['x'] > 0.6
+        assert matches[0][i]['x'] > 0.6
 
 
 @pytest.mark.parametrize('operator', list(numeric_operators.keys()))
@@ -142,14 +142,14 @@ def test_query_search_filter_float_type(annlite_with_heterogeneous_tags, operato
     thresholds = [20, 50, 100, 400]
 
     for threshold in thresholds:
-        annlite_with_heterogeneous_tags.search(
+        matches = annlite_with_heterogeneous_tags.search(
             query_da, filter={'price': {operator: threshold}}, include_metadata=True
         )
-        for query in query_da:
+        for query, query_matches in zip(query_da, matches):
             assert all(
                 [
                     numeric_operators[operator](m['price'], threshold)
-                    for m in query.matches
+                    for m in query_matches
                 ]
             )
 
@@ -185,14 +185,14 @@ def test_search_filter_str(annlite_with_heterogeneous_tags, operator):
 
     categories = ['comics', 'movies', 'audiobook']
     for category in categories:
-        annlite_with_heterogeneous_tags.search(
+        matches = annlite_with_heterogeneous_tags.search(
             query_da, filter={'category': {operator: category}}, include_metadata=True
         )
-        for query in query_da:
+        for query, query_matches in zip(query_da, matches):
             assert all(
                 [
                     numeric_operators[operator](m['category'], category)
-                    for m in query.matches
+                    for m in query_matches
                 ]
             )
 
