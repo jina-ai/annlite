@@ -3,8 +3,7 @@ import random
 import shutil
 
 import numpy as np
-from jina import Document, DocumentArray
-from jina.logging.profile import TimeContext
+from utils import TimeContext, _batch
 
 from annlite import AnnLite
 
@@ -37,15 +36,16 @@ def docs_with_tags(N, D, probs, categories):
         X = np.random.random((n_current, D)).astype(np.float32)
 
         docs = [
-            Document(
+            dict(
                 embedding=X[i],
-                tags={'category': categories[k], 'x': random.randint(0, 5)},
+                category=categories[k],
+                x=random.randint(0, 5),
             )
             for i in range(n_current)
         ]
         all_docs.extend(docs)
 
-    return DocumentArray(all_docs)
+    return all_docs
 
 
 results = []
@@ -66,7 +66,7 @@ for n_i in n_index:
     da = docs_with_tags(n_i, D, current_probs, categories)
 
     with TimeContext(f'indexing {n_i} docs') as t_i:
-        for i, _batch in enumerate(da.batch(batch_size=B)):
+        for i, _batch in enumerate(_batch(da, batch_size=B)):
             idxer.index(_batch)
 
     for cat, prob in zip(categories, current_probs):
@@ -74,9 +74,8 @@ for n_i in n_index:
 
         query_times = []
         for n_q in n_query:
-            qa = DocumentArray.empty(n_q)
             q_embs = np.random.random([n_q, D]).astype(np.float32)
-            qa.embeddings = q_embs
+            qa = [dict(embedding=q_embs[i]) for i in range(n_q)]
             t_qs = []
 
             for _ in range(R):

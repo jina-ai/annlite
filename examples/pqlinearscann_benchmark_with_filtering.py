@@ -1,9 +1,7 @@
 import numpy as np
-from docarray import Document, DocumentArray
-from docarray.math.distance import cdist
-from docarray.math.helper import top_k as _top_k
-from jina.logging.profile import TimeContext
-from utils import clean_workspace, docs_with_tags, evaluate
+from utils import clean_workspace, docs_with_tags, evaluate, TimeContext
+from annlite.math import cdist
+from annlite.math import top_k as _top_k
 
 from annlite import AnnLite
 
@@ -53,25 +51,22 @@ for n_i in n_index:
         for cat, prob in zip(categories, current_probs):
             f = {'category': {'$eq': cat}}
 
-            indices_cat = (
-                np.array([t['category'] for t in da.get_attributes('tags')]) == cat
-            )
+            indices_cat = np.array([d['category'] for d in da]) == cat
             ids_indices_cat = np.array(
-                [d.id for d in da if d.tags['category'] == cat], dtype='int'
+                [d['id'] for d in da if d['category'] == cat], dtype='int'
             )
 
             da_embeddings_cat = da_embeddings[indices_cat, :]
 
             query_times = []
             for n_q in n_query:
-                qa = DocumentArray.empty(n_q)
                 q_embs = np.random.random([n_q, D]).astype(np.float32)
-                qa.embeddings = q_embs
+                qa = [dict(embedding=q_embs[i]) for i in range(n_q)]
                 t_qs = []
 
                 for _ in range(R):
                     with TimeContext(f'searching {n_q} docs') as t_q:
-                        indexer.search(qa, filter=f, limit=top_k)
+                        query_matches = indexer.search(qa, filter=f, limit=top_k)
                     t_qs.append(t_q.duration)
 
                 query_times.append(np.mean(t_qs[1:]))
@@ -86,8 +81,8 @@ for n_i in n_index:
                     #   We need to go from these positions to the original positions
                     true_ids = ids_indices_cat[true_local_ids]
                     ids = []
-                    for doc in qa:
-                        ids.append([m.id for m in doc.matches])
+                    for doc, matches in zip(qa, query_matches):
+                        ids.append([m['id'] for m in matches])
 
                     recall, precision = evaluate(ids, true_ids, top_k)
 
