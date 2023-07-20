@@ -278,22 +278,3 @@ def test_local_backup_restore(tmpdir):
     status = index.stat
     assert int(status['total_docs']) == N
     assert int(status['index_size']) == N
-
-
-@pytest.mark.skip(reason='This test requires a running hubble instance')
-def test_remote_backup_restore(tmpdir):
-    X = np.random.random((N, D))
-    docs = [dict(id=f'{i}', embedding=X[i]) for i in range(N)]
-    index = AnnLite(n_dim=D, data_path=tmpdir / 'workspace' / '0')
-    index.index(docs)
-
-    tmpname = uuid.uuid4().hex
-    index.backup(target_name='test_remote_backup_restore', token=token)
-
-    index = AnnLite(n_dim=D, data_path=tmpdir / 'workspace' / '0')
-    index.restore(source_name='test_remote_backup_restore', token=token)
-
-    delete_artifact(tmpname)
-    status = index.stat
-    assert int(status['total_docs']) == N
-    assert int(status['index_size']) == N

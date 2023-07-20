@@ -84,8 +84,7 @@ class TimeContext:
 
     def _exit_msg(self):
         print(
-            f'{self.task_name} takes {self.readable_duration} ({self.duration:.2f}s)'
-            ,
+            f'{self.task_name} takes {self.readable_duration} ({self.duration:.2f}s)',
             flush=True,
         )
 
@@ -138,7 +137,7 @@ for n_i in n_index:
 
             def _batch(l, batch_size):
                 for i in range(0, len(l), batch_size):
-                    yield l[i:i + batch_size]
+                    yield l[i : i + batch_size]
 
             with TimeContext(f'indexing {n_i} docs') as t_i:
                 for i, _batch in enumerate(_batch(da, batch_size=B)):
