@@ -2,7 +2,6 @@ from time import time
 
 import numpy as np
 import pytest
-from docarray import Document, DocumentArray
 from loguru import logger
 
 from annlite import AnnLite, pq_bind
@@ -21,9 +20,8 @@ def random_docs():
     X = np.random.random((N, D)).astype(
         np.float32
     )  # 10,000 64-dim vectors to be indexed
-    docs = DocumentArray(
-        [Document(id=f'{i}', embedding=X[i], tags={'x': str(i)}) for i in range(N)]
-    )
+    docs = [dict(id=f'{i}', embedding=X[i], tags={'x': str(i)}) for i in range(N)]
+
     return docs
 
 
@@ -87,8 +85,8 @@ def test_hnsw_pq_search_multi_clusters(tmpdir, n_clusters, random_docs):
     computed_dist = euclidean(X, X)
     computed_labels = np.argsort(computed_dist, axis=1)[:, :topk]
 
-    query = DocumentArray([Document(embedding=X[i]) for i in range(total_test)])
-    test_query = DocumentArray([Document(embedding=X[i]) for i in range(total_test)])
+    query = [dict(embedding=X[i]) for i in range(total_test)]
+    test_query = [dict(embedding=X[i]) for i in range(total_test)]
 
     # HNSW search with float----------------------------------
     no_pq_index = AnnLite(D, data_path=tmpdir / 'no_pq_index', metric='EUCLIDEAN')

@@ -1,9 +1,7 @@
 import random
-import tempfile
 
 import numpy as np
 import pytest
-from docarray import Document, DocumentArray
 
 from annlite import AnnLite
 from annlite.filter import Filter
@@ -118,12 +116,8 @@ def test_filter_with_columns(tmpfile, columns):
     index = AnnLite(D, columns=columns, data_path=tmpfile, include_metadata=True)
     X = np.random.random((N, D)).astype(np.float32)
 
-    docs = DocumentArray(
-        [
-            Document(id=f'{i}', embedding=X[i], tags={'x': random.random()})
-            for i in range(N)
-        ]
-    )
+    docs = [dict(id=f'{i}', embedding=X[i], x=random.random()) for i in range(N)]
+
     index.index(docs)
 
     matches = index.filter(
@@ -148,12 +142,7 @@ def test_filter_with_dict(tmpfile, filterable_attrs):
     )
     X = np.random.random((N, D)).astype(np.float32)
 
-    docs = DocumentArray(
-        [
-            Document(id=f'{i}', embedding=X[i], tags={'x': random.random()})
-            for i in range(N)
-        ]
-    )
+    docs = [dict(id=f'{i}', embedding=X[i], x=random.random()) for i in range(N)]
     index.index(docs)
 
     matches = index.filter(
@@ -180,16 +169,7 @@ def test_filter_with_limit_offset(tmpfile, limit, offset, order_by, ascending):
     )
     X = np.random.random((N, D)).astype(np.float32)
 
-    docs = DocumentArray(
-        [
-            Document(
-                id=f'{i}',
-                embedding=X[i],
-                tags={'x': random.random(), 'y': random.random()},
-            )
-            for i in range(N)
-        ]
-    )
+    docs = [dict(id=f'{i}', embedding=X[i], x=random.random(), y=random.random()) for i in range(N)]
     index.index(docs)
 
     matches = index.filter(
@@ -223,12 +203,7 @@ def test_filter_with_wrong_columns(tmpfile, limit):
     )
     X = np.random.random((N, D)).astype(np.float32)
 
-    docs = DocumentArray(
-        [
-            Document(id=f'{i}', embedding=X[i], tags={'price': random.random()})
-            for i in range(N)
-        ]
-    )
+    docs = [dict(id=f'{i}', embedding=X[i], price=random.random()) for i in range(N)]
 
     index.index(docs)
 

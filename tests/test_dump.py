@@ -1,6 +1,5 @@
 import numpy as np
 import pytest
-from docarray import Document, DocumentArray
 
 from annlite import AnnLite
 
@@ -12,9 +11,9 @@ N = 1000
 
 @pytest.fixture
 def index_data():
-    index_data = DocumentArray()
+    index_data = []
     for i in range(N):
-        index_data.append(Document(id=str(i)))
+        index_data.append(dict(id=str(i)))
     half_embedding = np.random.random((N, D // 2))
     index_data.embeddings = np.concatenate([half_embedding, half_embedding], axis=1)
     return index_data

@@ -1,5 +1,4 @@
 import pytest
-from docarray import Document, DocumentArray
 
 from annlite.storage.table import CellTable, MetaTable
 
@@ -17,16 +16,12 @@ def dummy_cell_table():
 
 @pytest.fixture
 def sample_docs():
-    return DocumentArray(
-        [
-            Document(
-                id='0', tags={'name': 'orange', 'price': 1.2, 'category': 'fruit'}
-            ),
-            Document(id='1', tags={'name': 'banana', 'price': 2, 'category': 'fruit'}),
-            Document(id='2', tags={'name': 'poly', 'price': 5.1, 'category': 'animal'}),
-            Document(id='3', tags={'name': 'bread'}),
-        ]
-    )
+    return [
+        dict(id='0', name='orange', price=1.2, category='fruit'),
+        dict(id='1', name='banana', price=2, category='fruit'),
+        dict(id='2', name='poly', price=5.1, category='animal'),
+        dict(id='3', name='bread')
+    ]
 
 
 @pytest.fixture

@@ -1,13 +1,10 @@
 import operator
-import os
 import random
 import uuid
-from unittest.mock import patch
 
 import hubble
 import numpy as np
 import pytest
-from docarray import Document, DocumentArray
 
 from annlite import AnnLite
 
@@ -36,10 +33,6 @@ token = 'ed17d158d95d3f53f60eed445d783c80'
 
 @pytest.fixture
 def annlite_index(tmpfile):
-    Xt = np.random.random((Nt, D)).astype(
-        np.float32
-    )  # 2,000 128-dim vectors for training
-
     index = AnnLite(n_dim=D, data_path=tmpfile)
     return index
 
@@ -53,12 +46,8 @@ def annlite_with_data(tmpfile):
         np.float32
     )  # 10,000 128-dim vectors to be indexed
 
-    docs = DocumentArray(
-        [
-            Document(id=f'{i}', embedding=X[i], tags={'x': random.random()})
-            for i in range(N)
-        ]
-    )
+    docs = [dict(id=f'{i}', embedding=X[i], x=random.random()) for i in range(N)]
+
     index.index(docs)
     return index
 
@@ -68,14 +57,11 @@ def heterogenenous_da(tmpfile):
     prices = [10.0, 25.0, 50.0, 100.0]
     categories = ['comics', 'movies', 'audiobook']
 
-    columns = [('price', float), ('category', str)]
-    index = AnnLite(n_dim=D, columns=columns, data_path=tmpfile)
-
     X = np.random.random((N, D)).astype(
         np.float32
     )  # 10,000 128-dim vectors to be indexed
     docs = [
-        Document(
+        dict(
             id=f'{i}',
             embedding=X[i],
             tags={
@@ -85,9 +71,8 @@ def heterogenenous_da(tmpfile):
         )
         for i in range(N)
     ]
-    da = DocumentArray(docs)
 
-    return da
+    return docs
 
 
 @pytest.fixture
@@ -103,7 +88,7 @@ def test_index(annlite_index):
         np.float32
     )  # 10,000 128-dim vectors to be indexed
 
-    docs = DocumentArray([Document(id=f'{i}', embedding=X[i]) for i in range(N)])
+    docs = [dict(id=f'{i}', embedding=X[i]) for i in range(N)]
     annlite_index.index(docs)
 
 
@@ -111,7 +96,7 @@ def test_index(annlite_index):
 def test_dtype(annlite_index, dtype):
     X = np.random.random((N, D)).astype(dtype)  # 10,000 128-dim vectors to be indexed
 
-    docs = DocumentArray([Document(id=f'{i}', embedding=X[i]) for i in range(N)])
+    docs = [dict(id=f'{i}', embedding=X[i]) for i in range(N)]
     annlite_index.index(docs)
 
 
@@ -121,13 +106,13 @@ def test_delete(annlite_with_data):
 
 def test_update(annlite_with_data):
     X = np.random.random((5, D)).astype(np.float32)  # 5 128-dim vectors to be indexed
-    docs = DocumentArray([Document(id=f'{i}', embedding=X[i]) for i in range(5)])
+    docs = [dict(id=f'{i}', embedding=X[i]) for i in range(5)]
     annlite_with_data.update(docs)
 
 
 def test_query(annlite_with_data):
     X = np.random.random((Nq, D)).astype(np.float32)  # a 128-dim query vector
-    query = DocumentArray([Document(embedding=X[i]) for i in range(5)])
+    query = [dict(embedding=X[i]) for i in range(5)]
 
     annlite_with_data.search(query)
 
@@ -140,7 +125,7 @@ def test_query(annlite_with_data):
 
 def test_index_query_with_filtering_sorted_results(annlite_with_data):
     X = np.random.random((Nq, D)).astype(np.float32)
-    query = DocumentArray([Document(embedding=X[i]) for i in range(5)])
+    query = [dict(embedding=X[i]) for i in range(5)]
     annlite_with_data.search(query, filter={'x': {'$gt': 0.6}}, include_metadata=True)
 
     for i in range(len(query[0].matches) - 1):
@@ -154,7 +139,7 @@ def test_index_query_with_filtering_sorted_results(annlite_with_data):
 @pytest.mark.parametrize('operator', list(numeric_operators.keys()))
 def test_query_search_filter_float_type(annlite_with_heterogeneous_tags, operator):
     X = np.random.random((Nq, D)).astype(np.float32)
-    query_da = DocumentArray([Document(embedding=X[i]) for i in range(Nq)])
+    query_da = [dict(embedding=X[i]) for i in range(Nq)]
 
     thresholds = [20, 50, 100, 400]
 
@@ -198,7 +183,7 @@ def test_query_search_numpy_filter_float_type(
 @pytest.mark.parametrize('operator', list(categorical_operators.keys()))
 def test_search_filter_str(annlite_with_heterogeneous_tags, operator):
     X = np.random.random((Nq, D)).astype(np.float32)
-    query_da = DocumentArray([Document(embedding=X[i]) for i in range(Nq)])
+    query_da = [dict(embedding=X[i]) for i in range(Nq)]
 
     categories = ['comics', 'movies', 'audiobook']
     for category in categories:
@@ -283,7 +268,7 @@ def delete_artifact(tmpname):
 
 def test_local_backup_restore(tmpdir):
     X = np.random.random((N, D))
-    docs = DocumentArray([Document(id=f'{i}', embedding=X[i]) for i in range(N)])
+    docs = [dict(id=f'{i}', embedding=X[i]) for i in range(N)]
     index = AnnLite(n_dim=D, data_path=tmpdir / 'workspace' / '0')
     index.index(docs)
 
@@ -302,7 +287,7 @@ def test_local_backup_restore(tmpdir):
 @pytest.mark.skip(reason='This test requires a running hubble instance')
 def test_remote_backup_restore(tmpdir):
     X = np.random.random((N, D))
-    docs = DocumentArray([Document(id=f'{i}', embedding=X[i]) for i in range(N)])
+    docs = [dict(id=f'{i}', embedding=X[i]) for i in range(N)]
     index = AnnLite(n_dim=D, data_path=tmpdir / 'workspace' / '0')
     index.index(docs)
 
