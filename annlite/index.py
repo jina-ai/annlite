@@ -172,7 +172,6 @@ class AnnLite(CellContainer):
             total_size = 0
             # TODO: add a progress bar
             for docs in self.documents_generator(0, batch_size=1024):
-                print(f' docs {docs}')
                 x = np.array([doc['embedding'] for doc in docs])
                 total_size += x.shape[0]
                 self.partial_train(x, auto_save=True, force_train=True)
