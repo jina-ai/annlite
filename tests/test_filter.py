@@ -169,7 +169,10 @@ def test_filter_with_limit_offset(tmpfile, limit, offset, order_by, ascending):
     )
     X = np.random.random((N, D)).astype(np.float32)
 
-    docs = [dict(id=f'{i}', embedding=X[i], x=random.random(), y=random.random()) for i in range(N)]
+    docs = [
+        dict(id=f'{i}', embedding=X[i], x=random.random(), y=random.random())
+        for i in range(N)
+    ]
     index.index(docs)
 
     matches = index.filter(

@@ -20,7 +20,7 @@ def sample_docs():
         dict(id='0', name='orange', price=1.2, category='fruit'),
         dict(id='1', name='banana', price=2, category='fruit'),
         dict(id='2', name='poly', price=5.1, category='animal'),
-        dict(id='3', name='bread')
+        dict(id='3', name='bread'),
     ]
 
 

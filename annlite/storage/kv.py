@@ -52,8 +52,8 @@ class DocStorage:
         write_opt.sync = True
         batch_size = 0
         for doc in docs:
-            #TODO: How to serialize a dict
-            #write_batch.put(doc.id.encode(), doc.to_bytes(**self._serialize_config))
+            # TODO: How to serialize a dict
+            # write_batch.put(doc.id.encode(), doc.to_bytes(**self._serialize_config))
             write_batch.put(doc['id'].encode(), pickle.dumps(doc))
             batch_size += 1
         self._db.write(write_batch, write_opt=write_opt)
@@ -68,7 +68,7 @@ class DocStorage:
             if key not in self._db:
                 raise ValueError(f'The Doc ({doc["id"]}) does not exist in database!')
 
-            #write_batch.put(key, doc.to_bytes(**self._serialize_config))
+            # write_batch.put(key, doc.to_bytes(**self._serialize_config))
             # TODO: Serialize
             write_batch.put(key, pickle.dumps(doc))
         self._db.write(write_batch, write_opt=write_opt)
@@ -89,7 +89,7 @@ class DocStorage:
 
         for doc_bytes in self._db[[k.encode() for k in doc_ids]]:
             if doc_bytes:
-                #docs.append(Document.from_bytes(doc_bytes, **self._serialize_config))
+                # docs.append(Document.from_bytes(doc_bytes, **self._serialize_config))
                 # TODO: Deserialize
                 docs.append(pickle.loads(doc_bytes))
 
@@ -144,8 +144,8 @@ class DocStorage:
         read_opt = ReadOptions()
 
         for value in self._db.values(read_opt=read_opt):
-            #doc = Document.from_bytes(value, **self._serialize_config)
-            #TODO: Deserialize
+            # doc = Document.from_bytes(value, **self._serialize_config)
+            # TODO: Deserialize
             docs.append(pickle.loads(value))
             count += 1
 

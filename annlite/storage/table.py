@@ -231,10 +231,7 @@ class CellTable(Table):
         for doc in docs:
             doc_value = tuple(
                 [doc['id']]
-                + [
-                    _converting(doc[c]) if c in doc else None
-                    for c in self.columns[2:]
-                ]
+                + [_converting(doc[c]) if c in doc else None for c in self.columns[2:]]
             )
             values.append(doc_value)
             docs_size += 1

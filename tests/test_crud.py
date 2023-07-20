@@ -42,7 +42,9 @@ def test_update_legal(annlite_with_data):
     index = annlite_with_data
 
     updated_X = np.random.random((Nt, D)).astype(np.float32)
-    updated_docs = [dict(id=f'{i}', embedding=updated_X[i], x=random.random()) for i in range(Nt)]
+    updated_docs = [
+        dict(id=f'{i}', embedding=updated_X[i], x=random.random()) for i in range(Nt)
+    ]
 
     index.update(updated_docs)
     matches = index.search(updated_docs)
@@ -56,9 +58,10 @@ def test_update_illegal(annlite_with_data):
     index = annlite_with_data
 
     updated_X = np.random.random((Nt, D)).astype(np.float32)
-    updated_docs = [dict(
-        id=f'{i}_wrong', embedding=updated_X[i], x=random.random()
-    ) for i in range(Nt)]
+    updated_docs = [
+        dict(id=f'{i}_wrong', embedding=updated_X[i], x=random.random())
+        for i in range(Nt)
+    ]
 
     with pytest.raises(Exception):
         index.update(

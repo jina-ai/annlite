@@ -65,7 +65,7 @@ def heterogenenous_da(tmpfile):
             id=f'{i}',
             embedding=X[i],
             price=np.random.choice(prices),
-            category=np.random.choice(categories)
+            category=np.random.choice(categories),
         )
         for i in range(N)
     ]
@@ -124,7 +124,9 @@ def test_query(annlite_with_data):
 def test_index_query_with_filtering_sorted_results(annlite_with_data):
     X = np.random.random((Nq, D)).astype(np.float32)
     query = [dict(embedding=X[i]) for i in range(5)]
-    matches = annlite_with_data.search(query, filter={'x': {'$gt': 0.6}}, include_metadata=True)
+    matches = annlite_with_data.search(
+        query, filter={'x': {'$gt': 0.6}}, include_metadata=True
+    )
 
     for i in range(len(matches[0]) - 1):
         assert (
@@ -170,9 +172,7 @@ def test_query_search_numpy_filter_float_type(
         for doc_ids_query_k in doc_ids:
             assert all(
                 [
-                    numeric_operators[operator](
-                        da[int(doc_id)]['price'], threshold
-                    )
+                    numeric_operators[operator](da[int(doc_id)]['price'], threshold)
                     for doc_id in doc_ids_query_k
                 ]
             )
@@ -213,9 +213,7 @@ def test_search_numpy_filter_str(
         for doc_ids_query_k in doc_ids:
             assert all(
                 [
-                    numeric_operators[operator](
-                        da[int(doc_id)]['category'], category
-                    )
+                    numeric_operators[operator](da[int(doc_id)]['category'], category)
                     for doc_id in doc_ids_query_k
                 ]
             )

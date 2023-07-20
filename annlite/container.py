@@ -188,9 +188,7 @@ class CellContainer:
 
         # reordering the results from multiple cells
         if order_by and len(cells) > 1:
-            result = sorted(
-                result, key=lambda d: d['order_by'], reverse=not ascending
-            )
+            result = sorted(result, key=lambda d: d['order_by'], reverse=not ascending)
             if limit > 0:
                 result = result[:limit]
 
