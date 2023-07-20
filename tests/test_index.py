@@ -64,10 +64,8 @@ def heterogenenous_da(tmpfile):
         dict(
             id=f'{i}',
             embedding=X[i],
-            tags={
-                'price': np.random.choice(prices),
-                'category': np.random.choice(categories),
-            },
+            price=np.random.choice(prices),
+            category=np.random.choice(categories)
         )
         for i in range(N)
     ]
@@ -118,8 +116,8 @@ def test_query(annlite_with_data):
 
     for i in range(len(query[0].matches) - 1):
         assert (
-            query[0].matches[i].scores['euclidean'].value
-            <= query[0].matches[i + 1].scores['euclidean'].value
+            query[0].matches[i]['scores']['euclidean']
+            <= query[0].matches[i + 1]['scores']['euclidean']
         )
 
 
@@ -130,10 +128,10 @@ def test_index_query_with_filtering_sorted_results(annlite_with_data):
 
     for i in range(len(query[0].matches) - 1):
         assert (
-            query[0].matches[i].scores['euclidean'].value
-            <= query[0].matches[i + 1].scores['euclidean'].value
+            query[0].matches[i]['scores']['euclidean']
+            <= query[0].matches[i + 1]['scores']['euclidean']
         )
-        assert query[0].matches[i].tags['x'] > 0.6
+        assert query[0].matches[i]['x'] > 0.6
 
 
 @pytest.mark.parametrize('operator', list(numeric_operators.keys()))
@@ -150,7 +148,7 @@ def test_query_search_filter_float_type(annlite_with_heterogeneous_tags, operato
         for query in query_da:
             assert all(
                 [
-                    numeric_operators[operator](m.tags['price'], threshold)
+                    numeric_operators[operator](m['price'], threshold)
                     for m in query.matches
                 ]
             )
@@ -173,7 +171,7 @@ def test_query_search_numpy_filter_float_type(
             assert all(
                 [
                     numeric_operators[operator](
-                        da[int(doc_id)].tags['price'], threshold
+                        da[int(doc_id)]['price'], threshold
                     )
                     for doc_id in doc_ids_query_k
                 ]
@@ -193,7 +191,7 @@ def test_search_filter_str(annlite_with_heterogeneous_tags, operator):
         for query in query_da:
             assert all(
                 [
-                    numeric_operators[operator](m.tags['category'], category)
+                    numeric_operators[operator](m['category'], category)
                     for m in query.matches
                 ]
             )
@@ -216,7 +214,7 @@ def test_search_numpy_filter_str(
             assert all(
                 [
                     numeric_operators[operator](
-                        da[int(doc_id)].tags['category'], category
+                        da[int(doc_id)]['category'], category
                     )
                     for doc_id in doc_ids_query_k
                 ]
@@ -239,7 +237,7 @@ def test_search_numpy_membership_filter(
         assert len(doc_ids)
         assert all(
             [
-                da[int(doc_id)].tags['category'] in ['comics', 'audiobook']
+                da[int(doc_id)]['category'] in ['comics', 'audiobook']
                 for doc_id in doc_ids_query_k
             ]
         )
@@ -253,7 +251,7 @@ def test_search_numpy_membership_filter(
         assert len(doc_ids)
         assert all(
             [
-                da[int(doc_id)].tags['category'] not in ['comics', 'audiobook']
+                da[int(doc_id)]['category'] not in ['comics', 'audiobook']
                 for doc_id in doc_ids_query_k
             ]
         )

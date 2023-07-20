@@ -20,13 +20,13 @@ def random_docs():
     X = np.random.random((N, D)).astype(
         np.float32
     )  # 10,000 64-dim vectors to be indexed
-    docs = [dict(id=f'{i}', embedding=X[i], tags={'x': str(i)}) for i in range(N)]
+    docs = [dict(id=f'{i}', embedding=X[i], x=str(i)) for i in range(N)]
 
     return docs
 
 
 def test_pq_index_dist_mat(random_docs):
-    X = random_docs.embeddings
+    X = np.array([doc['embedding'] for doc in random_docs])
     N, D = X.shape
     pq_class = PQCodec(dim=D)
     pq_class.fit(X)
@@ -69,7 +69,7 @@ def test_hnsw_pq_load(tmpfile, random_docs):
         data_path=tmpfile,
         n_subvectors=8,
     )
-    pq_index.train(random_docs.embeddings)
+    pq_index.train(np.array([doc['embedding'] for doc in random_docs]))
     pq_index.index(random_docs)
     assert all([x.pq_codec.is_trained for x in pq_index._vec_indexes])
     assert all([x._index.pq_enable for x in pq_index._vec_indexes])
@@ -80,7 +80,7 @@ def test_hnsw_pq_search_multi_clusters(tmpdir, n_clusters, random_docs):
     total_test = 10
     topk = 50
 
-    X = random_docs.embeddings
+    X = np.array([doc['embedding'] for doc in random_docs])
     N, Dim = X.shape
     computed_dist = euclidean(X, X)
     computed_labels = np.argsort(computed_dist, axis=1)[:, :topk]
@@ -125,7 +125,7 @@ def test_hnsw_pq_search_multi_clusters(tmpdir, n_clusters, random_docs):
     linear_pq_index = PQIndex(Dim, _pq_codec)
     linear_pq_index.add_with_ids(X, ids)
 
-    search_x = test_query.embeddings
+    search_x = np.array([q['embedding'] for q in test_query])
     pq_dists = []
     linear_results = []
     pq_s = time()

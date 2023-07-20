@@ -17,7 +17,7 @@ def annlite_with_data(tmpfile):
 
     X = np.random.random((N, D)).astype(np.float32)
 
-    docs = [dict(id=f'{i}', embedding=X[i], tags={'x': random.random()}) for i in range(N)]
+    docs = [dict(id=f'{i}', embedding=X[i], x=random.random()) for i in range(N)]
     index.index(docs)
     return index
 
@@ -35,20 +35,20 @@ def test_get(annlite_with_data, filter, limit):
 
     if filter:
         for doc in docs:
-            assert doc.tags['x'] < 0.5
+            assert doc['x'] < 0.5
 
 
 def test_update_legal(annlite_with_data):
     index = annlite_with_data
 
     updated_X = np.random.random((Nt, D)).astype(np.float32)
-    updated_docs = [dict(id=f'{i}', embedding=updated_X[i], tags={'x': random.random()}) for i in range(Nt)]
+    updated_docs = [dict(id=f'{i}', embedding=updated_X[i], x=random.random()) for i in range(Nt)]
 
     index.update(updated_docs)
     index.search(updated_docs)
     for i in range(Nt):
         np.testing.assert_array_almost_equal(
-            updated_docs[i].embedding, updated_docs[i].matches[0].embedding, decimal=5
+            updated_docs[i]['embedding'], updated_docs[i].matches[0]['embedding'], decimal=5
         )
 
 

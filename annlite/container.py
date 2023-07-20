@@ -189,7 +189,7 @@ class CellContainer:
         # reordering the results from multiple cells
         if order_by and len(cells) > 1:
             result = sorted(
-                result, key=lambda d: d.tags.get(order_by), reverse=not ascending
+                result, key=lambda d: d['order_by'], reverse=not ascending
             )
             if limit > 0:
                 result = result[:limit]
@@ -222,11 +222,11 @@ class CellContainer:
             topk_dists.append(dists)
             match_docs = []
             for dist, doc_id, cell_id in zip(dists, doc_ids, cells):
-                doc = dict(id=doc_id)
+                doc = dict(id=doc_id, scores={})
                 if include_metadata:
                     doc = self.doc_store(cell_id).get([doc_id])[0]
 
-                doc.scores[self.metric.name.lower()].value = dist
+                doc['scores'][self.metric.name.lower()] = dist
                 match_docs.append(doc)
             topk_docs.append(match_docs)
 

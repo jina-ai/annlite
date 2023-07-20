@@ -10,7 +10,7 @@ def test_get(tmpfile, docs):
 
     doc = storage.get('doc1')[0]
     assert doc.id == 'doc1'
-    assert (doc.embedding == [1, 0, 0, 0]).all()
+    assert (doc['embedding'] == [1, 0, 0, 0]).all()
 
     docs = storage.get('doc7')
     assert len(docs) == 0
@@ -23,7 +23,7 @@ def test_update(tmpfile, docs, update_docs):
     storage.update(update_docs)
 
     doc = storage.get('doc1')[0]
-    assert (doc.embedding == [0, 0, 0, 1]).all()
+    assert (doc['embedding'] == [0, 0, 0, 1]).all()
 
 
 def test_delete(tmpfile, docs):

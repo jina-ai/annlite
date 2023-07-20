@@ -4,7 +4,7 @@ import os
 import platform
 import warnings
 from pathlib import Path
-from typing import TYPE_CHECKING, Dict, List, Optional, Union
+from typing import Dict, List, Optional, Union
 
 import numpy as np
 from loguru import logger
@@ -53,23 +53,23 @@ class AnnLite(CellContainer):
     """
 
     def __init__(
-        self,
-        n_dim: int,
-        metric: Union[str, Metric] = 'cosine',
-        n_cells: int = 1,
-        n_subvectors: Optional[int] = None,
-        n_clusters: Optional[int] = 256,
-        n_probe: int = 16,
-        n_components: Optional[int] = None,
-        initial_size: Optional[int] = None,
-        expand_step_size: int = 10240,
-        columns: Optional[Union[Dict, List]] = None,
-        filterable_attrs: Optional[Dict] = None,
-        data_path: Union[Path, str] = Path('./data'),
-        create_if_missing: bool = True,
-        read_only: bool = False,
-        verbose: bool = False,
-        **kwargs,
+            self,
+            n_dim: int,
+            metric: Union[str, Metric] = 'cosine',
+            n_cells: int = 1,
+            n_subvectors: Optional[int] = None,
+            n_clusters: Optional[int] = 256,
+            n_probe: int = 16,
+            n_components: Optional[int] = None,
+            initial_size: Optional[int] = None,
+            expand_step_size: int = 10240,
+            columns: Optional[Union[Dict, List]] = None,
+            filterable_attrs: Optional[Dict] = None,
+            data_path: Union[Path, str] = Path('./data'),
+            create_if_missing: bool = True,
+            read_only: bool = False,
+            verbose: bool = False,
+            **kwargs,
     ):
         setup_logging(verbose)
 
@@ -81,7 +81,7 @@ class AnnLite(CellContainer):
 
         if n_subvectors:
             assert (
-                n_dim % n_subvectors == 0
+                    n_dim % n_subvectors == 0
             ), '"n_dim" needs to be divisible by "n_subvectors"'
         self.n_dim = n_dim
         self.n_components = n_components
@@ -172,7 +172,7 @@ class AnnLite(CellContainer):
             total_size = 0
             # TODO: add a progress bar
             for docs in self.documents_generator(0, batch_size=1024):
-                x = to_numpy_array(docs.embeddings)
+                x = np.array([doc['embedding'] for doc in docs])
                 total_size += x.shape[0]
                 self.partial_train(x, auto_save=True, force_train=True)
                 if total_size >= MAX_TRAINING_DATA_SIZE:
@@ -185,7 +185,7 @@ class AnnLite(CellContainer):
     def _sanity_check(self, x: 'np.ndarray'):
         assert x.ndim == 2, 'inputs must be a 2D array'
         assert (
-            x.shape[1] == self.n_dim
+                x.shape[1] == self.n_dim
         ), f'inputs must have the same dimension as the index , got {x.shape[1]}, expected {self.n_dim}'
 
         return x.shape
@@ -229,7 +229,7 @@ class AnnLite(CellContainer):
             self.dump_model()
 
     def partial_train(
-        self, x: np.ndarray, auto_save: bool = True, force_train: bool = False
+            self, x: np.ndarray, auto_save: bool = True, force_train: bool = False
     ):
         """Partially train the index with the given data.
 
@@ -281,8 +281,7 @@ class AnnLite(CellContainer):
             raise RuntimeError(f'The indexer is not trained, cannot add new documents')
 
         # TODO: Obtain the embeddings from the dict or change index signature
-        #x = to_numpy_array(docs.embeddings)
-        x = None
+        x = np.array([doc['embedding'] for doc in docs])
         n_data, _ = self._sanity_check(x)
 
         assigned_cells = (
@@ -293,11 +292,11 @@ class AnnLite(CellContainer):
         return super(AnnLite, self).insert(x, assigned_cells, docs)
 
     def update(
-        self,
-        docs: 'List',
-        raise_errors_on_not_found: bool = False,
-        insert_if_not_found: bool = True,
-        **kwargs,
+            self,
+            docs: 'List',
+            raise_errors_on_not_found: bool = False,
+            insert_if_not_found: bool = True,
+            **kwargs,
     ):
         """Update the documents in the index.
 
@@ -313,8 +312,7 @@ class AnnLite(CellContainer):
             raise RuntimeError(f'The indexer is not trained, cannot add new documents')
 
         # TODO: Obtain the embeddings from the dict or change index signature
-        #x = to_numpy_array(docs.embeddings)
-        x = None
+        x = np.array([doc['embedding'] for doc in docs])
         n_data, _ = self._sanity_check(x)
 
         assigned_cells = (
@@ -332,12 +330,12 @@ class AnnLite(CellContainer):
         )
 
     def search(
-        self,
-        docs: 'List',
-        filter: Optional[dict] = None,
-        limit: int = 10,
-        include_metadata: bool = True,
-        **kwargs,
+            self,
+            docs: 'List',
+            filter: Optional[dict] = None,
+            limit: int = 10,
+            include_metadata: bool = True,
+            **kwargs,
     ):
         """Search the index, and attach matches to the query Documents in `docs`
 
@@ -349,23 +347,19 @@ class AnnLite(CellContainer):
         if not self.is_trained:
             raise RuntimeError(f'The indexer is not trained, cannot add new documents')
 
-        # TODO: Obtain the embeddings from the dict or change index signature
-        #query_np = to_numpy_array(docs.embeddings)
-        query_np = None
+        query_np = np.array([doc['embedding'] for doc in docs])
 
-        match_dists, match_docs = self.search_by_vectors(
+        _, match_docs = self.search_by_vectors(
             query_np, filter=filter, limit=limit, include_metadata=include_metadata
         )
-
-        for doc, matches in zip(docs, match_docs):
-            doc.matches = matches
+        return match_docs
 
     def search_by_vectors(
-        self,
-        query_np: 'np.ndarray',
-        filter: Optional[dict] = None,
-        limit: int = 10,
-        include_metadata: bool = True,
+            self,
+            query_np: 'np.ndarray',
+            filter: Optional[dict] = None,
+            limit: int = 10,
+            include_metadata: bool = True,
     ):
         """Search the index by vectors, and return the matches.
 
@@ -389,13 +383,13 @@ class AnnLite(CellContainer):
         return match_dists, match_docs
 
     def filter(
-        self,
-        filter: Dict,
-        limit: int = 10,
-        offset: int = 0,
-        order_by: Optional[str] = None,
-        ascending: bool = True,
-        include_metadata: bool = True,
+            self,
+            filter: Dict,
+            limit: int = 10,
+            offset: int = 0,
+            order_by: Optional[str] = None,
+            ascending: bool = True,
+            include_metadata: bool = True,
     ):
         """Find the documents by the filter.
 
@@ -432,12 +426,12 @@ class AnnLite(CellContainer):
         return self._get_doc_by_id(doc_id)
 
     def get_docs(
-        self,
-        filter: Optional[dict] = None,
-        limit: int = 10,
-        offset: int = 0,
-        order_by: Optional[str] = None,
-        ascending: bool = True,
+            self,
+            filter: Optional[dict] = None,
+            limit: int = 10,
+            offset: int = 0,
+            order_by: Optional[str] = None,
+            ascending: bool = True,
     ):
         """Get the documents.
 
@@ -485,11 +479,11 @@ class AnnLite(CellContainer):
         return cells
 
     def search_numpy(
-        self,
-        query_np: 'np.ndarray',
-        filter: Dict = {},
-        limit: int = 10,
-        **kwargs,
+            self,
+            query_np: 'np.ndarray',
+            filter: Dict = {},
+            limit: int = 10,
+            **kwargs,
     ):
         """Search the index and return distances to the query and ids of the closest documents.
 
@@ -524,9 +518,9 @@ class AnnLite(CellContainer):
         return dists, ids
 
     def delete(
-        self,
-        docs: Union['List[Dict]', List[str]],
-        raise_errors_on_not_found: bool = False,
+            self,
+            docs: Union['List[Dict]', List[str]],
+            raise_errors_on_not_found: bool = False,
     ):
         """Delete entries from the index by id
 
@@ -622,9 +616,9 @@ class AnnLite(CellContainer):
     def index_path(self):
         if self.index_hash:
             return (
-                self.data_path
-                / f'snapshot-{self.params_hash}'
-                / f'{self.index_hash}-SNAPSHOT'
+                    self.data_path
+                    / f'snapshot-{self.params_hash}'
+                    / f'{self.index_hash}-SNAPSHOT'
             )
         return None
 
@@ -790,7 +784,7 @@ class AnnLite(CellContainer):
                     f'Rebuild the index of cell-{cell_id} ({cell_size} docs)...'
                 )
                 for docs in self.documents_generator(cell_id, batch_size=10240):
-                    x = to_numpy_array(docs.embeddings)
+                    x = np.array([doc['embedding'] for doc in docs])
 
                     assigned_cells = np.ones(len(docs), dtype=np.int64) * cell_id
                     super().insert(x, assigned_cells, docs, only_index=True)
@@ -868,14 +862,14 @@ class AnnLite(CellContainer):
                     # default has only one cell
                     shutil.unpack_archive(zip_file, self.data_path / f'cell_{cell_id}')
                     for f in list(
-                        (
-                            self.data_path
-                            / f'cell_{cell_id}'
-                            / zip_file.name.split('.zip')[0]
-                        ).iterdir()
+                            (
+                                    self.data_path
+                                    / f'cell_{cell_id}'
+                                    / zip_file.name.split('.zip')[0]
+                            ).iterdir()
                     ):
                         origin_database_path = (
-                            self.data_path / f'cell_{cell_id}' / f.name
+                                self.data_path / f'cell_{cell_id}' / f.name
                         )
                         if origin_database_path.exists():
                             origin_database_path.unlink()

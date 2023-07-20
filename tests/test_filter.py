@@ -125,7 +125,7 @@ def test_filter_with_columns(tmpfile, columns):
     )
     assert len(matches) == limit
     for m in matches:
-        assert m.tags['x'] < 0.5
+        assert m['x'] < 0.5
 
 
 @pytest.mark.parametrize('filterable_attrs', [{'x': 'float'}, {'x': float}])
@@ -150,7 +150,7 @@ def test_filter_with_dict(tmpfile, filterable_attrs):
     )
     assert len(matches) == limit
     for m in matches:
-        assert m.tags['x'] < 0.5
+        assert m['x'] < 0.5
 
 
 @pytest.mark.parametrize('limit', [1, 5])
@@ -184,11 +184,11 @@ def test_filter_with_limit_offset(tmpfile, limit, offset, order_by, ascending):
 
     for i in range(len(matches) - 1):
         m = matches[i]
-        assert m.tags['x'] < 0.5
+        assert m['x'] < 0.5
         if ascending:
-            assert m.tags[order_by] <= matches[i + 1].tags[order_by]
+            assert m[order_by] <= matches[i + 1][order_by]
         else:
-            assert m.tags[order_by] >= matches[i + 1].tags[order_by]
+            assert m[order_by] >= matches[i + 1][order_by]
 
 
 @pytest.mark.parametrize('limit', [1, 5])

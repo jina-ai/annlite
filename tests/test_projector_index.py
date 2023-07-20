@@ -53,6 +53,6 @@ def test_query(projector_annlite_with_data):
 
     for i in range(len(query[0].matches) - 1):
         assert (
-            query[0].matches[i].scores['euclidean'].value
-            <= query[0].matches[i + 1].scores['euclidean'].value
+            query[0].matches[i]['scores']['euclidean']
+            <= query[0].matches[i + 1]['scores']['euclidean']
         )
