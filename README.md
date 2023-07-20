@@ -134,7 +134,7 @@ At the query time, the annlite will filter the dataset by providing `conditions`
 import annlite
 
 # the column schema: (name:str, dtype:type, create_index: bool)
-ann = annlite.AnnLite(128, columns=[('price', float)], data_path="/tmp/annlite_data")
+ann = annlite.AnnLite(128, columns=[('price', float)], data_path="/tmp/annlite_data", metric='euclidean')
 ```
 
 Then you can insert the docs, in which each doc has a field `price` with a float value contained in the `tags`:
@@ -142,32 +142,22 @@ Then you can insert the docs, in which each doc has a field `price` with a float
 
 ```python
 import random
-
-docs = DocumentArray.empty(1000)
-docs = DocumentArray(
-    [
-        Document(id=f'{i}', tags={'price': random.random()})
-        for i in range(1000)
-    ]
-)
-
-docs.embeddings = np.random.random([1000, 128]).astype(np.float32)
-
+import numpy as np
+docs = [dict(id=f'{i}', price=random.random(), embedding=np.random.random([128]).astype(np.float32)) for i in range(1000)]
 ann.index(docs)
 ```
 
 Then you can search for nearest neighbors with filtering conditions as:
 
 ```python
-query = DocumentArray.empty(5)
-query.embeddings = np.random.random([5, 128]).astype(np.float32)
+queries = [dict(embedding=np.random.random([128]).astype(np.float32)) for i in range(5)]
 
-ann.search(query, filter={"price": {"$lte": 50}}, limit=10)
+query_matches = ann.search(queries, filter={"price": {"$lte": 50}}, limit=10)
 print(f'the result with filtering:')
-for i, q in enumerate(query):
+for query, matches in enumerate(queries, query_matches):
     print(f'query [{i}]:')
-    for m in q.matches:
-        print(f'\t{m.id} {m.scores["euclidean"].value} (price={m.tags["price"]})')
+    for m in matches:
+        print(f'\t{m["id"]} {m["scores"]["euclidean"]} (price={m["price"]})')
 ```
 
 The `conditions` parameter is a dictionary of conditions. The key is the field name, and the value is a dictionary of conditions.

@@ -4,7 +4,6 @@ from datetime import date
 
 import numpy as np
 import pandas as pd
-from docarray import Document, DocumentArray
 from sklearn.datasets import make_blobs
 from sklearn.model_selection import train_test_split
 
@@ -66,9 +65,9 @@ print(f'Xtr: {Xtr.shape} vs Xte: {Xte.shape}')
 
 def get_documents(nr=10, index_start=0, embeddings=None):
     for i in range(index_start, nr + index_start):
-        d = Document()
-        d.id = f'{i}'  # to test it supports non-int ids
-        d.embedding = embeddings[i - index_start]
+        d = {}
+        d['id'] = f'{i}'  # to test it supports non-int ids
+        d['embedding'] = embeddings[i - index_start]
         yield d
 
 
@@ -92,14 +91,14 @@ for n_cells in [1, 8, 16, 32, 64, 128]:
         train_time = abs(time.time() - t0)
 
         t0 = time.time()
-        pq.index(DocumentArray(get_documents(len(Xtr), embeddings=Xtr)))
+        pq.index(list(get_documents(len(Xtr), embeddings=Xtr)))
         index_time = abs(t0 - time.time())
 
         dists = cdist(Xte, Xtr, metric='euclidean')
         true_dists, true_ids = _top_k(dists, top_k, descending=False)
 
         t0 = time.time()
-        docs = DocumentArray(get_documents(len(Xte), embeddings=Xte))
+        docs = list(get_documents(len(Xte), embeddings=Xte))
         pq.search(docs, limit=top_k)
 
         query_time = abs(t0 - time.time())
