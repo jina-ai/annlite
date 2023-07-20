@@ -33,14 +33,14 @@ token = 'ed17d158d95d3f53f60eed445d783c80'
 
 @pytest.fixture
 def annlite_index(tmpfile):
-    index = AnnLite(n_dim=D, data_path=tmpfile)
+    index = AnnLite(n_dim=D, data_path=tmpfile, metric='euclidean')
     return index
 
 
 @pytest.fixture
 def annlite_with_data(tmpfile):
     columns = [('x', float)]
-    index = AnnLite(n_dim=D, columns=columns, data_path=tmpfile)
+    index = AnnLite(n_dim=D, columns=columns, data_path=tmpfile, metric='euclidean')
 
     X = np.random.random((N, D)).astype(
         np.float32

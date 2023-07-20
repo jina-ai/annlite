@@ -1,5 +1,3 @@
-import pytest
-
 from annlite.storage.kv import DocStorage
 
 
@@ -9,7 +7,7 @@ def test_get(tmpfile, docs):
     storage.insert(docs)
 
     doc = storage.get('doc1')[0]
-    assert doc.id == 'doc1'
+    assert doc['id'] == 'doc1'
     assert (doc['embedding'] == [1, 0, 0, 0]).all()
 
     docs = storage.get('doc7')
@@ -50,14 +48,13 @@ def test_batched_iterator(tmpfile, docs):
         assert len(docs) == 3
 
 
-@pytest.mark.parametrize('protocol', ['pickle', 'protobuf'])
-def test_searalize(tmpfile, protocol, docs):
-    storage = DocStorage(tmpfile, serialize_config={'protocol': protocol})
+def test_searalize(tmpfile, docs):
+    storage = DocStorage(tmpfile)
     storage.insert(docs)
 
     doc = storage.get('doc1')[0]
-    assert doc.id == 'doc1'
-    assert (doc.embedding == [1, 0, 0, 0]).all()
+    assert doc['id'] == 'doc1'
+    assert (doc['embedding'] == [1, 0, 0, 0]).all()
 
     docs = storage.get('doc7')
     assert len(docs) == 0

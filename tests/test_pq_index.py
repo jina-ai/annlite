@@ -121,7 +121,7 @@ def test_hnsw_pq_search_multi_clusters(tmpdir, n_clusters, random_docs):
 
     # PQ linear search----------------------------------
     _pq_codec = pq_index._pq_codec
-    ids = np.array([int(doc.id) for doc in random_docs])
+    ids = np.array([int(doc['id']) for doc in random_docs])
     linear_pq_index = PQIndex(Dim, _pq_codec)
     linear_pq_index.add_with_ids(X, ids)
 
@@ -141,8 +141,8 @@ def test_hnsw_pq_search_multi_clusters(tmpdir, n_clusters, random_docs):
     pq_precision = []
     for i in range(total_test):
         real_ground_truth = set([str(i) for i in computed_labels[i]])
-        ground_truth = set([m.id for m in matches[i]])
-        pq_result = set([m.id for m in matches[i]])
+        ground_truth = set([m['id'] for m in matches[i]])
+        pq_result = set([m['id'] for m in matches[i]])
         linear_pq_result = set([str(i_id) for i_id in linear_results[i]])
         original_precision.append(len(real_ground_truth & ground_truth) / topk)
         pq_precision.append(len(real_ground_truth & linear_pq_result) / topk)

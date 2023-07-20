@@ -1,7 +1,7 @@
 import warnings
 from pathlib import Path
 from typing import Dict, List, Union
-
+import pickle
 from rocksdict import Options, Rdict, ReadOptions, WriteBatch, WriteOptions
 
 
@@ -11,12 +11,10 @@ class DocStorage:
     def __init__(
         self,
         path: Union[str, Path],
-        serialize_config: Dict = {},
         create_if_missing: bool = True,
         **kwargs,
     ):
         self._path = str(path)
-        self._serialize_config = serialize_config
 
         self._kwargs = kwargs
 
@@ -56,7 +54,7 @@ class DocStorage:
         for doc in docs:
             #TODO: How to serialize a dict
             #write_batch.put(doc.id.encode(), doc.to_bytes(**self._serialize_config))
-            write_batch.put(doc['id'].encode(), bytes(doc))
+            write_batch.put(doc['id'].encode(), pickle.dumps(doc))
             batch_size += 1
         self._db.write(write_batch, write_opt=write_opt)
         self._size += batch_size
@@ -71,7 +69,8 @@ class DocStorage:
                 raise ValueError(f'The Doc ({doc["id"]}) does not exist in database!')
 
             #write_batch.put(key, doc.to_bytes(**self._serialize_config))
-            write_batch.put(key, bytes(doc))
+            # TODO: Serialize
+            write_batch.put(key, pickle.dumps(doc))
         self._db.write(write_batch, write_opt=write_opt)
 
     def delete(self, doc_ids: List[str]):
@@ -91,7 +90,8 @@ class DocStorage:
         for doc_bytes in self._db[[k.encode() for k in doc_ids]]:
             if doc_bytes:
                 #docs.append(Document.from_bytes(doc_bytes, **self._serialize_config))
-                docs.append(doc_bytes)
+                # TODO: Deserialize
+                docs.append(pickle.loads(doc_bytes))
 
         return docs
 
@@ -145,7 +145,8 @@ class DocStorage:
 
         for value in self._db.values(read_opt=read_opt):
             #doc = Document.from_bytes(value, **self._serialize_config)
-            docs.append(value)
+            #TODO: Deserialize
+            docs.append(pickle.loads(value))
             count += 1
 
             if count == batch_size:

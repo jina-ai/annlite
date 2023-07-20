@@ -225,8 +225,10 @@ class CellContainer:
                 doc = dict(id=doc_id, scores={})
                 if include_metadata:
                     doc = self.doc_store(cell_id).get([doc_id])[0]
-
-                doc['scores'][self.metric.name.lower()] = dist
+                if 'scores' not in doc:
+                    doc['scores'] = {self.metric.name.lower(): dist}
+                else:
+                    doc['scores'][self.metric.name.lower()] = dist
                 match_docs.append(doc)
             topk_docs.append(match_docs)
 
