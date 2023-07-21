@@ -268,7 +268,6 @@ def test_local_backup_restore(tmpdir):
     index = AnnLite(n_dim=D, data_path=tmpdir / 'workspace' / '0')
     index.index(docs)
 
-    tmpname = uuid.uuid4().hex
     index.backup()
     index.close()
 
@@ -278,3 +277,24 @@ def test_local_backup_restore(tmpdir):
     status = index.stat
     assert int(status['total_docs']) == N
     assert int(status['index_size']) == N
+
+
+def test_index_search_different_field(tmpdir):
+    X = np.random.random((N, D)).astype(
+        np.float32
+    )  # 10,000 128-dim vectors to be indexed
+
+    index = AnnLite(
+        n_dim=D, data_path=str(tmpdir), embedding_field='encoding', metric='euclidean'
+    )
+    docs = [dict(id=f'{i}', encoding=X[i]) for i in range(N)]
+    index.index(docs)
+    query = [dict(encoding=X[i]) for i in range(5)]
+
+    matches = index.search(query)
+
+    for i in range(len(matches[0]) - 1):
+        assert (
+            matches[0][i]['scores']['euclidean']
+            <= matches[0][i + 1]['scores']['euclidean']
+        )

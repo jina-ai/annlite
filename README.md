@@ -110,7 +110,7 @@ docs = ann.get_docs(limit=10, offset=0, order_by='x', ascending=True)
 After you have indexed the `docs`, you can update the docs in the index by calling `ann.update()`:
 
 ```python
-updated_docs = [{'id': '0', 'embedding': [], 'price': 6}]
+updated_docs = [{'id': '0', 'embedding': np.random.random([128]).astype(np.float32), 'price': 6}]
 
 ann.update(updated_docs)
 ```

@@ -56,6 +56,7 @@ class AnnLite(CellContainer):
         self,
         n_dim: int,
         metric: Union[str, Metric] = 'cosine',
+        embedding_field: str = 'embedding',
         n_cells: int = 1,
         n_subvectors: Optional[int] = None,
         n_clusters: Optional[int] = 256,
@@ -90,6 +91,7 @@ class AnnLite(CellContainer):
         self.n_probe = max(n_probe, n_cells)
         self.n_cells = n_cells
         self.size_limit = 2048
+        self._embedding_field = embedding_field
 
         if isinstance(metric, str):
             metric = Metric.from_string(metric)
@@ -172,7 +174,7 @@ class AnnLite(CellContainer):
             total_size = 0
             # TODO: add a progress bar
             for docs in self.documents_generator(0, batch_size=1024):
-                x = np.array([doc['embedding'] for doc in docs])
+                x = np.array([doc[self._embedding_field] for doc in docs])
                 total_size += x.shape[0]
                 self.partial_train(x, auto_save=True, force_train=True)
                 if total_size >= MAX_TRAINING_DATA_SIZE:
@@ -280,8 +282,7 @@ class AnnLite(CellContainer):
         if not self.is_trained:
             raise RuntimeError(f'The indexer is not trained, cannot add new documents')
 
-        # TODO: Obtain the embeddings from the dict or change index signature
-        x = np.array([doc['embedding'] for doc in docs])
+        x = np.array([doc[self._embedding_field] for doc in docs])
         n_data, _ = self._sanity_check(x)
 
         assigned_cells = (
@@ -312,7 +313,7 @@ class AnnLite(CellContainer):
             raise RuntimeError(f'The indexer is not trained, cannot add new documents')
 
         # TODO: Obtain the embeddings from the dict or change index signature
-        x = np.array([doc['embedding'] for doc in docs])
+        x = np.array([doc[self._embedding_field] for doc in docs])
         n_data, _ = self._sanity_check(x)
 
         assigned_cells = (
@@ -347,7 +348,7 @@ class AnnLite(CellContainer):
         if not self.is_trained:
             raise RuntimeError(f'The indexer is not trained, cannot add new documents')
 
-        query_np = np.array([doc['embedding'] for doc in docs])
+        query_np = np.array([doc[self._embedding_field] for doc in docs])
 
         _, match_docs = self.search_by_vectors(
             query_np, filter=filter, limit=limit, include_metadata=include_metadata
@@ -778,7 +779,7 @@ class AnnLite(CellContainer):
                     f'Rebuild the index of cell-{cell_id} ({cell_size} docs)...'
                 )
                 for docs in self.documents_generator(cell_id, batch_size=10240):
-                    x = np.array([doc['embedding'] for doc in docs])
+                    x = np.array([doc[self._embedding_field] for doc in docs])
 
                     assigned_cells = np.ones(len(docs), dtype=np.int64) * cell_id
                     super().insert(x, assigned_cells, docs, only_index=True)
