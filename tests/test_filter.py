@@ -1,9 +1,7 @@
 import random
-import tempfile
 
 import numpy as np
 import pytest
-from docarray import Document, DocumentArray
 
 from annlite import AnnLite
 from annlite.filter import Filter
@@ -118,12 +116,8 @@ def test_filter_with_columns(tmpfile, columns):
     index = AnnLite(D, columns=columns, data_path=tmpfile, include_metadata=True)
     X = np.random.random((N, D)).astype(np.float32)
 
-    docs = DocumentArray(
-        [
-            Document(id=f'{i}', embedding=X[i], tags={'x': random.random()})
-            for i in range(N)
-        ]
-    )
+    docs = [dict(id=f'{i}', embedding=X[i], x=random.random()) for i in range(N)]
+
     index.index(docs)
 
     matches = index.filter(
@@ -131,7 +125,7 @@ def test_filter_with_columns(tmpfile, columns):
     )
     assert len(matches) == limit
     for m in matches:
-        assert m.tags['x'] < 0.5
+        assert m['x'] < 0.5
 
 
 @pytest.mark.parametrize('filterable_attrs', [{'x': 'float'}, {'x': float}])
@@ -148,12 +142,7 @@ def test_filter_with_dict(tmpfile, filterable_attrs):
     )
     X = np.random.random((N, D)).astype(np.float32)
 
-    docs = DocumentArray(
-        [
-            Document(id=f'{i}', embedding=X[i], tags={'x': random.random()})
-            for i in range(N)
-        ]
-    )
+    docs = [dict(id=f'{i}', embedding=X[i], x=random.random()) for i in range(N)]
     index.index(docs)
 
     matches = index.filter(
@@ -161,7 +150,7 @@ def test_filter_with_dict(tmpfile, filterable_attrs):
     )
     assert len(matches) == limit
     for m in matches:
-        assert m.tags['x'] < 0.5
+        assert m['x'] < 0.5
 
 
 @pytest.mark.parametrize('limit', [1, 5])
@@ -180,16 +169,10 @@ def test_filter_with_limit_offset(tmpfile, limit, offset, order_by, ascending):
     )
     X = np.random.random((N, D)).astype(np.float32)
 
-    docs = DocumentArray(
-        [
-            Document(
-                id=f'{i}',
-                embedding=X[i],
-                tags={'x': random.random(), 'y': random.random()},
-            )
-            for i in range(N)
-        ]
-    )
+    docs = [
+        dict(id=f'{i}', embedding=X[i], x=random.random(), y=random.random())
+        for i in range(N)
+    ]
     index.index(docs)
 
     matches = index.filter(
@@ -204,11 +187,11 @@ def test_filter_with_limit_offset(tmpfile, limit, offset, order_by, ascending):
 
     for i in range(len(matches) - 1):
         m = matches[i]
-        assert m.tags['x'] < 0.5
+        assert m['x'] < 0.5
         if ascending:
-            assert m.tags[order_by] <= matches[i + 1].tags[order_by]
+            assert m[order_by] <= matches[i + 1][order_by]
         else:
-            assert m.tags[order_by] >= matches[i + 1].tags[order_by]
+            assert m[order_by] >= matches[i + 1][order_by]
 
 
 @pytest.mark.parametrize('limit', [1, 5])
@@ -223,12 +206,7 @@ def test_filter_with_wrong_columns(tmpfile, limit):
     )
     X = np.random.random((N, D)).astype(np.float32)
 
-    docs = DocumentArray(
-        [
-            Document(id=f'{i}', embedding=X[i], tags={'price': random.random()})
-            for i in range(N)
-        ]
-    )
+    docs = [dict(id=f'{i}', embedding=X[i], price=random.random()) for i in range(N)]
 
     index.index(docs)
 

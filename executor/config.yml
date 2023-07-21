@@ -1,8 +1,0 @@
-jtype: AnnLiteIndexer
-py_modules:
-  - ./executor.py
-metas:
-  name: AnnLiteIndexer_v3
-  description: A similarity search based on Annlite
-  url: https://github.com/jina-ai/annlite
-  keywords: [ann, similarity_search, indexer, pq, hnsw, pre-filtering]

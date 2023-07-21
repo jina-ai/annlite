@@ -2,7 +2,6 @@ from time import time
 
 import numpy as np
 import pytest
-from docarray import Document, DocumentArray
 from loguru import logger
 
 from annlite import AnnLite, pq_bind
@@ -21,14 +20,13 @@ def random_docs():
     X = np.random.random((N, D)).astype(
         np.float32
     )  # 10,000 64-dim vectors to be indexed
-    docs = DocumentArray(
-        [Document(id=f'{i}', embedding=X[i], tags={'x': str(i)}) for i in range(N)]
-    )
+    docs = [dict(id=f'{i}', embedding=X[i], x=str(i)) for i in range(N)]
+
     return docs
 
 
 def test_pq_index_dist_mat(random_docs):
-    X = random_docs.embeddings
+    X = np.array([doc['embedding'] for doc in random_docs])
     N, D = X.shape
     pq_class = PQCodec(dim=D)
     pq_class.fit(X)
@@ -71,7 +69,7 @@ def test_hnsw_pq_load(tmpfile, random_docs):
         data_path=tmpfile,
         n_subvectors=8,
     )
-    pq_index.train(random_docs.embeddings)
+    pq_index.train(np.array([doc['embedding'] for doc in random_docs]))
     pq_index.index(random_docs)
     assert all([x.pq_codec.is_trained for x in pq_index._vec_indexes])
     assert all([x._index.pq_enable for x in pq_index._vec_indexes])
@@ -82,13 +80,13 @@ def test_hnsw_pq_search_multi_clusters(tmpdir, n_clusters, random_docs):
     total_test = 10
     topk = 50
 
-    X = random_docs.embeddings
+    X = np.array([doc['embedding'] for doc in random_docs])
     N, Dim = X.shape
     computed_dist = euclidean(X, X)
     computed_labels = np.argsort(computed_dist, axis=1)[:, :topk]
 
-    query = DocumentArray([Document(embedding=X[i]) for i in range(total_test)])
-    test_query = DocumentArray([Document(embedding=X[i]) for i in range(total_test)])
+    query = [dict(embedding=X[i]) for i in range(total_test)]
+    test_query = [dict(embedding=X[i]) for i in range(total_test)]
 
     # HNSW search with float----------------------------------
     no_pq_index = AnnLite(D, data_path=tmpdir / 'no_pq_index', metric='EUCLIDEAN')
@@ -98,7 +96,7 @@ def test_hnsw_pq_search_multi_clusters(tmpdir, n_clusters, random_docs):
     hnsw_d = time() - hnsw_s
     print('Index time', hnsw_d)
     hnsw_s = time()
-    no_pq_index.search(query, limit=topk)
+    matches = no_pq_index.search(query, limit=topk)
     hnsw_d = time() - hnsw_s
     print(hnsw_d)
     no_pq_index.close()
@@ -123,11 +121,11 @@ def test_hnsw_pq_search_multi_clusters(tmpdir, n_clusters, random_docs):
 
     # PQ linear search----------------------------------
     _pq_codec = pq_index._pq_codec
-    ids = np.array([int(doc.id) for doc in random_docs])
+    ids = np.array([int(doc['id']) for doc in random_docs])
     linear_pq_index = PQIndex(Dim, _pq_codec)
     linear_pq_index.add_with_ids(X, ids)
 
-    search_x = test_query.embeddings
+    search_x = np.array([q['embedding'] for q in test_query])
     pq_dists = []
     linear_results = []
     pq_s = time()
@@ -143,8 +141,8 @@ def test_hnsw_pq_search_multi_clusters(tmpdir, n_clusters, random_docs):
     pq_precision = []
     for i in range(total_test):
         real_ground_truth = set([str(i) for i in computed_labels[i]])
-        ground_truth = set([m.id for m in query[i].matches])
-        pq_result = set([m.id for m in test_query[i].matches])
+        ground_truth = set([m['id'] for m in matches[i]])
+        pq_result = set([m['id'] for m in matches[i]])
         linear_pq_result = set([str(i_id) for i_id in linear_results[i]])
         original_precision.append(len(real_ground_truth & ground_truth) / topk)
         pq_precision.append(len(real_ground_truth & linear_pq_result) / topk)

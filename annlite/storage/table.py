@@ -2,12 +2,9 @@ import datetime
 import sqlite3
 import threading
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, List, Optional, Tuple, Union
+from typing import Any, List, Optional, Tuple, Union
 
 import numpy as np
-
-if TYPE_CHECKING:
-    from docarray import DocumentArray
 
 sqlite3.register_adapter(np.int64, lambda x: int(x))
 sqlite3.register_adapter(np.int32, lambda x: int(x))
@@ -212,7 +209,7 @@ class CellTable(Table):
 
     def insert(
         self,
-        docs: 'DocumentArray',
+        docs: 'List[Dict]',
         commit: bool = True,
     ) -> List[int]:
         """Add a single record into the table.
@@ -233,11 +230,8 @@ class CellTable(Table):
         docs_size = 0
         for doc in docs:
             doc_value = tuple(
-                [doc.id]
-                + [
-                    _converting(doc.tags[c]) if c in doc.tags else None
-                    for c in self.columns[2:]
-                ]
+                [doc['id']]
+                + [_converting(doc[c]) if c in doc else None for c in self.columns[2:]]
             )
             values.append(doc_value)
             docs_size += 1

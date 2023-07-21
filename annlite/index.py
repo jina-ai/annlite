@@ -4,14 +4,10 @@ import os
 import platform
 import warnings
 from pathlib import Path
-from typing import TYPE_CHECKING, Dict, List, Optional, Union
+from typing import Dict, List, Optional, Union
 
 import numpy as np
-from docarray.math.ndarray import to_numpy_array
 from loguru import logger
-
-if TYPE_CHECKING:
-    from docarray import DocumentArray
 
 from .container import CellContainer
 from .core import PQCodec, ProjectorCodec, VQCodec
@@ -60,6 +56,7 @@ class AnnLite(CellContainer):
         self,
         n_dim: int,
         metric: Union[str, Metric] = 'cosine',
+        embedding_field: str = 'embedding',
         n_cells: int = 1,
         n_subvectors: Optional[int] = None,
         n_clusters: Optional[int] = 256,
@@ -94,6 +91,7 @@ class AnnLite(CellContainer):
         self.n_probe = max(n_probe, n_cells)
         self.n_cells = n_cells
         self.size_limit = 2048
+        self._embedding_field = embedding_field
 
         if isinstance(metric, str):
             metric = Metric.from_string(metric)
@@ -176,7 +174,7 @@ class AnnLite(CellContainer):
             total_size = 0
             # TODO: add a progress bar
             for docs in self.documents_generator(0, batch_size=1024):
-                x = to_numpy_array(docs.embeddings)
+                x = np.array([doc[self._embedding_field] for doc in docs])
                 total_size += x.shape[0]
                 self.partial_train(x, auto_save=True, force_train=True)
                 if total_size >= MAX_TRAINING_DATA_SIZE:
@@ -271,7 +269,7 @@ class AnnLite(CellContainer):
         if auto_save:
             self.dump_model()
 
-    def index(self, docs: 'DocumentArray', **kwargs):
+    def index(self, docs: 'List', **kwargs):
         """Add the documents to the index.
 
         :param docs: the document array to be indexed.
@@ -284,7 +282,7 @@ class AnnLite(CellContainer):
         if not self.is_trained:
             raise RuntimeError(f'The indexer is not trained, cannot add new documents')
 
-        x = to_numpy_array(docs.embeddings)
+        x = np.array([doc[self._embedding_field] for doc in docs])
         n_data, _ = self._sanity_check(x)
 
         assigned_cells = (
@@ -296,7 +294,7 @@ class AnnLite(CellContainer):
 
     def update(
         self,
-        docs: 'DocumentArray',
+        docs: 'List',
         raise_errors_on_not_found: bool = False,
         insert_if_not_found: bool = True,
         **kwargs,
@@ -314,7 +312,8 @@ class AnnLite(CellContainer):
         if not self.is_trained:
             raise RuntimeError(f'The indexer is not trained, cannot add new documents')
 
-        x = to_numpy_array(docs.embeddings)
+        # TODO: Obtain the embeddings from the dict or change index signature
+        x = np.array([doc[self._embedding_field] for doc in docs])
         n_data, _ = self._sanity_check(x)
 
         assigned_cells = (
@@ -333,7 +332,7 @@ class AnnLite(CellContainer):
 
     def search(
         self,
-        docs: 'DocumentArray',
+        docs: 'List',
         filter: Optional[dict] = None,
         limit: int = 10,
         include_metadata: bool = True,
@@ -349,14 +348,12 @@ class AnnLite(CellContainer):
         if not self.is_trained:
             raise RuntimeError(f'The indexer is not trained, cannot add new documents')
 
-        query_np = to_numpy_array(docs.embeddings)
+        query_np = np.array([doc[self._embedding_field] for doc in docs])
 
-        match_dists, match_docs = self.search_by_vectors(
+        _, match_docs = self.search_by_vectors(
             query_np, filter=filter, limit=limit, include_metadata=include_metadata
         )
-
-        for doc, matches in zip(docs, match_docs):
-            doc.matches = matches
+        return match_docs
 
     def search_by_vectors(
         self,
@@ -523,7 +520,7 @@ class AnnLite(CellContainer):
 
     def delete(
         self,
-        docs: Union['DocumentArray', List[str]],
+        docs: Union['List[Dict]', List[str]],
         raise_errors_on_not_found: bool = False,
     ):
         """Delete entries from the index by id
@@ -532,9 +529,11 @@ class AnnLite(CellContainer):
         :param docs: the documents to delete
         """
 
-        super().delete(
-            docs if isinstance(docs, list) else docs[:, 'id'], raise_errors_on_not_found
-        )
+        if len(docs) > 0:
+            super().delete(
+                docs if isinstance(docs[0], str) else [doc['id'] for doc in docs],
+                raise_errors_on_not_found,
+            )
 
     def clear(self):
         """Clear the whole database"""
@@ -663,18 +662,11 @@ class AnnLite(CellContainer):
             self.close()
             self._backup_index_to_remote(target_name, token)
 
-    def restore(self, source_name: Optional[str] = None, token: Optional[str] = None):
+    def restore(self):
         # file lock will be released when restore from remote
-        if not source_name:
-            if self.total_docs > 0:
-                logger.info(f'restore Annlite from local')
-                self._rebuild_index_from_local()
-        else:
-            if token is None:
-                logger.error(f'restore from remote needs token')
-            logger.info(f'restore Annlite from artifact: {source_name}')
-            self.close()
-            self._rebuild_index_from_remote(source_name, token)
+        if self.total_docs > 0:
+            logger.info(f'restore Annlite from local')
+            self._rebuild_index_from_local()
 
     def dump_model(self):
         logger.info(f'Save the parameters to {self.model_path}')
@@ -787,7 +779,7 @@ class AnnLite(CellContainer):
                     f'Rebuild the index of cell-{cell_id} ({cell_size} docs)...'
                 )
                 for docs in self.documents_generator(cell_id, batch_size=10240):
-                    x = to_numpy_array(docs.embeddings)
+                    x = np.array([doc[self._embedding_field] for doc in docs])
 
                     assigned_cells = np.ones(len(docs), dtype=np.int64) * cell_id
                     super().insert(x, assigned_cells, docs, only_index=True)
@@ -795,132 +787,6 @@ class AnnLite(CellContainer):
         if self.model_path:
             logger.info(f'Load the model from {self.model_path}')
             self._reload_models()
-
-    def _rebuild_index_from_remote(self, source_name: str, token: str):
-        import shutil
-
-        from .hubble_tools import Merger
-
-        self.token = token
-        client = self.remote_store_client
-        art_list = client.list_artifacts(
-            filter={'metaData.name': source_name}, pageSize=100
-        )
-        if len(art_list['data']) == 0:
-            logger.info(f'The indexer `{source_name}` not found. ')
-        else:
-            logger.info(f'Load the indexer `{source_name}` from remote store')
-
-            restore_path = self.data_path / 'restore'
-            merger = Merger(restore_path=restore_path, client=client)
-
-            for cell_id in range(self.n_cells):
-                # download hnsw files and merge and load
-                logger.info(f'Load the hnsw `{source_name}` from remote store')
-
-                hnsw_ids = merger.get_artifact_ids(
-                    art_list, type='hnsw', cell_id=cell_id
-                )
-                merger.download(ids=hnsw_ids, download_folder=f'hnsw_{cell_id}')
-                if len(hnsw_ids) > 1:
-                    merger.merge_file(
-                        inputdir=restore_path / f'hnsw_{cell_id}',
-                        outputdir=restore_path / f'hnsw_{cell_id}',
-                        outputfilename=Path(f'cell_{cell_id}.hnsw'),
-                    )
-                self.vec_index(cell_id).load(
-                    restore_path / f'hnsw_{cell_id}' / f'cell_{cell_id}.hnsw'
-                )
-                shutil.rmtree(restore_path / f'hnsw_{cell_id}')
-
-                # download cell_table files and merge and load
-                logger.info(f'Load the cell_table `{source_name}` from remote store')
-
-                cell_table_ids = merger.get_artifact_ids(
-                    art_list, type='cell_table', cell_id=cell_id
-                )
-                merger.download(
-                    ids=cell_table_ids, download_folder=f'cell_table_{cell_id}'
-                )
-                if len(cell_table_ids) > 1:
-                    merger.merge_file(
-                        inputdir=restore_path / f'cell_table_{cell_id}',
-                        outputdir=restore_path / f'cell_table_{cell_id}',
-                        outputfilename=Path(f'cell_{cell_id}.db'),
-                    )
-
-                self.cell_table(cell_id).load(
-                    restore_path / f'cell_table_{cell_id}' / f'cell_{cell_id}.db'
-                )
-                shutil.rmtree(restore_path / f'cell_table_{cell_id}')
-
-                # download database files and rebuild
-                logger.info(f'Load the database `{source_name}` from remote store')
-
-                database_ids = merger.get_artifact_ids(
-                    art_list, type='database', cell_id=cell_id
-                )
-                merger.download(ids=database_ids, download_folder='database')
-                for zip_file in list((restore_path / 'database').iterdir()):
-                    # default has only one cell
-                    shutil.unpack_archive(zip_file, self.data_path / f'cell_{cell_id}')
-                    for f in list(
-                        (
-                            self.data_path
-                            / f'cell_{cell_id}'
-                            / zip_file.name.split('.zip')[0]
-                        ).iterdir()
-                    ):
-                        origin_database_path = (
-                            self.data_path / f'cell_{cell_id}' / f.name
-                        )
-                        if origin_database_path.exists():
-                            origin_database_path.unlink()
-                        f.rename(self.data_path / f'cell_{cell_id}' / f.name)
-                    shutil.rmtree(
-                        self.data_path
-                        / f'cell_{cell_id}'
-                        / zip_file.name.split('.zip')[0]
-                    )
-                    Path(zip_file).unlink()
-            self._rebuild_database()
-
-            # download meta_table files
-            logger.info(f'Load the meta_table `{source_name}` from remote store')
-
-            meta_table_ids = merger.get_artifact_ids(
-                art_list, type='meta_table', cell_id=0
-            )
-            merger.download(ids=meta_table_ids, download_folder='meta_table')
-
-            if len(meta_table_ids) > 1:
-                merger.merge_file(
-                    inputdir=restore_path / 'meta_table',
-                    outputdir=restore_path / 'meta_table',
-                    outputfilename=Path('meta.db'),
-                )
-            self._meta_table.load(restore_path / 'meta_table' / 'meta.db')
-            shutil.rmtree(restore_path / 'meta_table')
-
-            # download model files
-            logger.info(f'Load the model `{source_name}` from remote store')
-            file_name = str(self.model_path.parent / f'{source_name}_model.zip')
-            model_id = [
-                art['_id']
-                for art in art_list['data']
-                if 'model' in art['metaData']['type']
-            ]
-            assert len(model_id) == 1
-            client.download_artifact(
-                id=model_id[0],
-                f=file_name,
-                show_progress=True,
-            )
-            shutil.unpack_archive(file_name, self.model_path.parent)
-            self._reload_models()
-            Path(file_name).unlink()
-
-            shutil.rmtree(restore_path)
 
     @property
     def is_trained(self):

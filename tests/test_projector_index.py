@@ -1,6 +1,5 @@
 import numpy as np
 import pytest
-from docarray import Document, DocumentArray
 
 from annlite.index import AnnLite
 
@@ -18,7 +17,7 @@ def build_data():
 
 @pytest.fixture
 def build_projector_annlite(tmpfile):
-    index = AnnLite(n_dim=n_features, data_path=tmpfile)
+    index = AnnLite(n_dim=n_features, data_path=tmpfile, metric='euclidean')
     return index
 
 
@@ -27,9 +26,8 @@ def projector_annlite_with_data(build_data, build_projector_annlite):
     Xt = build_data
     indexer = build_projector_annlite
 
-    docs = DocumentArray(
-        [Document(id=f'{i}', embedding=Xt[i]) for i in range(n_examples)]
-    )
+    docs = [dict(id=f'{i}', embedding=Xt[i]) for i in range(n_examples)]
+
     indexer.index(docs)
     return indexer
 
@@ -42,19 +40,19 @@ def test_delete(projector_annlite_with_data):
 def test_update(projector_annlite_with_data):
     indexer = projector_annlite_with_data
     X = np.random.random((5, n_features)).astype(np.float32)
-    docs = DocumentArray([Document(id=f'{i}', embedding=X[i]) for i in range(5)])
+    docs = [dict(id=f'{i}', embedding=X[i]) for i in range(5)]
     indexer.update(docs)
 
 
 def test_query(projector_annlite_with_data):
     indexer = projector_annlite_with_data
     X = np.random.random((5, n_features)).astype(np.float32)  # a 128-dim query vector
-    query = DocumentArray([Document(embedding=X[i]) for i in range(5)])
+    query = [dict(embedding=X[i]) for i in range(5)]
 
-    indexer.search(query)
+    matches = indexer.search(query)
 
-    for i in range(len(query[0].matches) - 1):
+    for i in range(len(matches[0]) - 1):
         assert (
-            query[0].matches[i].scores['euclidean'].value
-            <= query[0].matches[i + 1].scores['euclidean'].value
+            matches[0][i]['scores']['euclidean']
+            <= matches[0][i + 1]['scores']['euclidean']
         )
